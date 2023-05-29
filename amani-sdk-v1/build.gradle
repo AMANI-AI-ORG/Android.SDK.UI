@@ -77,7 +77,7 @@ afterEvaluate {
             release(MavenPublication) {
                 from components.release
 
-                groupId = 'ai.amani.android'
+                groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'AmaniSDK-UI'
                 version = '1.0.0alpha01'
             }
