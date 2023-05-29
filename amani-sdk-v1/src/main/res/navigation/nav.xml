@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav"
+    app:startDestination="@id/homeKYCFragment">
+
+    <fragment
+        android:id="@+id/homeKYCFragment"
+        android:name="ai.amani.sdk.presentation.home_kyc.HomeKYCFragment"
+        android:label="">
+        <action
+            android:id="@+id/action_homeKYCFragment_to_IDCaptureFrontSideFrag"
+            app:destination="@id/IDCaptureFrontSideFrag" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_selfieCaptureFragment"
+            app:destination="@id/selfieCaptureFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_selectDocumentTypeFragment"
+            app:destination="@id/selectDocumentTypeFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_NFCScanFragment"
+            app:destination="@id/NFCScanFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_congratulationsFragment"
+            app:destination="@id/congratulationsFragment"
+            app:popUpTo="@navigation/nav"
+            app:popUpToInclusive="true"
+            app:launchSingleTop="true" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_signatureFragment"
+            app:destination="@id/signatureFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_physicalContractFragment"
+            app:destination="@id/physicalContractFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/previewScreenFragment"
+        android:name="ai.amani.sdk.presentation.preview_screen.PreviewScreenFragment"
+        android:label="">
+        <argument
+            android:name="previewScreenModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.PreviewScreenModel" />
+        <action
+            android:id="@+id/action_return_homeFragment"
+            app:destination="@id/homeKYCFragment" />
+        <action
+            android:id="@+id/action_previewScreenFragment_to_IDCaptureBackSideFrag"
+            app:destination="@id/IDCaptureBackSideFrag" />
+        <action
+            android:id="@+id/action_previewScreenFragment_to_NFCScanFragment"
+            app:destination="@id/NFCScanFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/IDCaptureFrontSideFrag"
+        android:name="ai.amani.sdk.presentation.id_capture.IDCaptureFrontSideFrag"
+        android:label="">
+        <action
+            android:id="@+id/action_IDCaptureFrontSideFrag_to_previewScreenFragment"
+            app:destination="@id/previewScreenFragment" />
+        <action
+            android:id="@+id/action_IDCaptureFrontSideFrag_to_IDCaptureBackSideFrag"
+            app:destination="@id/IDCaptureBackSideFrag" />
+        <argument
+            android:name="dataModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/selfieCaptureFragment"
+        android:name="ai.amani.sdk.presentation.selfie.SelfieCaptureFragment"
+        android:label="">
+        <action
+            android:id="@+id/action_selfieCaptureFragment_to_previewScreenFragment"
+            app:destination="@id/previewScreenFragment" />
+        <argument
+            android:name="dataModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/selectDocumentTypeFragment"
+        android:name="ai.amani.sdk.presentation.select_document_type.SelectDocumentTypeFragment"
+        android:label="" >
+        <action
+            android:id="@+id/action_selectDocumentTypeFragment_to_IDCaptureFrontSideFrag"
+            app:destination="@id/IDCaptureFrontSideFrag" />
+        <argument
+            android:name="dataModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.SelectDocumentTypeModel"/>
+    </fragment>
+    <fragment
+        android:id="@+id/IDCaptureBackSideFrag"
+        android:name="ai.amani.sdk.presentation.id_capture.IDCaptureBackSideFrag"
+        android:label="" >
+        <action
+            android:id="@+id/action_IDCaptureBackSideFrag_to_previewScreenFragment"
+            app:destination="@id/previewScreenFragment" />
+        <argument
+            android:name="dataModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+
+    </fragment>
+    <fragment
+        android:id="@+id/NFCScanFragment"
+        android:name="ai.amani.sdk.presentation.nfc.NFCScanFragment"
+        android:label="NFCScanFragment" >
+        <argument
+            android:name="dataModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.NFCScanScreenModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/congratulationsFragment"
+        android:name="ai.amani.sdk.presentation.congratulations_screen.CongratulationsFragment"
+        android:label="CongratulationsFragment" >
+        <argument
+            android:name="configModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/signatureFragment"
+        android:name="ai.amani.sdk.presentation.signature_screen.SignatureFragment"
+        android:label="SignatureFragment" >
+        <argument
+            android:name="configModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/physicalContractFragment"
+        android:name="ai.amani.sdk.presentation.physical_contract_screen.PhysicalContractFragment"
+        android:label="PhysicalContractFragment" >
+        <argument
+            android:name="dataModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+</navigation>

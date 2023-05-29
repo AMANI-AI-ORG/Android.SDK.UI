@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = "https://jfrog.amani.ai/artifactory/amani-sdk"
+        }
+    }
+}
+rootProject.name = "SampleAmaniUI2"
+
+include ':app'                  // Sample that runs the AmaniSDK module
+
+include ':amani-sdk-v1'    // Module that is responsible for only usage
+                                // of AmaniSDK in proper and fully configurable way

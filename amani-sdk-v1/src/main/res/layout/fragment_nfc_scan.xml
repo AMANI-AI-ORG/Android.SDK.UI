@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+        <import type="android.view.View" />
+        <variable
+            name="dataModel"
+            type="ai.amani.sdk.model.ConfigModel" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/parent_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        setBackgroundColor="@{dataModel.generalConfigs.appBackground}">
+
+
+        <ai.amani.sdk.presentation.common.CustomTextView
+            android:id="@+id/read_nfc_tv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="76dp"
+            android:textAlignment="center"
+            android:textSize="@dimen/dp_16"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:layout_editor_absoluteX="0dp" />
+
+        <LinearLayout
+            android:id="@+id/linear_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/read_nfc_tv"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="40dp"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/dp_10"
+            android:paddingTop="@dimen/dp_60"
+            android:paddingEnd="@dimen/dp_10"
+            android:paddingBottom="@dimen/dp_60"
+            app:layout_constraintTop_toBottomOf="@+id/read_nfc_tv"
+            tools:layout_editor_absoluteX="0dp">
+
+            <ai.amani.sdk.presentation.common.CustomTextView
+                android:id="@+id/hold_id_tv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dp_19"
+                android:textAlignment="center"
+                android:textSize="@dimen/sp_16" />
+
+            <ai.amani.sdk.presentation.common.CustomTextView
+                android:id="@+id/keep_still_tv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/dp_19"
+                android:textAlignment="center"
+                android:textSize="@dimen/sp_16" />
+
+            <ai.amani.sdk.presentation.common.CustomTextView
+                android:id="@+id/reading_complete_tv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAlignment="center"
+                android:textSize="@dimen/sp_16" />
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/animationLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/animationView"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/dp_200"
+                android:background="#ffffff"
+                android:visibility="invisible"
+                app:lottie_autoPlay="true"
+                app:lottie_loop="true"
+                app:lottie_rawRes="@raw/nfc_animation"
+                app:lottie_url="REPLACE_JSON_URL" />
+
+            <ai.amani.sdk.presentation.common.CustomTextView
+                android:id="@+id/text_nfc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#ffffff"
+                android:text="@string/nfc_scanning_started"
+                android:textAlignment="center"
+                android:textSize="@dimen/dp_18"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/animationDone"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dp_200"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:background="#ffffff"
+            android:visibility="invisible"
+            app:layout_constraintEnd_toEndOf="@+id/read_nfc_tv"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="false"
+            app:lottie_rawRes="@raw/nfc_done"
+            app:lottie_url="REPLACE_JSON_URL" />
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

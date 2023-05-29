@@ -1,0 +1,24 @@
+<resources>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="error_upload_source">Uploading source is failed</string>
+    <string name="error_fetch_source">Fetching source is failed</string>
+    <string name="mrz_fetch_error">MRZ fetch error</string>
+
+
+    <!-- PreviewScreen-->
+    <string name="confirm_text">Confirm</string>
+    <string name="try_again_text">Try Again</string>
+
+    <!-- NFCScanScreen-->
+    <string name="nfc_title">NFC</string>
+    <string name="nfc_confirm">Confirm</string>
+    <string name="nfc_hold_your_card">Please hold your card stable</string>
+    <string name="nfc_keep_still">Please still keep your card</string>
+    <string name="nfc_reading_completed">NFC Reading Completed</string>
+
+
+
+
+
+</resources>
