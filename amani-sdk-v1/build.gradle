@@ -79,7 +79,7 @@ afterEvaluate {
 
                 groupId = 'ai.amani.android'
                 artifactId = 'AmaniSDK-UI'
-                version = '1.0.0test'
+                version = '1.0.0alpha01'
             }
         }
     }
