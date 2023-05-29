@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">AmaniV3_0_0alpha04</string>
+    <string name="amani_app_name">Amani Demo</string>
+    <string name="str_message">If not filled customer created. If filled with an ID Number old customer used for KYC process so you can see rejection message etc</string>
+    <string name="tcn_number">TCN NUMBER</string>
+    <string name="email">EMAIL ID</string>
+    <string name="password">PASSWORD</string>
+    <string name="start_kyc">START KYC</string>
+    <string name="doc_number">DOCUMENT NUMBER </string>
+    <string name="expiry_date">EXPIRE DATE (YYMMDD e.g.: 230497)</string>
+    <string name="birth_date">BIRTH DATE (YYMMDD e.g: 230497)</string>
+
+</resources>
