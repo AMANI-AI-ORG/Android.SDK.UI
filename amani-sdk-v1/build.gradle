@@ -78,8 +78,8 @@ afterEvaluate {
                 from components.release
 
                 groupId = 'com.github.AMANI-AI-ORG'
-                artifactId = 'AmaniSDK-UI'
-                version = '1.0.0alpha01'
+                artifactId = 'Android.SDK.UI'
+                version = '1.0.0alpha02'
             }
         }
     }
