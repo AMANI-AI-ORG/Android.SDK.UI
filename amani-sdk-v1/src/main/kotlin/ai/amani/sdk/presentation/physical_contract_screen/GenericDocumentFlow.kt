@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation.physical_contract_screen
 
-import ai.amani.sdk.modules.document.FileWithType
 import android.net.Uri
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize

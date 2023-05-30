@@ -17,7 +17,7 @@ The minimum requirements for the SDK are:
 
    1. Add the following dependencies to your Module build.gradle file.
 ```groovy
-    implementation 'ai.amani.android:AmaniSDK-UI:1.0.0' // Add only this line
+    implementation 'ai.amani.android:Amani.SDK.UI:TAG' // Add only this line
 ```
 
    2. Enable DataBinding in the Module build.gradle by adding this line into code block of android {}:
@@ -57,7 +57,7 @@ allprojects {
 
  
 ```kotlin   
-    AmaniV1UI.init(
+    AmaniSDKUI.init(
             activity = this,
             serverURL = TestCredentials.SERVER_URL,
             amaniVersion = AmaniVersion.V2,
@@ -85,7 +85,7 @@ allprojects {
 > If you use goToKycActivity() without calling init, you will get the error **RuntimeException("Amani not initialised")** . This method must be called at least once before other methods are called in same activity. If you in another acitivity you may need to call it twice.
         
 ```kotlin    
-AmaniV1UI.goToKycActivity(
+AmaniSDKUI.goToKycActivity(
                 activity = this, //Activity pointer
                 resultLauncher = resultLauncher, //Requires for listening the activity result, sample resultLauncher is below
                 idNumber = ID_CARD_NUMBER,

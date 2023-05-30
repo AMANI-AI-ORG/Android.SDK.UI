@@ -1,8 +1,6 @@
 package ai.amani.sdk
 
 import ai.amani.amani_sdk.BuildConfig
-import ai.amani.base.utility.AmaniVersion
-import ai.amani.sdk.di.AppContainer
 import android.app.Application
 import timber.log.Timber
 
@@ -13,8 +11,6 @@ import timber.log.Timber
 
 
 class App :Application(){
-
-    val appContainer = AppContainer()
 
     override fun onCreate() {
         super.onCreate()

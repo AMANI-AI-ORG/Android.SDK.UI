@@ -9,7 +9,7 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 
-object AmaniV1UI {
+object AmaniSDKUI {
 
     fun init(
         activity: Activity,

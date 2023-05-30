@@ -10,7 +10,6 @@ sealed interface ScreenRoutes{
     object IDBackSideScreen: ScreenRoutes
     object SelfieCaptureScreen: ScreenRoutes
     object HomeKYCScreen: ScreenRoutes
-    object PreviewScreen: ScreenRoutes
     object NFCScanScreen: ScreenRoutes
     object SignatureScreen: ScreenRoutes
     object PhysicalContractScreen: ScreenRoutes

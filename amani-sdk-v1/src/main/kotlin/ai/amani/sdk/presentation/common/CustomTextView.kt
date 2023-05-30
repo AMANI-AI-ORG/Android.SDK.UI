@@ -117,41 +117,6 @@ class CustomTextView : AppCompatTextView {
         invalidate()
     }
 
-    fun setCompoundFromDrawable(drawable: Drawable?, gravity: Int, padding: Int, visible: Boolean) {
-        if (visible) {
-            when (gravity) {
-                Gravity.TOP -> this.setCompoundDrawablesWithIntrinsicBounds(
-                    null,
-                    drawable,
-                    null,
-                    null
-                )
-                Gravity.BOTTOM -> this.setCompoundDrawablesWithIntrinsicBounds(
-                    null,
-                    null,
-                    null,
-                    drawable
-                )
-                Gravity.END -> this.setCompoundDrawablesWithIntrinsicBounds(
-                    null,
-                    null,
-                    drawable,
-                    null
-                )
-                Gravity.START -> this.setCompoundDrawablesWithIntrinsicBounds(
-                    drawable,
-                    null,
-                    null,
-                    null
-                )
-            }
-        } else {
-            this.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null)
-        }
-        this.compoundDrawablePadding = padding
-        invalidate()
-    }
-
     /**
      * Setting textSize of the text views.
      * @param textSize

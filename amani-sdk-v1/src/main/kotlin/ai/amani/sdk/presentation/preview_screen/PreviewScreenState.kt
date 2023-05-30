@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation.preview_screen
 
-import ai.amani.sdk.presentation.home_kyc.HomeKYCState
 import androidx.annotation.StringRes
 
 /**
