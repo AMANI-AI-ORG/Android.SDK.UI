@@ -1,8 +1,5 @@
 package ai.amani.sdk.presentation.selfie
 
-import ai.amani.sdk.modules.selfie.manual_capture.Selfie
-import ai.amani.sdk.presentation.preview_screen.PreviewScreenState
-import androidx.camera.core.Preview
 import androidx.lifecycle.ViewModel
 import datamanager.model.config.Version
 import kotlinx.coroutines.flow.MutableStateFlow

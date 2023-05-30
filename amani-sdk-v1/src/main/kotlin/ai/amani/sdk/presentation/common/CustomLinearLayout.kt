@@ -64,36 +64,4 @@ class CustomLinearLayout : ConstraintLayout {
         }
         invalidate()
     }
-
-    /**
-     * @param view        button view of xml
-     * @param startColor  button start color
-     * @param startColor  button end color
-     * @param strokeSize  outline size
-     * @param strokeColor outline color
-     * @param isRounded   set rounded corner if true
-     * @param corner      corner radius
-     */
-    fun setGradientBackgroundDrawable(
-        view: CustomLinearLayout,
-        startColor: String?,
-        endColor: String?,
-        strokeSize: Int,
-        strokeColor: String?,
-        isRounded: Boolean,
-        corner: Int
-    ) {
-        val colors = intArrayOf(Color.parseColor(startColor), Color.parseColor(endColor))
-        val gradientDrawable = GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, colors)
-        if (strokeSize > 0) {
-            gradientDrawable.setStroke(
-                strokeSize,
-                ColorStateList.valueOf(Color.parseColor(strokeColor))
-            )
-        }
-        if (isRounded) {
-            gradientDrawable.cornerRadius = corner.toFloat()
-        }
-        view.background = gradientDrawable
-    }
 }

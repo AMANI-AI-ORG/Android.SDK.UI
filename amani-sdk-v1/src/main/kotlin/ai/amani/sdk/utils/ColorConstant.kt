@@ -6,7 +6,5 @@ package ai.amani.sdk.utils
  */
 object ColorConstant {
 
-    const val COLOR_WHITE = "#ffffff"
-    const val DISABLED_COLOR_WHITE = "#80ffffff"
     const val COLOR_BLACK = "#000000"
 }

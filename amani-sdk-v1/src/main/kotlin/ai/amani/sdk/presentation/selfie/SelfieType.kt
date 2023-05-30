@@ -16,7 +16,7 @@ sealed class SelfieType : Parcelable {
     /** Selfie type is Manual that represent to take selfie manually with capture button*/
     object Manual : SelfieType()
 
-    /** Selfie type is PoseEstimatio that represent to take selfie automatically after requested
+    /** Selfie type is PoseEstimation that represent to take selfie automatically after requested
      * facial pose order finalized correctly by user to verify user is real/fake*/
     data class PoseEstimation(var requestedOrderNumber: Int) : SelfieType()
 

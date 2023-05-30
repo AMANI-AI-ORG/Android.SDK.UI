@@ -62,8 +62,6 @@ fun ImageView.setImageAsUri(imageUri: String) {
         .diskCacheStrategy(DiskCacheStrategy.NONE)
         .skipMemoryCache(true)
         .into(this);
-
-    //this.setImageURI(Uri.fromFile(File(imageUri)))
 }
 
 @BindingAdapter("buttonTryAgain")

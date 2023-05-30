@@ -55,10 +55,10 @@ class DocumentAdapter(
                 holder.binding.btnDocument.context.resources,
                 R.drawable.custom_btn, null
             ),
-            generalConfig!!.getPrimaryButtonBackgroundColor(),
+            generalConfig!!.primaryButtonBackgroundColor,
             4,
-            if (generalConfig!!.getPrimaryButtonBorderColor() != null
-            ) generalConfig!!.getPrimaryButtonBorderColor() else generalConfig!!.getPrimaryButtonBackgroundColor(),
+            if (generalConfig!!.primaryButtonBorderColor != null
+            ) generalConfig!!.primaryButtonBorderColor else generalConfig!!.primaryButtonBackgroundColor,
             0F,
             null,
             true,
@@ -66,7 +66,7 @@ class DocumentAdapter(
         )
         holder.binding.btnDocument.setTextProperty(
             mDocumentList!![position]!!.title,
-            generalConfig!!.getPrimaryButtonTextColor()
+            generalConfig!!.primaryButtonTextColor
         )
     }
 
