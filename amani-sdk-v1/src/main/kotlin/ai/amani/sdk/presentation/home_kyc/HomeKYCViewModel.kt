@@ -76,8 +76,6 @@ open class HomeKYCViewModel constructor(
 
     fun getAppConfig(): ResGetConfig? = CachingHomeKYC.appConfig
 
-    fun getCustomerDetail(): CustomerDetailResult? = CachingHomeKYC.customerDetail
-
     fun getDocList(): ArrayList<Rule> {
        val list = CachingHomeKYC.customerDetail!!.rules as ArrayList<Rule>?
         return list!!.sort()
@@ -281,26 +279,6 @@ open class HomeKYCViewModel constructor(
         setLoaderStatus()
         signatureRepository.uploadSignature(
             onCompleted
-        )
-    }
-
-    /** Fetches all current rules from API to check current user state
-     * @param uploadRes: Response of the uplaod
-     * @param onComplete: Unit callback when process is done
-     */
-    fun fetchRules(
-       // uploadRes: UploadResultModel,
-        onComplete: (result: CustomerDetailResult) -> Unit
-    ) {
-        customerDetailRepoImp.getCustomerDetail(
-            onStart = {
-            },
-            onComplete = {
-                onComplete.invoke(it)
-                clearLogicState()
-            },
-            onError = {
-            }
         )
     }
 
@@ -526,7 +504,4 @@ open class HomeKYCViewModel constructor(
         listenAmaniEvents()
     }
 
-    fun clearLogicState() {
-        _logicEvent.postValue(HomeKYCLogicEvent.Empty)
-    }
- }
+}
