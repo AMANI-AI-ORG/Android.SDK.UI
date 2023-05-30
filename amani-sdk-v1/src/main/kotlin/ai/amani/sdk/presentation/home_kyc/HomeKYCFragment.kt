@@ -1,30 +1,36 @@
 package ai.amani.sdk.presentation.home_kyc
 
-import ai.amani.amani_sdk.BuildConfig
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentHomeKycBinding
 import ai.amani.sdk.Amani
-import ai.amani.sdk.App
-import ai.amani.sdk.di.AppContainer
-import ai.amani.sdk.extentions.*
-import ai.amani.sdk.model.*
+import ai.amani.sdk.extentions.customizeToolBar
+import ai.amani.sdk.extentions.debugToast
+import ai.amani.sdk.extentions.hide
+import ai.amani.sdk.extentions.logUploadResult
+import ai.amani.sdk.extentions.show
+import ai.amani.sdk.extentions.showToast
+import ai.amani.sdk.model.ConfigModel
+import ai.amani.sdk.model.HomeKYCResultModel
+import ai.amani.sdk.model.KYCResult
+import ai.amani.sdk.model.NFCScanScreenModel
+import ai.amani.sdk.model.RegisterConfig
+import ai.amani.sdk.model.SelectDocumentTypeModel
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
-import ai.amani.sdk.utils.*
+import ai.amani.sdk.utils.AmaniDocumentTypes
+import ai.amani.sdk.utils.AppConstant
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import datamanager.model.customer.Rule
 import timber.log.Timber
 
 /**
@@ -36,7 +42,6 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
     private lateinit var binding: FragmentHomeKycBinding
     private var mAdapter: KYCAdapter? = null
-    private lateinit var appContainer: AppContainer
     private val viewModel: HomeKYCViewModel by activityViewModels { HomeKYCViewModel.Factory }
 
     override fun onCreateView(
@@ -47,7 +52,6 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         val view = inflater.inflate(R.layout.fragment_home_kyc, container, false)
         binding = FragmentHomeKycBinding.bind(view)
         getIntent()
-        appContainer = (requireActivity().application as App).appContainer
         return view
     }
 
