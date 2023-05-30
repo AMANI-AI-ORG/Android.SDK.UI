@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:background="@color/color_white"
-    tools:context=".MainRegisterActivity">
+    tools:context="ai.amani.sample.MainRegisterActivity">
 
     <ImageView
         android:layout_width="wrap_content"

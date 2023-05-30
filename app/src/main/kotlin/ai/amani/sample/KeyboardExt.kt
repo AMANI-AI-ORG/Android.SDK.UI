@@ -1,4 +1,4 @@
-package ai.amani.sampleamaniui2
+package ai.amani.sample
 
 import android.content.Context
 import android.content.Intent

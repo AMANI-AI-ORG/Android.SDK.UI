@@ -1,7 +1,8 @@
-package ai.amani.sampleamaniui2
+package ai.amani.sample
 
 import AmaniV1UI
 import ai.amani.base.utility.AmaniVersion
+import ai.amani.sampleamaniui2.R
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity

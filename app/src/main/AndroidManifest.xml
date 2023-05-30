@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         >
         <activity
-            android:name=".MainRegisterActivity"
+            android:name="ai.amani.sample.MainRegisterActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
