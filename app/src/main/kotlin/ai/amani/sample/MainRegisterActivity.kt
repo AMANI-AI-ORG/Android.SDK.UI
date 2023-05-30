@@ -1,6 +1,6 @@
 package ai.amani.sample
 
-import AmaniV1UI
+import AmaniSDKUI
 import ai.amani.base.utility.AmaniVersion
 import ai.amani.sampleamaniui2.R
 import ai.amani.sdk.model.KYCResult
@@ -44,7 +44,7 @@ class MainRegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register_main)
 
-        AmaniV1UI.init(
+        AmaniSDKUI.init(
             activity = this,
             serverURL = TestCredentials.SERVER_URL,
             amaniVersion = AmaniVersion.V2,
@@ -60,7 +60,7 @@ class MainRegisterActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            AmaniV1UI.goToKycActivity(
+            AmaniSDKUI.goToKycActivity(
                 activity = this,
                 resultLauncher = resultLauncher,
                 idNumber = inputIdLabel.text.toString(),
