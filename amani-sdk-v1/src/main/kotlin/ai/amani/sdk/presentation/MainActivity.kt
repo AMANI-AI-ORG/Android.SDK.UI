@@ -170,7 +170,17 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        if (navController.currentDestination?.id!! == R.id.homeKYCFragment) finishActivity()
+        else navController.popBackStack()
+    }
+
+    /**
+     * Finish whole activity and return the relevant data to client
+     */
+    private fun finishActivity() {
+        //Finishing activity with KYCResult as INCOMPLETE
         val intent = Intent()
         intent.putExtra(AppConstant.KYC_RESULT, KYCResult())
         this.setResult(Activity.RESULT_OK, intent)
