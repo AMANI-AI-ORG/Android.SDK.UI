@@ -18,7 +18,7 @@ The minimum requirements for the SDK are:
 
    1. Add the following dependencies to your Module build.gradle file.
 ```groovy
-    implementation 'ai.amani:Amani.SDK.UI:TAG' // Add only this line
+    implementation 'ai.amani:Android.SDK.UI:Tag' // Add only this line
 ```
 
    2. Enable DataBinding in the Module build.gradle by adding this line into code block of android {}:
