@@ -27,7 +27,7 @@ object AmaniSDKUI {
     }
 
     fun goToKycActivity(
-        activity: ComponentActivity,
+        activity: Activity,
         idNumber: String,
         resultLauncher: ActivityResultLauncher<Intent>,
         authToken: String,
