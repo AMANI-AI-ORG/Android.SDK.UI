@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation.nfc
 
 import ai.amani.sdk.data.repository.nfc.NFCRepositoryImp
 import ai.amani.sdk.extentions.deviceNFCState
+import ai.amani.sdk.extentions.parcelable
 import android.content.Context
 import android.content.Intent
 import android.nfc.NfcAdapter
@@ -43,7 +44,7 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
         documentNumber: String
     ) {
 
-        val tag = intent.extras!!.getParcelable<Tag>(NfcAdapter.EXTRA_TAG);
+        val tag = intent.extras!!.parcelable<Tag>(NfcAdapter.EXTRA_TAG);
         nfcRepository.scan(
             tag!!,
             context,

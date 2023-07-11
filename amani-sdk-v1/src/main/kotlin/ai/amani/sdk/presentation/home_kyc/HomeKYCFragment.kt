@@ -7,8 +7,8 @@ import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.extentions.debugToast
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.logUploadResult
+import ai.amani.sdk.extentions.parcelable
 import ai.amani.sdk.extentions.show
-import ai.amani.sdk.extentions.showToast
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.model.KYCResult
@@ -19,6 +19,7 @@ import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -164,8 +165,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     private fun getIntent() {
         val extras = requireActivity().intent.extras
         extras?.let {
-            // TODO: Migrate it
-            val config = it.getParcelable<RegisterConfig>(AppConstant.REGISTER_CONFIG)
+            val config = it.parcelable<RegisterConfig>(AppConstant.REGISTER_CONFIG)
             viewModel.setRegisterConfigModel(
                 registerConfig = config
             )
@@ -181,9 +181,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     setCustomUI()
                 }
                 is HomeKYCState.Error -> {
-                    showToast("Login failed due to httpsErrorCode: ${it.httpsErrorCode}")
                     binding.progressLoaderCentered.hide()
-                    requireActivity().finish()
                 }
             }
         }
@@ -218,6 +216,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     KYCResult(
                         httpErrorCode = it.httpErroCode
                     ))
+                    requireActivity().setResult(Activity.RESULT_OK, returnIntent)
                     requireActivity().finish()
                     Timber.d("KYC activity is finished")
                 }
@@ -231,6 +230,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         KYCResult(
                             generalException = it.exception
                         ))
+                    requireActivity().setResult(Activity.RESULT_OK, returnIntent)
                     requireActivity().finish()
                     Timber.d("KYC activity is finished")
                 }

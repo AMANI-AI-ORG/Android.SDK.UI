@@ -117,10 +117,12 @@ open class HomeKYCViewModel constructor(
                         Timber.e("Login is failed, HttpsErrorCode: $error")
 
                         _uiState.value = HomeKYCState.Error(error)
+                        _logicEvent.postValue(HomeKYCLogicEvent.Finish.LoginFailed(error))
                     } ?: run {
                         Timber.e("Login is failed, HttpsErrorCode: null")
 
                         _uiState.value = HomeKYCState.Error()
+                        _logicEvent.postValue(HomeKYCLogicEvent.Finish.LoginFailed(0))
                     }
                 }
             }

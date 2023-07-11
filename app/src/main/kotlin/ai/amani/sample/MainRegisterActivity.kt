@@ -27,7 +27,6 @@ class MainRegisterActivity : AppCompatActivity() {
 
 
     private val resultLauncher = this.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        Toast.makeText(this, "Activity result", Toast.LENGTH_LONG).show()
 
         if (result.resultCode == Activity.RESULT_OK) {
             // There are no request codes

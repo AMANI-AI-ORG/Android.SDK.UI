@@ -41,10 +41,6 @@ fun Fragment.removeChildFragment(fragment: Fragment?) {
         .commit()
 }
 
-fun Fragment.showToast(message: String) {
-    Toast.makeText(this.requireContext(),message, Toast.LENGTH_LONG).show()
-}
-
 fun Fragment.logUploadResult(
     it: UploadResultModel,
     docType: String
