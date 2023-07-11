@@ -26,6 +26,7 @@
 -dontwarn datamanager.**
 -keep class networkmanager.** {*;}
 -dontwarn networkmanager.**
+-keep class ai.amani.jniLibrary.CroppedResult.**{*;}
 
 -keep class org.jmrtd.** {*;}
 -keep class net.sf.scuba.** {*;}

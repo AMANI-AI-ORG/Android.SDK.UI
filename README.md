@@ -107,15 +107,15 @@ AmaniSDKUI.goToKycActivity(
    * If you are using ProGuard in your application, you just need to add this line into your ProGuard Rules!
    
    ```java
--keep class com.amani_ml** {*;}
--dontwarn com.amani.ml**
+-keep class ai.** {*;}
+-dontwarn ai.**
 -keep class datamanager.** {*;}
 -dontwarn datamanager.**
 -keep class networkmanager.** {*;}
 -dontwarn networkmanager.**
--keep class com.amani_ai.jniLibrary.CroppedResult { *; }
+-keep class ai.amani.jniLibrary.CroppedResult.**{*;}
 
--keep class org.jmrtd.** { *; }
+-keep class org.jmrtd.** {*;}
 -keep class net.sf.scuba.** {*;}
 -keep class org.bouncycastle.** {*;}
 -keep class org.spongycastle.** {*;}
