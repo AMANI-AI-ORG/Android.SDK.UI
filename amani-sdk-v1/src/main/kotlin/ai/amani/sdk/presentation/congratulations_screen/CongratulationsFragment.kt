@@ -6,6 +6,7 @@ import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.ProfileStatus
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -73,6 +74,7 @@ class CongratulationsFragment : Fragment() {
                 profileStatus = ProfileStatus.APPROVED
             )
         )
+        requireActivity().setResult(Activity.RESULT_OK, returnIntent)
         requireActivity().finish()
     }
 }

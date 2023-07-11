@@ -79,7 +79,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.0.0beta05'
+                version = '1.0.0beta06'
             }
         }
     }
