@@ -66,9 +66,9 @@ class MainRegisterActivity : AppCompatActivity() {
                 authToken = TestCredentials.TOKEN,
                 language = "tr",
                 geoLocation = true,
-                birthDate = "234234",
-                expireDate = "34234",
-                documentNumber = "234234",
+                birthDate = inputBirthDateLabel.text.toString(),
+                expireDate = inputExpiryDateLabel.text.toString(),
+                documentNumber = inputDocumentNumberLabel.text.toString(),
                 userEmail = "",
                 userPhoneNumber = ""
             )
