@@ -14,6 +14,11 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
+import androidx.constraintlayout.widget.Constraints.LayoutParams
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -79,39 +84,51 @@ class NFCScanFragment : Fragment() {
 
     private fun setCustomUI() {
         val nfcTitle =
-            if (args.dataModel.configModel.version!!.nfcTitle != null) args.dataModel.configModel.version!!.nfcTitle else resources.getString(
+            if (args.dataModel.configModel.version!!.nfcTitle != null)
+                args.dataModel.configModel.version!!.nfcTitle else resources.getString(
                 R.string.nfc_title
             )
         val nfcDescription1 =
-            if (args.dataModel.configModel.version!!.nfcDescription1 != null) args.dataModel.configModel.version!!.nfcDescription1 else resources.getString(
+            if (args.dataModel.configModel.version!!.nfcDescription1 != null)
+                args.dataModel.configModel.version!!.nfcDescription1 else resources.getString(
                 R.string.nfc_hold_your_card
             )
         val nfcDescription2 =
-            if (args.dataModel.configModel.version!!.nfcDescription2 != null) args.dataModel.configModel.version!!.nfcDescription2 else resources.getString(
+            if (args.dataModel.configModel.version!!.nfcDescription2 != null)
+                args.dataModel.configModel.version!!.nfcDescription2 else resources.getString(
                 R.string.nfc_keep_still
             )
         val nfcDescription3 =
-            if (args.dataModel.configModel.version!!.nfcDescription3 != null) args.dataModel.configModel.version!!.nfcDescription3 else resources.getString(
+            if (args.dataModel.configModel.version!!.nfcDescription3 != null)
+                args.dataModel.configModel.version!!.nfcDescription3 else resources.getString(
                 R.string.nfc_reading_completed
             )
+        val nfcPleaseHold =
+            if (args.dataModel.configModel.version!!.nfcPleaseHold != null)
+                args.dataModel.configModel.version!!.nfcPleaseHold else resources.getString(
+                R.string.nfc_hold_your_card
+            )
         val appFontColor =
-            if (args.dataModel.configModel.generalConfigs!!.appFontColor != null) args.dataModel.configModel.generalConfigs!!.appFontColor else ColorConstant.COLOR_BLACK
+            if (args.dataModel.configModel.generalConfigs!!.appFontColor != null)
+                args.dataModel.configModel.generalConfigs!!.appFontColor
+            else ColorConstant.COLOR_BLACK
         val appBackGroundColor: Int =
-            if (args.dataModel.configModel.generalConfigs!!.appBackground != null) Color.parseColor(
-                args.dataModel.configModel.generalConfigs!!.appBackground
-            ) else Color.BLACK
+            if (args.dataModel.configModel.generalConfigs!!.appBackground != null)
+                Color.parseColor(args.dataModel.configModel.generalConfigs!!.appBackground)
+            else Color.BLACK
         val nfcAnimationColor =
-            if (args.dataModel.configModel.version!!.nfcAnimationColor != null) args.dataModel.configModel.version!!.nfcAnimationColor else appFontColor
+            if (args.dataModel.configModel.version!!.nfcAnimationColor != null)
+                args.dataModel.configModel.version!!.nfcAnimationColor else appFontColor
+
+        binding.textNfc.setTextProperty(nfcPleaseHold, appFontColor)
+        binding.nfcDesc1.setTextProperty(nfcDescription1, appFontColor)
+        binding.nfcDesc2.setTextProperty(nfcDescription2, appFontColor)
+        binding.nfcDesc3.setTextProperty(nfcDescription3, appFontColor)
 
         binding.parentLayout.setBackgroundColor(appBackGroundColor)
         binding.animationView.setBackgroundColor(appBackGroundColor)
         binding.animationDone.setBackgroundColor(appBackGroundColor)
-        binding.textNfc.setBackgroundColor(appBackGroundColor)
-        binding.holdIdTv.setTextProperty(nfcDescription1, appFontColor)
-        binding.keepStillTv.setTextProperty(nfcDescription2, appFontColor)
-        binding.readingCompleteTv.setTextProperty(nfcDescription3, appFontColor)
 
-        binding.textNfc.setTextColor(Color.parseColor(appFontColor))
         try {
             binding.animationView.setColor(nfcAnimationColor)
 
@@ -130,7 +147,12 @@ class NFCScanFragment : Fragment() {
     private fun observeLiveEvent() {
         viewModel.get.observe(viewLifecycleOwner) {
             if (it != null) {
-                binding.animationView.show()
+                CoroutineScope(Dispatchers.Main).launch {
+                    binding.animationView.makeItCenter()
+                }
+
+                binding.animationView.playAnimation()
+                showTexts(false)
                 viewModel.scanNFC(
                     it,
                     requireContext(),
@@ -154,8 +176,8 @@ class NFCScanFragment : Fragment() {
                         delay(1000)
 
                         viewModel.clearNFCState()
-                        findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
-                            HomeKYCResultModel(
+                        findNavController().getBackStackEntry(R.id.homeKYCFragment)
+                            .savedStateHandle[AmaniDocumentTypes.type] = HomeKYCResultModel(
                                 AmaniDocumentTypes.NFC,
                                 args.dataModel.configModel.version!!.type,
                                 SelfieType.Unknown,
@@ -172,18 +194,34 @@ class NFCScanFragment : Fragment() {
                 is NFCScanState.Failure ->{
                     //Show message to user to re-scan NFC
                     Timber.i("NFC scanning failed")
-                    binding.animationView.hide()
+                    CoroutineScope(Dispatchers.Main).launch {
+                        binding.animationView.putTopOfIt(binding.linearLayout)
+                        showTexts(true)
+                        binding.animationView.pauseAnimation()
+                    }
                 }
 
                 is NFCScanState.OutOfMaxAttempt ->{
                     //Navigate HomeKYCFragment
                     Timber.i("NFC scanning failed, OutOfMaxAttempt")
                     CoroutineScope(Dispatchers.Main).launch {
-                        binding.readingCompleteTv.text = args.dataModel.configModel.version!!.nfcFailedScreenText1
-                        binding.readNfcTv.text = args.dataModel.configModel.version!!.nfcFailedScreenText2
-                        binding.holdIdTv.text = args.dataModel.configModel.version!!.nfcFailedScreenText3
-
                         viewModel.clearNFCState()
+                        binding.animationView.hide()
+
+                        binding.linearLayout.makeItCenter()
+
+                        binding.textNfc.text =
+                            args.dataModel.configModel.version!!.nfcFailedScreenText1
+                        binding.textNfc.show()
+                        delay(1000)
+                        binding.nfcDesc1.text =
+                            args.dataModel.configModel.version!!.nfcFailedScreenText2
+                        binding.nfcDesc1.show()
+                        delay(1000)
+                        binding.nfcDesc2.text =
+                            args.dataModel.configModel.version!!.nfcFailedScreenText3
+                        binding.nfcDesc2.show()
+                        delay(1000)
 
                         if (args.dataModel.nfcOnly) {
                             findNavController().clearBackStack(R.id.homeKYCFragment)
@@ -191,9 +229,12 @@ class NFCScanFragment : Fragment() {
                             return@launch
                         }
 
-                        findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
+                        findNavController().getBackStackEntry(R.id.homeKYCFragment)
+                            .savedStateHandle[AmaniDocumentTypes.type] =
                             HomeKYCResultModel(
-                                AmaniDocumentTypes.IDENTIFICATION, // Due to NFC failed, we are sending type as ID to only upload ID, otherwise it will crash while trying
+                                AmaniDocumentTypes.IDENTIFICATION,
+                                // Due to NFC failed, we are sending type as ID to only upload ID,
+                                // otherwise it will crash while trying
                                 // to upload ID and NFC together although NFC could not scanned
                                 args.dataModel.configModel.version!!.type
                             )
@@ -211,6 +252,21 @@ class NFCScanFragment : Fragment() {
         }
     }
 
+    private fun View.makeItCenter() {
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(binding.parentLayout)
+        constraintSet.centerHorizontally(this.id, ConstraintSet.PARENT_ID)
+        constraintSet.centerVertically(this.id, ConstraintSet.PARENT_ID)
+        constraintSet.applyTo(binding.parentLayout)
+    }
+
+    private fun View.putTopOfIt(view: View){
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(binding.parentLayout)
+        constraintSet.clear(view.id)
+        constraintSet.connect(this.id, ConstraintSet.BOTTOM, view.id, ConstraintSet.TOP)
+        constraintSet.applyTo(binding.parentLayout)
+    }
     override fun onPause() {
         super.onPause()
         viewModel.setNfcEnable(false)
@@ -218,5 +274,12 @@ class NFCScanFragment : Fragment() {
 
     private fun startNfcSettingsActivity() {
         startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+    }
+
+    private fun showTexts(show: Boolean) {
+        binding.textNfc.show(show)
+        binding.nfcDesc1.show(show)
+        binding.nfcDesc2.show(show)
+        binding.nfcDesc3.show(show)
     }
 }

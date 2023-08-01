@@ -55,7 +55,7 @@
                 android:id="@+id/confirm_button"
                 buttonConfirm="@{dataModel.generalConfigs}"
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/dp_40"
+                android:layout_height="@dimen/dp_50"
                 android:layout_marginHorizontal="@dimen/dp_20"
                 android:layout_marginBottom="@dimen/dp_20"
                 android:text="@string/confirm_text"
@@ -63,6 +63,20 @@
                 app:layout_constraintEnd_toEndOf="@+id/selfie_animation_first"
                 app:layout_constraintStart_toStartOf="@+id/selfie_animation_first" />
         </LinearLayout>
+
+        <ai.amani.sdk.presentation.common.CustomTextView
+            android:id="@+id/textDescription"
+            setText="@{dataModel.version.informationScreenDesc1}"
+            setTextColor="@{dataModel.generalConfigs.appFontColor}"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="@dimen/dp_20"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toTopOf="@+id/button_linear"
+            app:layout_constraintEnd_toEndOf="@+id/child_of_selfie"
+            app:layout_constraintStart_toStartOf="@+id/child_of_selfie" />
 
 
         <FrameLayout
