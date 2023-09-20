@@ -32,20 +32,14 @@ class LoginRepoImp : LoginRepository {
                 tcNumber,
                 token,
                 location,
-                lang,
-                object : ILoginCallBack {
-                    override fun cb(
-                        isSucess: Boolean,
-                        errorCode: Int?) {
-                        loginResultModel = LoginResultModelMapper.map(
-                            isSucess,
-                            errorCode
-                        )
+                lang
+            ) { isSucess ->
+                loginResultModel = LoginResultModelMapper.map(
+                    isSucess
+                )
 
-                        onCompleted.invoke(loginResultModel)
-                    }
-                }
-            )
+                onCompleted.invoke(loginResultModel)
+            }
         }.onFailure {
             loginResultModel.throwable = it
             onCompleted.invoke(loginResultModel)
@@ -74,20 +68,14 @@ class LoginRepoImp : LoginRepository {
                 email,
                 password,
                 location,
-                lang,
-                object : ILoginCallBack {
-                    override fun cb(
-                        isSucess: Boolean,
-                        errorCode: Int?) {
-                        loginResultModel = LoginResultModelMapper.map(
-                            isSucess,
-                            errorCode
-                        )
+                lang
+            ) { isSucess ->
+                loginResultModel = LoginResultModelMapper.map(
+                    isSucess
+                )
 
-                        onCompleted.invoke(loginResultModel)
-                    }
-                }
-            )
+                onCompleted.invoke(loginResultModel)
+            }
         }.onFailure {
             loginResultModel.throwable = it
             onCompleted.invoke(loginResultModel)

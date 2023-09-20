@@ -6,7 +6,6 @@ import ai.amani.sdk.data.mapper.StepsResultModelMapper
 import ai.amani.sdk.data.repository.config.ConfigRepositoryImp
 import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
 import ai.amani.sdk.data.repository.document.DocumentRepoImp
-import ai.amani.sdk.data.repository.document.DocumentRepository
 import ai.amani.sdk.data.repository.id_capture.IDCaptureRepoImp
 import ai.amani.sdk.data.repository.login.LoginRepoImp
 import ai.amani.sdk.data.repository.nfc.NFCRepositoryImp
@@ -16,12 +15,11 @@ import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.*
+import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
 import ai.amani.sdk.model.amani_events.steps_result.StepsResult
-import ai.amani.sdk.model.amani_events.upload_result.UploadResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
-import ai.amani.sdk.modules.document.FileWithType
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -38,10 +36,7 @@ import datamanager.model.config.DocumentList
 import datamanager.model.config.ResGetConfig
 import datamanager.model.config.StepConfig
 import datamanager.model.config.Version
-import datamanager.model.customer.Errors
 import timber.log.Timber
-import java.lang.Exception
-import java.lang.NullPointerException
 
 /**
  * @Author: zekiamani
@@ -476,10 +471,13 @@ open class HomeKYCViewModel constructor(
     private fun listenAmaniEvents() {
 
         Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack{
+            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
+                Timber.e("Amani SDK error type: $type Amani error: ${error?.firstNotNullOf { it?.errorCode }}")
+            }
 
             override fun profileStatus(profileStatus: ProfileStatus) {
                 Timber.d("Profile status received")
-                if (profileStatus.message!!.status.equals(STATUS_APPROVED, ignoreCase = true)){
+                if (profileStatus.status.equals(STATUS_APPROVED, ignoreCase = true)){
                     _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
                 }
             }

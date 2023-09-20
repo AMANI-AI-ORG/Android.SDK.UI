@@ -1,13 +1,11 @@
 package ai.amani.sdk.extentions
 
 import android.graphics.Color
-import android.graphics.ColorFilter
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import com.airbnb.lottie.LottieAnimationView
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.model.KeyPath
-import com.airbnb.lottie.value.SimpleLottieValueCallback
 
 /**
  * @Author: zekiamani

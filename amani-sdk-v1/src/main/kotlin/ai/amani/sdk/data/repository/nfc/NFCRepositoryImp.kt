@@ -5,6 +5,7 @@ import ai.amani.sdk.data.mapper.UploadResultModelMapper
 import ai.amani.sdk.interfaces.INfcCallBack
 import ai.amani.sdk.interfaces.IUploadCallBack
 import ai.amani.sdk.model.UploadResultModel
+import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.mrz.MRZResult
 import android.app.Activity
 import android.content.Context
@@ -30,26 +31,20 @@ class NFCRepositoryImp: NFCRepository {
 
         Amani.sharedInstance().ScanNFC().upload(
             activity,
-            type!!,
-            object: IUploadCallBack {
-                override fun cb(isSucess: Boolean, result: String?, errors: MutableList<Errors>?) {
+            type!!
+        ) { isSucess ->
+            uploadResultModel = UploadResultModelMapper.map(
+                isSucess
+            )
 
-                    uploadResultModel = UploadResultModelMapper.map(
-                        isSucess,
-                        result,
-                        errors)
-
-                    onComplete.invoke(uploadResultModel)
-
-                }
-            }
-        )
+            onComplete.invoke(uploadResultModel)
+        }
     }
 
     override fun getMRZ(
         type: String,
         onComplete: (mrz: MRZResult) -> Unit,
-        onError: (error : Errors) -> Unit
+        onError: (error : AmaniError) -> Unit
     ) {
 
         Amani.sharedInstance().IDCapture().getMRZ(

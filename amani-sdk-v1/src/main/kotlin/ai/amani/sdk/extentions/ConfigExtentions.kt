@@ -1,10 +1,7 @@
 package ai.amani.sdk.extentions
 
-import ai.amani.sdk.model.StepRuleModel
-import ai.amani.sdk.model.customer.Rule
 import datamanager.model.config.ResGetConfig
 import datamanager.model.config.StepConfig
-import java.util.*
 
 /**
  * @Author: zekiamani

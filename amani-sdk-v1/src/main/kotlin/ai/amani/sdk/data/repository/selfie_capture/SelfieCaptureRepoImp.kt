@@ -27,19 +27,14 @@ class SelfieCaptureRepoImp : SelfieCaptureRepository {
                 .Selfie()
                 .upload(
                     activity,
-                    docType,
-                    object : IUploadCallBack {
-                        override fun cb(isSuccess: Boolean, result: String?, errors: MutableList<Errors>?) {
-                            uploadResultSelfie = UploadResultModelMapper.map(
-                                isSuccess,
-                                result,
-                                errors
-                            )
+                    docType
+                ) { isSuccess ->
+                    uploadResultSelfie = UploadResultModelMapper.map(
+                        isSuccess
+                    )
 
-                            onComplete.invoke(uploadResultSelfie)
-                        }
-                    }
-                )
+                    onComplete.invoke(uploadResultSelfie)
+                }
         }.onFailure {
             uploadResultSelfie.throwable = it
             onComplete.invoke(uploadResultSelfie)
@@ -58,19 +53,14 @@ class SelfieCaptureRepoImp : SelfieCaptureRepository {
             onStart.invoke()
             Amani.sharedInstance().AutoSelfieCapture().upload(
                 activity,
-                docType!!,
-                object : IUploadCallBack {
-                    override fun cb(isSuccess: Boolean, result: String?, errors: MutableList<Errors>?) {
-                        uploadResultSelfie = UploadResultModelMapper.map(
-                            isSuccess,
-                            result,
-                            errors
-                        )
+                docType!!
+            ) { isSuccess ->
+                uploadResultSelfie = UploadResultModelMapper.map(
+                    isSuccess
+                )
 
-                        onComplete.invoke(uploadResultSelfie)
-                    }
-                }
-            )
+                onComplete.invoke(uploadResultSelfie)
+            }
         }.onFailure {
             uploadResultSelfie.throwable = it
             onComplete.invoke(uploadResultSelfie)
@@ -91,18 +81,14 @@ class SelfieCaptureRepoImp : SelfieCaptureRepository {
             Amani.sharedInstance().SelfiePoseEstimation()
                 .upload(
                     activity,
-                    docType!!,
-                    object : IUploadCallBack {
-                        override fun cb(isSuccess: Boolean, result: String?, errors: MutableList<Errors>?) {
-                            uploadResultSelfie = UploadResultModelMapper.map(
-                                isSuccess,
-                                result,
-                                errors
-                            )
+                    docType!!
+                ) { isSuccess ->
+                    uploadResultSelfie = UploadResultModelMapper.map(
+                        isSuccess
+                    )
 
-                            onComplete.invoke(uploadResultSelfie)
-                        }
-                    })
+                    onComplete.invoke(uploadResultSelfie)
+                }
         }.onFailure {
             uploadResultSelfie.throwable = it
             onComplete.invoke(uploadResultSelfie)

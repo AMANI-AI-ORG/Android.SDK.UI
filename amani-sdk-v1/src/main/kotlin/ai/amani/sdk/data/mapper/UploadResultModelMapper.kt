@@ -13,22 +13,10 @@ import java.lang.Error
 object UploadResultModelMapper {
 
     fun map(
-        isSuccess: Boolean,
-        result: String?,
-        errors: MutableList<Errors>?
+        isSuccess: Boolean
     ): UploadResultModel {
-        val idUploadResultModel = UploadResultModel()
-        return if (isSuccess) {
-            idUploadResultModel.isSuccess = true
-            idUploadResultModel.result = result
-            idUploadResultModel
-        } else {
-            if (!errors.isNullOrEmpty()) {
-                idUploadResultModel.onError = errors[0].errorCode
-                idUploadResultModel
-            } else {
-                idUploadResultModel
-            }
-        }
+        return UploadResultModel(
+            isSuccess = isSuccess
+        )
     }
 }

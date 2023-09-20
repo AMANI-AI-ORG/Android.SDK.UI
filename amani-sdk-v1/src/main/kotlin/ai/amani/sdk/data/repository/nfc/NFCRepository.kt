@@ -1,6 +1,7 @@
 package ai.amani.sdk.data.repository.nfc
 
 import ai.amani.sdk.model.UploadResultModel
+import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.mrz.MRZResult
 import androidx.fragment.app.FragmentActivity
 import datamanager.model.customer.Errors
@@ -20,6 +21,6 @@ interface NFCRepository {
     fun getMRZ(
         type: String,
         onComplete: (mrz: MRZResult) -> Unit,
-        onError: (error: Errors) -> Unit
+        onError: (error: AmaniError) -> Unit
     )
 }

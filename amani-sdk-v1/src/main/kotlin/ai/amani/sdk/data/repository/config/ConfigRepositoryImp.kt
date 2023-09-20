@@ -3,7 +3,6 @@ package ai.amani.sdk.data.repository.config
 import ai.amani.sdk.Amani
 import ai.amani.sdk.modules.config.app.AppConfigObserver
 import androidx.annotation.WorkerThread
-import datamanager.model.config.GeneralConfigs
 import datamanager.model.config.ResGetConfig
 
 /**
