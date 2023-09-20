@@ -2,7 +2,11 @@ package ai.amani.sdk.presentation.nfc
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentNfcScanBinding
-import ai.amani.sdk.extentions.*
+import ai.amani.sdk.extentions.alertDialog
+import ai.amani.sdk.extentions.hide
+import ai.amani.sdk.extentions.setColor
+import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -14,11 +18,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.constraintlayout.widget.Constraints.LayoutParams
-import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController

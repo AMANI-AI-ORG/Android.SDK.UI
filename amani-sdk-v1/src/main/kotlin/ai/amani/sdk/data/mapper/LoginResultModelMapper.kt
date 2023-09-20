@@ -9,17 +9,9 @@ import ai.amani.sdk.model.LoginResultModel
 object LoginResultModelMapper {
 
     fun map(
-        isSuccess: Boolean,
-        error: Int?) : LoginResultModel {
-        val loginResultModel = LoginResultModel()
-        return if (isSuccess) {
-            loginResultModel.isSuccess = true
-            loginResultModel
-        } else {
-            if (error != null) {
-                loginResultModel.error = error
-                loginResultModel
-            } else loginResultModel
-        }
+        isSuccess: Boolean) : LoginResultModel {
+        return LoginResultModel(
+            isSuccess = isSuccess
+        )
     }
 }

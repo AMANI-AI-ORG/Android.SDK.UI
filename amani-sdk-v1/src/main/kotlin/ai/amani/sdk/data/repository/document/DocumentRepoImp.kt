@@ -31,12 +31,10 @@ class DocumentRepoImp: DocumentRepository {
                     activity,
                     docType,
                     object : IUploadCallBack {
-                        override fun cb(isSucess: Boolean, result: String?, errors: MutableList<Errors>?) {
+                        override fun cb(isSucess: Boolean) {
                             uploadResultModel = UploadResultModelMapper.map(
-                                isSucess,
-                                result,
-                                errors)
-
+                                isSucess
+                            )
                             onComplete.invoke(uploadResultModel)
                         }
                     }
@@ -54,11 +52,9 @@ class DocumentRepoImp: DocumentRepository {
                     docType,
                     docList,
                     object : IUploadCallBack {
-                        override fun cb(isSucess: Boolean, result: String?, errors: MutableList<Errors>?) {
+                        override fun cb(isSucess: Boolean) {
                             uploadResultModel = UploadResultModelMapper.map(
-                                isSucess,
-                                result,
-                                errors)
+                                isSucess)
 
                             onComplete.invoke(uploadResultModel)
                         }

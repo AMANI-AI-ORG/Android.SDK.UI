@@ -1,7 +1,5 @@
 package ai.amani.sdk.presentation.home_kyc
 
-import androidx.annotation.StringRes
-
 /**
  * @Author: zekiamani
  * @Date: 6.09.2022

@@ -2,9 +2,7 @@ package ai.amani.sdk.extentions
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.graphics.Color
 import android.view.View
-import timber.log.Timber
 
 /**
  * @Author: zekiamani

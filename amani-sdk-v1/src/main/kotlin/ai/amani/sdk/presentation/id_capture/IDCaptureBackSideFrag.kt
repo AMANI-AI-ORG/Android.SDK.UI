@@ -2,9 +2,12 @@ package ai.amani.sdk.presentation.id_capture
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureBackBinding
-import ai.amani.amani_sdk.databinding.FragmentIdCaptureFrontBinding
 import ai.amani.sdk.Amani
-import ai.amani.sdk.extentions.*
+import ai.amani.sdk.extentions.gone
+import ai.amani.sdk.extentions.removeChildFragment
+import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
+import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.modules.document_capture.camera.BitmapUtils
 import ai.amani.sdk.presentation.MainActivity

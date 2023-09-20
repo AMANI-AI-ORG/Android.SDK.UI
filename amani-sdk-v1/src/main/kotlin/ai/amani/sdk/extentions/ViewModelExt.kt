@@ -2,9 +2,6 @@ package ai.amani.sdk.extentions
 
 import android.content.Context
 import android.nfc.NfcManager
-import androidx.core.content.ContentProviderCompat.requireContext
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 
 /**

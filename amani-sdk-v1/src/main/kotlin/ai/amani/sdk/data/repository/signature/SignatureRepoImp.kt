@@ -19,11 +19,7 @@ class SignatureRepoImp: SignatureRepository {
 
         runCatching {
             Amani.sharedInstance().Signature()
-                .upload(object : IUploadCallBack {
-                    override fun cb(isSucess: Boolean, result: String?, errors: List<Errors?>?) {
-                        onComplete.invoke(uploadSignature)
-                    }
-                })
+                .upload { onComplete.invoke(uploadSignature) }
         }.onFailure {
             uploadSignature.throwable = it
             onComplete.invoke(uploadSignature)

@@ -27,18 +27,13 @@ class IDCaptureRepoImp: IDCaptureRepository {
                 .IDCapture()
                 .upload(
                     activity,
-                    docType,
-                    object : IUploadCallBack {
-                        override fun cb(isSucess: Boolean, result: String?, errors: MutableList<Errors>?) {
-                            uploadResultModel = UploadResultModelMapper.map(
-                                isSucess,
-                                result,
-                                errors)
-
-                            onComplete.invoke(uploadResultModel)
-                        }
-                    }
-                )
+                    docType
+                ) { isSucess ->
+                    uploadResultModel = UploadResultModelMapper.map(
+                        isSucess
+                    )
+                    onComplete.invoke(uploadResultModel)
+                }
         }.onFailure {
             uploadResultModel.throwable = it
             onComplete.invoke(uploadResultModel)

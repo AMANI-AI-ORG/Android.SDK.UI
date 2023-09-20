@@ -1,8 +1,6 @@
 package ai.amani.sdk.presentation.home_kyc
 
-import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
-import java.lang.Exception
 
 /**
  * @Author: zekiamani
