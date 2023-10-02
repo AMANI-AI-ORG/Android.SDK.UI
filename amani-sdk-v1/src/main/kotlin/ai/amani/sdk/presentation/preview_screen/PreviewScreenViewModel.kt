@@ -131,8 +131,54 @@ class PreviewScreenViewModel constructor(private val nfcRepository: NFCRepositor
                         }
                     }
                     else -> {
-                        // Steps size equals 1, navigating home screen to make upload
-                        navigateTo.invoke(ScreenRoutes.HomeKYCScreen)
+                        if (version.nfc && deviceHasNFC(context)) {
+                            // NFC is active, navigate to NFC screen
+                            _uiState.value = PreviewScreenState.Loading
+                            nfcRepository.getMRZ(
+                                version.type,
+                                onComplete = {
+
+                                    if (!it.mRZBirthDate.isNullOrEmpty() &&
+                                        !it.mRZDocumentNumber.isNullOrEmpty() &&
+                                        !it.mRZExpiryDate.isNullOrEmpty()) {
+
+                                        Timber.i("MRZ fetched")
+                                        mrzModel = MRZModel(
+                                            it.mRZBirthDate!!,
+                                            it.mRZExpiryDate!!,
+                                            it.mRZDocumentNumber!!
+                                        )
+                                        _uiState.value = PreviewScreenState.Loaded
+                                        navigateTo(ScreenRoutes.NFCScanScreen)
+
+                                    } else {
+                                        currentAttempt += 1
+                                        Timber.e("MRZ could not fetch, current attempt: $currentAttempt")
+                                        if (currentAttempt >= maxAttempt) {
+                                            Timber.e("Out of max attempt")
+                                            resetCurrentAttempt()
+                                            _uiState.value = PreviewScreenState.OutOfMaxAttempt
+                                            resetCurrentAttempt()
+                                        } else{
+                                            _uiState.value = PreviewScreenState.Error(R.string.mrz_fetch_error)
+                                        }
+                                    }
+                                },
+                                onError = {
+                                    currentAttempt += 1
+                                    Timber.e("MRZ could not fetch, current attempt: $currentAttempt")
+                                    if (currentAttempt >= maxAttempt) {
+                                        Timber.e("Out of max attempt")
+                                        resetCurrentAttempt()
+                                        _uiState.value = PreviewScreenState.OutOfMaxAttempt
+                                    } else{
+                                        _uiState.value = PreviewScreenState.Error(R.string.mrz_fetch_error)
+                                    }
+                                }
+                            )
+                        }
+                        else navigateTo.invoke(ScreenRoutes.HomeKYCScreen)
+
                     }
                 }
             }
