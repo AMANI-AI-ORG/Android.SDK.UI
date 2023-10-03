@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -127,12 +128,14 @@ class SelfieCaptureFragment: Fragment() {
 
     /** Navigates the Selfie Pose Estimation Fragment*/
     private fun initSelfiePoseEstimation(
-        requestedOrderNumber: Int
+        requestedOrderNumber: Int,
+        videoRecord: Boolean?
     ) {
         val selfieFragment = Amani.sharedInstance().SelfiePoseEstimation()
             .Builder()
             .requestedPoseNumber(requestedOrderNumber)
             .ovalViewAnimationDurationMilSec(500)
+            .videoRecord(videoRecord = videoRecord)
             .observe(observable)
             .userInterfaceColors(
                 ai.amani.R.color.white,
@@ -232,7 +235,10 @@ class SelfieCaptureFragment: Fragment() {
                                 is SelfieType.PoseEstimation -> {
                                     binding.confirmButton.gone()
                                     binding.selfieAnimationSecond.slideLeft{
-                                        initSelfiePoseEstimation(args.dataModel.version!!.selfieType)
+                                        initSelfiePoseEstimation(
+                                            requestedOrderNumber = args.dataModel.version!!.selfieType,
+                                            videoRecord  = args.dataModel.version!!.videoRecord
+                                        )
                                     }
                                 }
 
