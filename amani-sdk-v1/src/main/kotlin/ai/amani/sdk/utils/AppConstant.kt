@@ -14,5 +14,6 @@ object AppConstant {
     const val ID_CAPTURE_TIME_OUT = 15
     const val SIGNATURE_NUMBER = 1
     const val REGISTER_CONFIG = "register_config"
+    const val FEATURE_CONFIG = "feature_config"
     const val KYC_RESULT = "kyc_result"
 }

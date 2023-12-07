@@ -98,6 +98,8 @@ class IDCaptureBackSideFrag : Fragment() {
             return
         }
 
+        Amani.sharedInstance().IDCapture().hologramDetection(false)
+
         idCaptureFragmentBackSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
             MainActivity.binding.fragmentContainerView, args.dataModel.version!!.type, false
@@ -110,7 +112,8 @@ class IDCaptureBackSideFrag : Fragment() {
                 //First for blocking possible memory leaks when child is still on back stack
                 //Second for ui, when back pressed from preview view child fragment is opening before
                 //the animation is end that we do not prefer
-                removeChildFragment(idCaptureFragmentBackSide)
+                //removeChildFragment(idCaptureFragmentBackSide)
+
 
                 try {
                     val file: File? =
@@ -124,7 +127,9 @@ class IDCaptureBackSideFrag : Fragment() {
                             )
                         )
 
-                    findNavController().navigate(action)
+                    requireActivity().runOnUiThread {
+                        findNavController().navigate(action)
+                    }
 
                 } catch (e: Exception) {
                     e.printStackTrace()

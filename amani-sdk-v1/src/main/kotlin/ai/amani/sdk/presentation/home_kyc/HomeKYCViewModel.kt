@@ -67,6 +67,7 @@ open class HomeKYCViewModel constructor(
     private var selectedStepNumber = 0
 
     private var profileInfoModel : ProfileInfoModel = ProfileInfoModel()
+    private var featureConfig : FeatureConfig = FeatureConfig()
 
 
     fun getAppConfig(): ResGetConfig? = CachingHomeKYC.appConfig
@@ -350,7 +351,7 @@ open class HomeKYCViewModel constructor(
                         route.invoke(ScreenRoutes.SelfieCaptureScreen)
                     }
 
-                    AmaniDocumentTypes.PASSPORT-> {
+                    AmaniDocumentTypes.PASSPORT, AmaniDocumentTypes.IDENTIFICATION-> {
                         route.invoke(ScreenRoutes.IDFrontSideScreen)
                     }
 
@@ -448,13 +449,21 @@ open class HomeKYCViewModel constructor(
 
     fun getProfileInfoModel() :ProfileInfoModel = profileInfoModel
 
-    fun setRegisterConfigModel(
-        registerConfig: RegisterConfig?
+    fun featureConfigModel(): FeatureConfig = featureConfig
+
+    fun setConfigModels(
+        registerConfig: RegisterConfig?,
+        featureConfig: FeatureConfig?
     ){
         if (registerConfig == null) {
             _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(NullPointerException()))
             return
         }
+
+        featureConfig?.let {
+            this.featureConfig = it
+        }
+
         if (!registerConfig.birthDate.isNullOrEmpty() &&
                 !registerConfig.expireDate.isNullOrEmpty() &&
                 !registerConfig.documentNumber.isNullOrEmpty()) {

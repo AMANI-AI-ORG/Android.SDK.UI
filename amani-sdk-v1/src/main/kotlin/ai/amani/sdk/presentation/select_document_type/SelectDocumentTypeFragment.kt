@@ -58,8 +58,9 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
                     val action =
                         SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToIDCaptureFrontSideFrag(
                             ConfigModel(
-                                version,
-                                args.dataModel.generalConfigs!!.generalConfigs
+                                version = version,
+                                generalConfigs =  args.dataModel.generalConfigs!!.generalConfigs,
+                                featureConfig = args.dataModel.featureConfig
                             )
                         )
                     findNavController().navigate(action)

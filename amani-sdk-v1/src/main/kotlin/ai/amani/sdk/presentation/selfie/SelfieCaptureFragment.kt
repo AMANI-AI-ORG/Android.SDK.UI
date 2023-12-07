@@ -237,7 +237,7 @@ class SelfieCaptureFragment: Fragment() {
                                     binding.selfieAnimationSecond.slideLeft{
                                         initSelfiePoseEstimation(
                                             requestedOrderNumber = args.dataModel.version!!.selfieType,
-                                            videoRecord  = args.dataModel.version!!.videoRecord
+                                            videoRecord  = args.dataModel.featureConfig.selfieCaptureVideoRecord
                                         )
                                     }
                                 }

@@ -10,6 +10,7 @@ import ai.amani.sdk.extentions.logUploadResult
 import ai.amani.sdk.extentions.parcelable
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.ConfigModel
+import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.model.NFCScanScreenModel
@@ -166,8 +167,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         val extras = requireActivity().intent.extras
         extras?.let {
             val config = it.parcelable<RegisterConfig>(AppConstant.REGISTER_CONFIG)
-            viewModel.setRegisterConfigModel(
-                registerConfig = config
+            val featureConfig = it.parcelable<FeatureConfig>(AppConstant.FEATURE_CONFIG)
+            viewModel.setConfigModels(
+                registerConfig = config,
+                featureConfig = featureConfig
             )
         }
     }
@@ -286,8 +289,9 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     val action =
                         HomeKYCFragmentDirections.actionHomeKYCFragmentToSelfieCaptureFragment(
                             ConfigModel(
-                                viewModel.getVersion(),
-                                viewModel.getAppConfig()!!.generalConfigs
+                                version = viewModel.getVersion(),
+                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs,
+                                featureConfig = viewModel.featureConfigModel()
                             )
                         )
 
@@ -295,15 +299,26 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 }
 
                 ScreenRoutes.IDFrontSideScreen -> {
-                    findNavController().navigate(R.id.action_homeKYCFragment_to_IDCaptureFrontSideFrag)
+
+                    val action =
+                        HomeKYCFragmentDirections.actionHomeKYCFragmentToIDCaptureFrontSideFrag(
+                            ConfigModel(
+                                version = viewModel.getVersion(),
+                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs,
+                                featureConfig = viewModel.featureConfigModel()
+                            )
+                        )
+                    findNavController().navigate(action)
+
                 }
 
                 ScreenRoutes.SelectDocumentTypeScreen -> {
                     val action =
                         HomeKYCFragmentDirections.actionHomeKYCFragmentToSelectDocumentTypeFragment(
                             SelectDocumentTypeModel(
-                                viewModel.getVersionList()!!,
-                                viewModel.getAppConfig()
+                                versionList =  viewModel.getVersionList()!!,
+                                generalConfigs =  viewModel.getAppConfig(),
+                                featureConfig = viewModel.featureConfigModel()
                             )
                         )
                     findNavController().navigate(action)
