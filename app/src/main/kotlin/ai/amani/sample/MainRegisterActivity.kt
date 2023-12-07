@@ -2,7 +2,6 @@ package ai.amani.sample
 
 import AmaniSDKUI
 import ai.amani.base.utility.AmaniVersion
-import ai.amani.sampleamaniui2.R
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
@@ -51,6 +50,10 @@ class MainRegisterActivity : AppCompatActivity() {
         )
 
         registerButton.setOnClickListener {
+
+            AmaniSDKUI.setHologramDetection(false)
+            AmaniSDKUI.setIdCaptureVideoRecord(false)
+            AmaniSDKUI.setSelfieCaptureVideoRecord(false)
 
             hideKeyboard()
 

@@ -65,7 +65,8 @@ allprojects {
             sharedSecret = null
         )
 ```
-* Registering for result of the KYC process.
+
+* Register for result of the KYC process.
 
 ```kotlin 
   private val resultLauncher = this.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -80,6 +81,19 @@ allprojects {
         }
     }
 ```    
+* Configurate the KYC features
+
+```kotlin 
+    //Enable/disable ID Card Hologram detection check for extra security
+    AmaniSDKUI.setHologramDetection(true)
+
+    //Enable/disable ID Card Scanning session video record 
+    AmaniSDKUI.setIdCaptureVideoRecord(false)
+
+    //Enable/disable Selfie Capture session video record 
+    AmaniSDKUI.setSelfieCaptureVideoRecord(false)
+```    
+
 
  * To Proceed for KYC Verification : 
  > **Warning**

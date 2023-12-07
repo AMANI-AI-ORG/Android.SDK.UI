@@ -1,6 +1,7 @@
 import ai.amani.base.utility.AmaniVersion
 import ai.amani.sdk.Amani
 import ai.amani.sdk.UploadSource
+import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.AppConstant
@@ -10,6 +11,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 
 object AmaniSDKUI {
+
+    private var featureConfig = FeatureConfig()
 
     fun init(
         activity: Activity,
@@ -56,7 +59,26 @@ object AmaniSDKUI {
         resultLauncher.launch(
             Intent(activity, MainActivity::class.java).apply {
                 this.putExtra(AppConstant.REGISTER_CONFIG, config)
+                this.putExtra(AppConstant.FEATURE_CONFIG, featureConfig)
             }
         )
+    }
+
+    fun setHologramDetection(hologramDetection: Boolean?) {
+        hologramDetection?.let {
+            featureConfig.idCaptureHologramDetection = it
+        }
+    }
+
+    fun setSelfieCaptureVideoRecord(selfieVideoRecord: Boolean?) {
+        selfieVideoRecord?.let {
+            featureConfig.selfieCaptureVideoRecord = it
+        }
+    }
+
+    fun setIdCaptureVideoRecord(idCaptureVideoRecord: Boolean?) {
+        idCaptureVideoRecord?.let {
+            featureConfig.idCaptureVideoRecord = it
+        }
     }
 }

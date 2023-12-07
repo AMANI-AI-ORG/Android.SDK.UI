@@ -9,7 +9,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "ai.amani.sampleamaniui2"
+        applicationId "ai.amani.sample"
         minSdk 21
         targetSdk 33
         versionCode 1
