@@ -83,7 +83,10 @@ allprojects {
 ```    
 * Configurate the KYC features
 
-```kotlin 
+> [!WARNING]
+> All the following methods/properties must be called before calling the goToKYCActivity method.
+
+```kotlin
     //Enable/disable ID Card Hologram detection check for extra security
     AmaniSDKUI.setHologramDetection(true)
 
