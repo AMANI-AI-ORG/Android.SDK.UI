@@ -80,7 +80,7 @@ class PhysicalContractFragment: Fragment() {
                         if (isSuccess) {
                             findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
                                 HomeKYCResultModel(
-                                    docID = args.value.dataModel.version!!.documentId,
+                                    docID = args.value.dataModel.version!!.documentId!!,
                                     docType = args.value.dataModel.version!!.type,
                                     )
 
@@ -142,7 +142,7 @@ class PhysicalContractFragment: Fragment() {
 
                     findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
                         HomeKYCResultModel(
-                            docID = args.value.dataModel.version!!.documentId,
+                            docID = args.value.dataModel.version!!.documentId!!,
                             docType = args.value.dataModel.version!!.type,
                             genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri)
                         )

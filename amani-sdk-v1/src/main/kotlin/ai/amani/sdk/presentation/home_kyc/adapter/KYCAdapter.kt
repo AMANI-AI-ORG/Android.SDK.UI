@@ -5,11 +5,13 @@ import ai.amani.amani_sdk.databinding.ItemKycBinding
 import ai.amani.base.util.SessionManager
 import ai.amani.base.utility.AppConstants
 import ai.amani.sdk.extentions.getStepConfig
+import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter.MyViewHolder
 import ai.amani.sdk.utils.AppConstant
+import ai.amani.sdk.utils.AppConstant.STEPS_BEFORE_KYC_FLOW
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -21,7 +23,9 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.RecyclerView
 import datamanager.model.config.ResGetConfig
+import datamanager.model.config.StepConfig
 import timber.log.Timber
+import java.lang.IndexOutOfBoundsException
 
 
 class KYCAdapter(
@@ -37,6 +41,7 @@ class KYCAdapter(
     private val mContext: Context
     private var flags = 0
 
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         if (layoutInflater == null) {
             layoutInflater = LayoutInflater.from(parent.context)
@@ -50,10 +55,17 @@ class KYCAdapter(
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
 
         val stepConfig = appConfig!!.getStepConfig(mDocumentList[position].sortOrder!!)
-        val loaderColor = if (appConfig!!.generalConfigs.loaderColor != null)
-            appConfig!!.generalConfigs.loaderColor else AppConstants.COLOR_BLACK
-        val buttonRadius = if (appConfig!!.generalConfigs.buttonRadiusAndroid != null)
-            appConfig!!.generalConfigs.buttonRadiusAndroid else 20
+
+        // If identifier is instance of invisible identifiers, do not show it
+        if (!isRuleVisible(stepConfig)) {
+            deactivateButton(holder)
+            return
+        }
+
+        val loaderColor = if (appConfig!!.generalConfigs?.loaderColor != null)
+            appConfig!!.generalConfigs?.loaderColor else AppConstants.COLOR_BLACK
+        val buttonRadius = if (appConfig!!.generalConfigs?.buttonRadiusAndroid != null)
+            appConfig!!.generalConfigs?.buttonRadiusAndroid else 20
 
         holder.mBinding.progressBar
             .indeterminateDrawable
@@ -74,17 +86,17 @@ class KYCAdapter(
                 holder.mBinding.subTextOfButton.hide()
                 holder.mBinding.linearBg.setBackgroundDrawable(
                     ResourcesCompat.getDrawable(mContext.resources, R.drawable.custom_btn, null),
-                    stepConfig.buttonColor.getApproved(),
+                    stepConfig.buttonColor?.approved,
                     4,
-                    stepConfig.buttonColor.getApproved(),
+                    stepConfig.buttonColor?.approved,
                     0f,
                     null,
                     true,
-                    buttonRadius
+                    buttonRadius!!
                 )
                 holder.mBinding.textOfButton.setTextProperty(
-                    stepConfig.buttonText.getApproved(),
-                    stepConfig.getButtonTextColor().getApproved()
+                    stepConfig.buttonText?.approved,
+                    stepConfig.buttonTextColor?.approved
                 )
             }
             AppConstant.STATUS_AUTOMATICALLY_REJECTED ->                 // If loader is visible
@@ -94,12 +106,12 @@ class KYCAdapter(
                             mContext.resources,
                             R.drawable.custom_btn,
                             null
-                        ), stepConfig.buttonColor.getProcessing(),
-                        4, stepConfig.buttonColor.getProcessing(), 0f, null, true, buttonRadius
+                        ), stepConfig.buttonColor?.processing,
+                        4, stepConfig.buttonColor?.processing, 0f, null, true, buttonRadius!!
                     )
                     holder.mBinding.textOfButton.setTextProperty(
-                        stepConfig.buttonText.getProcessing(),
-                        stepConfig.getButtonTextColor().getProcessing()
+                        stepConfig.buttonText?.processing,
+                        stepConfig.buttonTextColor?.processing
                     )
                 } else {
                     holder.mBinding.linearBg.setBackgroundDrawable(
@@ -108,27 +120,27 @@ class KYCAdapter(
                             R.drawable.custom_btn,
                             null
                         ),
-                        stepConfig.buttonColor.getAutomaticallyRejected(),
+                        stepConfig.buttonColor?.automaticallyRejected,
                         4,
-                        stepConfig.buttonColor.getAutomaticallyRejected(),
+                        stepConfig.buttonColor?.automaticallyRejected,
                         0f,
                         null,
                         true,
-                        buttonRadius
+                        buttonRadius!!
                     )
                     holder.mBinding.textOfButton.setTextProperty(
-                        stepConfig.buttonText.getAutomaticallyRejected(),
-                        stepConfig.getButtonTextColor().getAutomaticallyRejected()
+                        stepConfig.buttonText?.automaticallyRejected,
+                        stepConfig.buttonTextColor?.automaticallyRejected
                     )
 
                     // Sub Title UI: If any error exist, set sub title
                     if (mDocumentList[position].errors != null) {
                         holder.mBinding.subTextOfButton.show()
                         Timber.e("Current document upload response contains errors")
-                        if (!mDocumentList[position].errors!!.isEmpty()) {
+                        if (mDocumentList[position].errors!!.isNotEmpty()) {
                             holder.mBinding.subTextOfButton.setTextProperty(
                                 mDocumentList[position].errors!![0]!!.errorMessage.toString(),
-                                stepConfig.getButtonTextColor().getAutomaticallyRejected()
+                                stepConfig.buttonTextColor?.automaticallyRejected
                             )
                             holder.mBinding.subTextOfButton.setCompoundDrawable(
                                 R.drawable.custom_btn,
@@ -155,12 +167,12 @@ class KYCAdapter(
                             mContext.resources,
                             R.drawable.custom_btn,
                             null
-                        ), stepConfig.buttonColor.getProcessing(),
-                        4, stepConfig.buttonColor.getProcessing(), 0f, null, true, buttonRadius
+                        ), stepConfig.buttonColor?.processing,
+                        4, stepConfig.buttonColor?.processing, 0f, null, true, buttonRadius!!
                     )
                     holder.mBinding.textOfButton.setTextProperty(
-                        stepConfig.buttonText.getProcessing(),
-                        stepConfig.getButtonTextColor().getProcessing()
+                        stepConfig.buttonText?.processing,
+                        stepConfig.buttonTextColor?.processing
                     )
                 } else {
                     holder.mBinding.linearBg.setBackgroundDrawable(
@@ -168,12 +180,12 @@ class KYCAdapter(
                             mContext.resources,
                             R.drawable.custom_btn,
                             null
-                        ), stepConfig.buttonColor.getNotUploaded(),
-                        4, stepConfig.buttonColor.getNotUploaded(), 0f, null, true, buttonRadius
+                        ), stepConfig.buttonColor?.notUploaded,
+                        4, stepConfig.buttonColor?.notUploaded, 0f, null, true, buttonRadius!!
                     )
                     holder.mBinding.textOfButton.setTextProperty(
-                        stepConfig.buttonText.getNotUploaded(),
-                        stepConfig.getButtonTextColor().getNotUploaded()
+                        stepConfig.buttonText?.notUploaded,
+                        stepConfig.buttonTextColor?.notUploaded
                     )
                 }
             }
@@ -186,12 +198,12 @@ class KYCAdapter(
                             mContext.resources,
                             R.drawable.custom_btn,
                             null
-                        ), stepConfig.buttonColor.getProcessing(),
-                        4, stepConfig.buttonColor.getProcessing(), 0f, null, true, buttonRadius
+                        ), stepConfig.buttonColor?.processing,
+                        4, stepConfig.buttonColor?.processing, 0f, null, true, buttonRadius!!
                     )
                     holder.mBinding.textOfButton.setTextProperty(
-                        stepConfig.buttonText.getProcessing(),
-                        stepConfig.getButtonTextColor().getProcessing()
+                        stepConfig.buttonText?.processing,
+                        stepConfig.buttonTextColor?.processing
                     )
                 } else {
                     // If status is pending review and loader is not visible
@@ -200,12 +212,12 @@ class KYCAdapter(
                             mContext.resources,
                             R.drawable.custom_btn,
                             null
-                        ), stepConfig.buttonColor.getPendingReview(),
-                        4, stepConfig.buttonColor.getPendingReview(), 0f, null, true, buttonRadius
+                        ), stepConfig.buttonColor?.pendingReview,
+                        4, stepConfig.buttonColor?.pendingReview, 0f, null, true, buttonRadius!!
                     )
                     holder.mBinding.textOfButton.setTextProperty(
-                        stepConfig.buttonText.getPendingReview(),
-                        stepConfig.getButtonTextColor().getPendingReview()
+                        stepConfig.buttonText?.pendingReview,
+                        stepConfig.buttonTextColor?.pendingReview
                     )
 
                     // Sub Title UI: If any error exist, set sub title
@@ -214,7 +226,7 @@ class KYCAdapter(
                             holder.mBinding.subTextOfButton.show()
                             holder.mBinding.subTextOfButton.setTextProperty(
                                 mDocumentList[position].errors!![0]!!.errorMessage.toString(),
-                                stepConfig.getButtonTextColor().getAutomaticallyRejected()
+                                stepConfig.buttonTextColor?.automaticallyRejected
                             )
                             holder.mBinding.subTextOfButton.setCompoundDrawable(
                                 R.drawable.custom_btn,
@@ -241,50 +253,50 @@ class KYCAdapter(
                         mContext.resources,
                         R.drawable.custom_btn,
                         null
-                    ), stepConfig.buttonColor.getProcessing(),
-                    4, stepConfig.buttonColor.getProcessing(), 0f, null, true, buttonRadius
+                    ), stepConfig.buttonColor?.processing,
+                    4, stepConfig.buttonColor?.processing, 0f, null, true, buttonRadius!!
                 )
                 holder.mBinding.textOfButton.setTextProperty(
-                    stepConfig.buttonText.getProcessing(),
-                    stepConfig.getButtonTextColor().getProcessing()
+                    stepConfig.buttonText?.processing,
+                    stepConfig.buttonTextColor?.processing
                 )
             }
             AppConstant.STATUS_REJECTED -> if (mDocumentList[position].isShowLoader) {
                 holder.mBinding.linearBg.setBackgroundDrawable(
                     ResourcesCompat.getDrawable(mContext.resources, R.drawable.custom_btn, null),
-                    stepConfig.buttonColor.getProcessing(),
+                    stepConfig.buttonColor?.processing,
                     4,
-                    stepConfig.buttonColor.getProcessing(),
+                    stepConfig.buttonColor?.processing,
                     0f,
                     null,
                     true,
-                    buttonRadius
+                    buttonRadius!!
                 )
                 holder.mBinding.textOfButton.setTextProperty(
-                    stepConfig.buttonText.getProcessing(),
-                    stepConfig.getButtonTextColor().getProcessing()
+                    stepConfig.buttonText?.processing,
+                    stepConfig.buttonTextColor?.processing
                 )
             } else {
                 holder.mBinding.linearBg.setBackgroundDrawable(
                     ResourcesCompat.getDrawable(mContext.resources, R.drawable.custom_btn, null),
-                    stepConfig.buttonColor.getRejected(),
+                    stepConfig.buttonColor?.rejected,
                     4,
-                    stepConfig.buttonColor.getRejected(),
+                    stepConfig.buttonColor?.rejected,
                     0f,
                     null,
                     true,
-                    buttonRadius
+                    buttonRadius!!
                 )
                 holder.mBinding.textOfButton.setTextProperty(
-                    stepConfig.buttonText.getRejected(),
-                    stepConfig.getButtonTextColor().getRejected()
+                    stepConfig.buttonText?.rejected,
+                    stepConfig.buttonTextColor?.rejected
                 )
                 if (mDocumentList[position].errors != null) {
                     if (mDocumentList[position].errors!!.isNotEmpty()) {
                         holder.mBinding.subTextOfButton.show()
                         holder.mBinding.subTextOfButton.setTextProperty(
                             mDocumentList[position].errors!![0]!!.errorMessage.toString(),
-                            stepConfig.getButtonTextColor().getAutomaticallyRejected()
+                            stepConfig.buttonTextColor?.automaticallyRejected
                         )
                         holder.mBinding.subTextOfButton.setCompoundDrawable(
                             R.drawable.custom_btn,
@@ -358,28 +370,33 @@ class KYCAdapter(
     }
 
     fun updateDocumentList(newDocumentList: List<Rule>?) {
-        Timber.i("Document list update is started")
-        if (!newDocumentList.isNullOrEmpty()) {
-            if (newDocumentList.size == 1) {
-                repeat(mDocumentList.size) {
-                    if (mDocumentList[it].sortOrder == newDocumentList[0].sortOrder) {
-                        mDocumentList[it] = newDocumentList[0]
-                        notifyItemChanged(it)
-                        Timber.i("Document list index: ${newDocumentList[0].id} is up to date ")
+        try {
+            Timber.i("Document list update is started")
+            if (!newDocumentList.isNullOrEmpty()) {
+                if (newDocumentList.size == 1) {
+                    repeat(mDocumentList.size) {
+                        if (mDocumentList[it].sortOrder == newDocumentList[0].sortOrder) {
+                            mDocumentList[it] = newDocumentList[0]
+                            notifyItemChanged(it)
+                            Timber.i("Document list index: ${newDocumentList[0].id} is up to date ")
+                        }
                     }
-                }
-            } else {
-                repeat(newDocumentList.size) {
-                    repeat(mDocumentList.size) { index ->
-                        if (mDocumentList[index].sortOrder == newDocumentList[it].sortOrder) {
-                            mDocumentList[index] = newDocumentList[it]
-                            notifyItemChanged(index)
-                            Timber.i("Document list index: ${mDocumentList[it].id} is up to date")
+                } else {
+                    repeat(newDocumentList.size) {
+                        repeat(mDocumentList.size) { index ->
+                            if (mDocumentList[index].sortOrder == newDocumentList[it].sortOrder) {
+                                mDocumentList[index] = newDocumentList[it]
+                                notifyItemChanged(index)
+                                Timber.i("Document list index: ${mDocumentList[it].id} is up to date")
+                            }
                         }
                     }
                 }
             }
+        } catch (e: IndexOutOfBoundsException) {
+            e.printStackTrace()
         }
+
     }
 
     override fun getItemCount(): Int {
@@ -387,7 +404,7 @@ class KYCAdapter(
     }
 
     interface IKYCListener {
-        fun onOnItemSelected(version: Rule)
+        fun onOnItemSelected(version: Rule, adapterPosition: Int)
     }
 
     inner class MyViewHolder(val mBinding: ItemKycBinding) : RecyclerView.ViewHolder(
@@ -400,7 +417,8 @@ class KYCAdapter(
             )
             mBinding.linearBg.setOnClickListener { v: View? ->
                 listener?.onOnItemSelected(
-                    mDocumentList[adapterPosition]
+                    mDocumentList[adapterPosition],
+                    adapterPosition = adapterPosition
                 )
             }
         }
@@ -437,5 +455,15 @@ class KYCAdapter(
         mDocumentList = dataList
         this.listener = listener
         mContext = context
+    }
+
+    private fun isRuleVisible(stepConfig: StepConfig): Boolean {
+        if (stepConfig.identifier.isNullOrEmpty()) return true
+        STEPS_BEFORE_KYC_FLOW.forEach {
+            if (it == stepConfig.identifier) {
+                return false
+            }
+        }
+        return true
     }
 }

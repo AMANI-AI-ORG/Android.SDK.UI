@@ -66,7 +66,7 @@ class PreviewScreenViewModel constructor(private val nfcRepository: NFCRepositor
         version.steps.apply {
             if (!this.isNullOrEmpty()) {
                 when {
-                    version.getDocumentId().equals(AmaniDocumentTypes.SELFIE) -> {
+                    version.documentId.equals(AmaniDocumentTypes.SELFIE) -> {
                         // Means; current document is Selfie, there is no back side to care about
                         // so navigating HomeScreen to start upload process
                         navigateTo.invoke(ScreenRoutes.HomeKYCScreen)

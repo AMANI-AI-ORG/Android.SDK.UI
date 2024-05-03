@@ -98,16 +98,12 @@ class IDCaptureFrontSideFrag : Fragment() {
             return
         }
 
-        Amani.sharedInstance().IDCapture().videoRecord(args.dataModel.featureConfig.idCaptureVideoRecord)
-
-        if (args.dataModel.version?.type.equals("TUR_ID_1")) {
-           Amani.sharedInstance().IDCapture().hologramDetection(
-               args.dataModel.featureConfig.idCaptureHologramDetection
-           )
-       }
-
         // Setting IDCapture timeOut as default 30 sec
         Amani.sharedInstance().IDCapture().setManualCropTimeOut(AppConstant.ID_CAPTURE_TIME_OUT)
+
+        Amani.sharedInstance().IDCapture().videoRecord(args.dataModel.version!!.videoRecord)
+
+        Timber.d("VideoRecord ${args.dataModel.version!!.videoRecord}")
 
        idCaptureFragmentFrontSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
@@ -123,7 +119,7 @@ class IDCaptureFrontSideFrag : Fragment() {
                 //First for blocking possible memory leaks when child is still on back stack
                 //Second for ui, when back pressed from preview view child fragment is opening before
                 //the animation is end that we do not prefer
-                //removeChildFragment(idCaptureFragmentFrontSide)
+                removeChildFragment(idCaptureFragmentFrontSide)
 
                 try {
                     val file: File? =
@@ -137,9 +133,7 @@ class IDCaptureFrontSideFrag : Fragment() {
                             )
                         )
 
-                    requireActivity().runOnUiThread {
-                        findNavController().navigate(action)
-                    }
+                    findNavController().navigateSafely(action)
 
                 } catch (e: Exception) {
                     e.printStackTrace()

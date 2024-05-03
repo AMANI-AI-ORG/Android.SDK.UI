@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation.select_document_type
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentSelectDocumentTypeBinding
+import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
 import ai.amani.sdk.presentation.select_document_type.adapter.DocumentAdapter
@@ -63,7 +64,7 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
                                 featureConfig = args.dataModel.featureConfig
                             )
                         )
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
                 }
 
                 else -> {
@@ -78,18 +79,20 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
         appConfig: ResGetConfig?
     ) {
         if (appConfig == null || versionList.isNullOrEmpty()) return
-        val color: String = if (appConfig.generalConfigs!!.getAppFontColor() != null
-        ) appConfig.generalConfigs.getAppFontColor() else ColorConstant.COLOR_BLACK
+        val color: String = if (appConfig.generalConfigs!!.appFontColor != null
+        ) appConfig.generalConfigs?.appFontColor!! else ColorConstant.COLOR_BLACK
+
+        val matchingStepConfig = appConfig.stepConfigs.find { it.id == args.dataModel.currentVersionID }
 
         setToolBarTitle(
-            appConfig.stepConfigs[0].documentSelectionTitle,
+            matchingStepConfig?.documentSelectionTitle,
             appConfig.generalConfigs!!.appFontColor
         )
 
-        binding.text.setTextProperty(appConfig.stepConfigs[0].documentSelectionDescription, color)
+        binding.text.setTextProperty(matchingStepConfig?.documentSelectionDescription, color)
         binding.parentLayout.setBackgroundColor(
             Color.parseColor(
-                appConfig.generalConfigs.appBackground
+                appConfig.generalConfigs?.appBackground
             )
         )
 

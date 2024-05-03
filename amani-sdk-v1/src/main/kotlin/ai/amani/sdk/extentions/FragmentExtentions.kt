@@ -5,11 +5,21 @@ import ai.amani.amani_sdk.R
 import ai.amani.sdk.model.UploadResultModel
 import android.app.AlertDialog
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.view.LayoutInflater
+import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.material.snackbar.Snackbar
+import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEvent.setEventListener
+import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEventListener
 import timber.log.Timber
 
 
@@ -91,4 +101,67 @@ fun Fragment.debugToast(message: String?) {
     if (BuildConfig.DEBUG) {
         Toast.makeText(requireContext(), message.toString(), Toast.LENGTH_LONG).show()
     }
+}
+
+
+fun Fragment.showSnackbar(message: String) {
+    val snackbar = Snackbar.make(
+        requireActivity().findViewById(android.R.id.content),
+        message,
+        Snackbar.LENGTH_SHORT
+    )
+
+    snackbar.show()
+}
+
+fun Fragment.alertDialog(
+    mainText: String,
+    buttonText: String,
+    onButtonClick: () -> Unit
+) {
+    val factory = LayoutInflater.from(this.requireContext())
+    val alertDialogView: View = factory.inflate(R.layout.alert_dialog, null)
+    val alertDialog: AlertDialog = AlertDialog.Builder(requireContext()).create()
+    alertDialog.setView(
+        alertDialogView,
+        45,
+        0,
+        45,
+        0)
+    alertDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+    alertDialogView.findViewById<TextView>(R.id.text_dialog).text = mainText
+    alertDialogView.findViewById<Button>(R.id.back_to_login).text = buttonText
+    alertDialogView.findViewById<Button>(R.id.back_to_login)
+        .setOnClickListener {
+            onButtonClick.invoke()
+            alertDialog.dismiss()
+        }
+
+    alertDialog.show()
+}
+
+fun Fragment.hideKeyboard() {
+    try {
+        this.requireActivity().currentFocus?.let {
+            val inputMethodManager = ContextCompat.getSystemService(
+                this.requireContext(),
+                InputMethodManager::class.java)!!
+            inputMethodManager.hideSoftInputFromWindow(it.windowToken, 0)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+fun Fragment.runOnUiThread(action: () -> Unit) {
+    requireActivity().runOnUiThread(action)
+}
+
+fun Fragment.setKeyboardEventListener(listener: KeyboardVisibilityEventListener) {
+    setEventListener(
+        this.requireActivity(),
+        this.viewLifecycleOwner,
+        listener
+        )
 }

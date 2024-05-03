@@ -77,7 +77,7 @@ class SelfieCaptureFragment: Fragment() {
                         )
                     )
 
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
                 }
             }
         })
@@ -119,7 +119,7 @@ class SelfieCaptureFragment: Fragment() {
                             )
                         )
 
-                        findNavController().navigate(action)
+                        findNavController().navigateSafely(action)
                     }
                 }
             })
@@ -176,7 +176,7 @@ class SelfieCaptureFragment: Fragment() {
                     )
                 )
 
-                findNavController().navigate(action)
+                findNavController().navigateSafely(action)
             }?: run {
             }
         }
@@ -236,7 +236,7 @@ class SelfieCaptureFragment: Fragment() {
                                     binding.confirmButton.gone()
                                     binding.selfieAnimationSecond.slideLeft{
                                         initSelfiePoseEstimation(
-                                            requestedOrderNumber = args.dataModel.version!!.selfieType,
+                                            requestedOrderNumber = args.dataModel.version!!.selfieType!!,
                                             videoRecord  = args.dataModel.featureConfig.selfieCaptureVideoRecord
                                         )
                                     }

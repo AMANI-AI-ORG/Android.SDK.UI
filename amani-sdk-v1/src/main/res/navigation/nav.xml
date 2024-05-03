@@ -33,6 +33,19 @@
         <action
             android:id="@+id/action_homeKYCFragment_to_physicalContractFragment"
             app:destination="@id/physicalContractFragment" />
+
+        <action
+            android:id="@+id/action_homeKYCFragment_to_verifyEmailFragment"
+            app:destination="@id/verifyEmailFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_verifyPhoneFragment"
+            app:destination="@id/verifyPhoneFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_profileInfoFragment"
+            app:destination="@id/profileInfoFragment" />
+        <action
+            android:id="@+id/action_homeKYCFragment_to_questionnaireFragment"
+            app:destination="@id/questionnaireFragment" />
     </fragment>
     <fragment
         android:id="@+id/previewScreenFragment"
@@ -139,5 +152,102 @@
             android:name="dataModel"
             app:nullable="false"
             app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/verifyPhoneFragment"
+        tools:layout="@layout/fragment_phone_verify"
+        android:name="ai.amani.sdk.presentation.otp.phone_verify.PhoneVerifyFragment"
+        android:label="VerifyPhoneFragment" >
+        <action
+            android:id="@+id/action_verifyPhoneFragment_to_checkPhoneFragment"
+            app:destination="@id/checkPhoneFragment" />
+        <argument
+            android:name="data"
+            app:argType="ai.amani.sdk.model.OTPScreenArgModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/checkPhoneFragment"
+        tools:layout="@layout/fragment_phone_check"
+        android:name="ai.amani.sdk.presentation.otp.phone_check.PhoneCheckFragment"
+        android:label="CheckPhoneFragment">
+        <argument
+            android:name="data"
+            app:argType="ai.amani.sdk.model.OTPScreenArgModel" />
+        <action
+            android:id="@+id/action_checkPhoneFragment_to_questionnaireFragment"
+            app:destination="@id/questionnaireFragment" />
+        <action
+            android:id="@+id/action_checkPhoneFragment_to_verifyEmailFragment"
+            app:destination="@id/verifyEmailFragment" />
+        <action
+            android:id="@+id/action_checkPhoneFragment_to_profileInfoFragment"
+            app:destination="@id/profileInfoFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/checkEmailFragment"
+        tools:layout="@layout/fragment_email_check"
+        android:name="ai.amani.sdk.presentation.otp.email_check.EmailCheckFragment"
+        android:label="CheckEmailFragment">
+        <action
+            android:id="@+id/action_checkEmailFragment_to_verifyPhoneFragment"
+            app:destination="@id/verifyPhoneFragment" />
+        <argument
+            android:name="data"
+            app:argType="ai.amani.sdk.model.OTPScreenArgModel" />
+        <action
+            android:id="@+id/action_checkEmailFragment_to_profileInfoFragment"
+            app:destination="@id/profileInfoFragment" />
+        <action
+            android:id="@+id/action_checkEmailFragment_to_questionnaireFragment"
+            app:destination="@id/questionnaireFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/verifyEmailFragment"
+        android:name="ai.amani.sdk.presentation.otp.email_verify.EmailVerifyFragment"
+        tools:layout="@layout/fragment_email_verify"
+        android:label="VerifyEmailFragment">
+        <action
+            android:id="@+id/action_verifyEmailFragment_to_checkEmailFragment"
+            app:destination="@id/checkEmailFragment" />
+        <argument
+            android:name="data"
+            app:argType="ai.amani.sdk.model.OTPScreenArgModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/profileInfoFragment"
+        android:name="ai.amani.sdk.presentation.otp.profile_info.ProfileInfoFragment"
+        android:label="fragment_profile_info"
+        tools:layout="@layout/fragment_profile_info" >
+        <action
+            android:id="@+id/action_profileInfoFragment_to_verifyEmailFragment"
+            app:destination="@id/verifyEmailFragment" />
+        <argument
+            android:name="data"
+            app:argType="ai.amani.sdk.model.OTPScreenArgModel" />
+        <action
+            android:id="@+id/action_profileInfoFragment_to_verifyPhoneFragment"
+            app:destination="@id/verifyPhoneFragment" />
+        <action
+            android:id="@+id/action_profileInfoFragment_to_questionnaireFragment"
+            app:destination="@id/questionnaireFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/questionnaireFragment"
+        android:name="ai.amani.sdk.presentation.otp.questions.QuestionnaireFragment"
+        android:label="fragment_questionnaire"
+        tools:layout="@layout/fragment_questionnaire" >
+
+        <argument
+            android:name="data"
+            app:argType="ai.amani.sdk.model.OTPScreenArgModel" />
+        <action
+            android:id="@+id/action_questionnaireFragment_to_profileInfoFragment"
+            app:destination="@id/profileInfoFragment" />
+        <action
+            android:id="@+id/action_questionnaireFragment_to_verifyPhoneFragment"
+            app:destination="@id/verifyPhoneFragment" />
+        <action
+            android:id="@+id/action_questionnaireFragment_to_verifyEmailFragment"
+            app:destination="@id/verifyEmailFragment" />
     </fragment>
 </navigation>

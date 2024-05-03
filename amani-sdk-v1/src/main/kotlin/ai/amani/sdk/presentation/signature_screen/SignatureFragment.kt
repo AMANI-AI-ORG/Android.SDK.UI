@@ -99,7 +99,7 @@ class SignatureFragment: Fragment() {
             //Navigating to HomeKYCFragment for calling upload the taken data
             findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
                 HomeKYCResultModel(
-                    args.configModel.version!!.documentId,
+                    args.configModel.version!!.documentId!!,
                     args.configModel.version!!.type
                 )
 

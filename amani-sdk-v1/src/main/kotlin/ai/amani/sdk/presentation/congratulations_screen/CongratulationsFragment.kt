@@ -2,8 +2,9 @@ package ai.amani.sdk.presentation.congratulations_screen
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentCongratulationsBinding
-import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.model.KYCResult
+import ai.amani.sdk.presentation.binding.setText
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.ProfileStatus
 import android.app.Activity
@@ -39,7 +40,7 @@ class CongratulationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        toolBar()
+        setCustomUI()
 
         onClickEvents()
 
@@ -52,11 +53,15 @@ class CongratulationsFragment : Fragment() {
         }
     }
 
-    private fun toolBar() {
-        setToolBarTitle(
-            args.configModel.generalConfigs!!.successsTitle,
-            args.configModel.generalConfigs!!.appFontColor
+    private fun setCustomUI() {
+        customizeToolBar(
+            backgroundColor = args.configModel.generalConfigs?.topBarBackground?: "",
+            backImgColor = args.configModel.generalConfigs?.appFontColor?: "",
+            titleTextColor = args.configModel.generalConfigs?.appFontColor?: "",
+            title= args.configModel.generalConfigs?.successTitle?: ""
         )
+
+        binding.congratulationTv.text = args.configModel.generalConfigs?.successHeaderText
     }
 
     private fun handleBackPressed() {
