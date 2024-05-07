@@ -81,6 +81,7 @@ open class HomeKYCViewModel constructor(
         val result = CachingHomeKYC.appConfig?.stepConfigs?.filter { element1 ->
             sortedList.any {
                 element2 -> element2.id == element1.id && element1.identifier == "kyc"
+                    || element1.identifier == ""
             }
         }
 
