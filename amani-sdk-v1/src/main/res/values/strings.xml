@@ -17,8 +17,57 @@
     <string name="nfc_keep_still">Please still keep your card</string>
     <string name="nfc_reading_completed">NFC Reading Completed</string>
 
-
-
-
-
+    <string name="amani_studio">AMANI Studio</string>
+    <string name="login_account">Login to your account</string>
+    <string name="email_address">Email Address</string>
+    <string name="enter_your_business_email">Enter your business email</string>
+    <string name="your_password">Your Password</string>
+    <string name="enter_your_password">Enter your password</string>
+    <string name="login">Login</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="reset_your_password">Reset your password</string>
+    <string name="continue_text">Continue</string>
+    <string name="we_will_send_you_a_one_time_pin_to_reset_your_password">We will send you a ‘one time PIN’ to reset your password</string>
+    <string name="otp_text">OTP ( One Time PIN you received )</string>
+    <string name="new_password">New Password</string>
+    <string name="confirm_new_password">Config New Password</string>
+    <string name="verify_email_desc">We will send a ‘one time PIN’ to your email address for verification</string>
+    <string name="change_password">Change Password</string>
+    <string name="resend_email">Resend Email</string>
+    <string name="back_to_login">Back to Login</string>
+    <string name="password_changed_successfully">Your password is changed successfully</string>
+    <string name="password_changed">Password Changed</string>
+    <string name="invalid_email">This email is wrong</string>
+    <string name="duplicated_email">This email belongs to another profile, please try another email</string>
+    <string name="invalid_password">This password is wrong</string>
+    <string name="invalid_otp_code">This OTP code is wrong</string>
+    <string name="inputs_are_not_same">Inputs are not same</string>
+    <string name="network_error">Something gone wrong</string>
+    <string name="verify_email_address">Verify Email Address</string>
+    <string name="enter_your_email_address_here">Enter your email address here</string>
+    <string name="check_your_email">Check your Email</string>
+    <string name="check_email_desc">Please check your inbox and enter the OTP (One Time PIN) you received</string>
+    <string name="verify_email">Verify Email</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="enter_phone_number_here">Enter phone number here</string>
+    <string name="resend_otp">Resend OTP</string>
+    <string name="otp_one_time_pin">OTP (One Time PIN)</string>
+    <string name="check_sms_desc">Please check your SMS messages and enter the OTP (One Time PIN) you received</string>
+    <string name="check_your_sms">Check your SMS</string>
+    <string name="invalid_phone_number">Phone number is invalid</string>
+    <string name="type_your_answer_here">Type your answer here</string>
+    <string name="verify_phone_number">Verify Phone Number</string>
+    <string name="verify_phone_description">We will send a ‘one time PIN’ to your phone number for verification</string>
+    <string name="enter_your_birthdate">Enter your birthdate</string>
+    <string name="fill_the_details">Fill the details</string>
+    <string name="enter_your_name">Enter your name</string>
+    <string name="surname">Surname</string>
+    <string name="enter_your_surname">Enter your surname</string>
+    <string name="birthdate">Birthdate</string>
+    <string name="name">Name</string>
+    <string name="select_the_applicable_options">Select the applicable options</string>
+    <string name="questionnaire">Questionnaire</string>
+    <string name="answer_questions">Please answer the following simple questions to help us serve you better.</string>
+    <string name="select">Select</string>
+    <string name="description_profile_info">Please fill in your profile information</string>
 </resources>

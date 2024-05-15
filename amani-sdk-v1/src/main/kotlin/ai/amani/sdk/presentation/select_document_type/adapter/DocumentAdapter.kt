@@ -55,14 +55,13 @@ class DocumentAdapter(
                 holder.binding.btnDocument.context.resources,
                 R.drawable.custom_btn, null
             ),
-            generalConfig!!.primaryButtonBackgroundColor,
+            generalConfig!!.primaryButtonBackgroundColor!!,
             4,
-            if (generalConfig!!.primaryButtonBorderColor != null
-            ) generalConfig!!.primaryButtonBorderColor else generalConfig!!.primaryButtonBackgroundColor,
+            generalConfig!!.primaryButtonBackgroundColor,
             0F,
             null,
             true,
-            buttonRadius
+            buttonRadius!!
         )
         holder.binding.btnDocument.setTextProperty(
             mDocumentList!![position]!!.title,

@@ -7,32 +7,70 @@
         android:id="@+id/constraint"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/background"
         android:orientation="horizontal">
 
-        <androidx.appcompat.widget.Toolbar
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/toolbar"
-            style="@style/Toolbar.TitleText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
             android:visibility="invisible"
+            tools:visibility="visible"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
 
-        <ai.amani.sdk.presentation.common.CustomTextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/button_select_pdf"
-            android:layout_marginEnd="@dimen/dp_20"
-            style="@style/Toolbar.TitleText"
-            android:visibility="invisible"
-            android:text="Select PDF"
-            android:textColor="@color/white"
-            tools:visibility="visible"
-            app:layout_constraintBottom_toBottomOf="@+id/toolbar"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/toolbar" />
+            <ImageView
+                android:id="@+id/back_button"
+                android:layout_width="50dp"
+                android:layout_height="@dimen/dp_50"
+                android:layout_marginStart="0dp"
+                android:padding="@dimen/dp_15"
+                android:visibility="visible"
+                android:src="@drawable/ic_back_press"
+                tools:visibility="visible"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:fontFamily="@font/rubik_500"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Toolbar Mock Title" />
+
+            <ImageView
+                android:id="@+id/button_select_pdf"
+                style="@style/Toolbar.TitleText"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="@dimen/dp_15"
+                android:src="@drawable/ic_pdf_upload"
+                android:textColor="@color/black"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@+id/toolbar"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/toolbar"
+                tools:visibility="visible" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:id="@+id/toolbar_divider"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/dp_1"
+                app:dividerColor="@color/white"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/fragment_container_view"
@@ -45,7 +83,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/toolbar"
             app:navGraph="@navigation/nav" />
-
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

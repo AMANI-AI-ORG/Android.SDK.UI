@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation.home_kyc
 
 import ai.amani.sdk.model.customer.CustomerDetailResult
+import ai.amani.sdk.model.customer.Rule
 import datamanager.model.config.ResGetConfig
 import datamanager.model.config.Version
 
@@ -17,4 +18,6 @@ object CachingHomeKYC {
     var version: Version? = null
 
     var versionsList : MutableList<Version>? = null
+
+    var onlyKYCRules: ArrayList<Rule>? = null
 }

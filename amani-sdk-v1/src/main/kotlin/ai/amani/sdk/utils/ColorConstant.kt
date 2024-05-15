@@ -7,4 +7,5 @@ package ai.amani.sdk.utils
 object ColorConstant {
 
     const val COLOR_BLACK = "#000000"
+    const val DEFAULT_LOADER_COLOR = "#EA3365"
 }

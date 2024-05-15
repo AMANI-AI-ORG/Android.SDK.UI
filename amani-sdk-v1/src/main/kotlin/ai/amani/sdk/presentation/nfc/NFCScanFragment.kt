@@ -39,6 +39,8 @@ class NFCScanFragment : Fragment() {
     private lateinit var binding: FragmentNfcScanBinding
     private val args: NFCScanFragmentArgs by navArgs()
     private val viewModel: NFCSharedViewModel by activityViewModels{NFCSharedViewModel.Factory}
+    private val nfcScanningModal by lazy { NFCScanningBottomDialog() }
+    private var nfcDialogMessages: NFCScanningBottomDialog.NFCDialogMessages = NFCScanningBottomDialog.NFCDialogMessages()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,6 +61,7 @@ class NFCScanFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.clearNFCState()
         viewModel.checkNFCState(
             requireContext(),
             disable = {
@@ -120,23 +123,17 @@ class NFCScanFragment : Fragment() {
             if (args.dataModel.configModel.version!!.nfcAnimationColor != null)
                 args.dataModel.configModel.version!!.nfcAnimationColor else appFontColor
 
-        binding.textNfc.setTextProperty(nfcPleaseHold, appFontColor)
         binding.nfcDesc1.setTextProperty(nfcDescription1, appFontColor)
         binding.nfcDesc2.setTextProperty(nfcDescription2, appFontColor)
         binding.nfcDesc3.setTextProperty(nfcDescription3, appFontColor)
 
         binding.parentLayout.setBackgroundColor(appBackGroundColor)
-        binding.animationView.setBackgroundColor(appBackGroundColor)
-        binding.animationDone.setBackgroundColor(appBackGroundColor)
 
-        try {
-            binding.animationView.setColor(nfcAnimationColor)
-
-            binding.animationDone.setColor(nfcAnimationColor)
-
-        } catch (e: Exception) {
-            Timber.e("NFCFragment setUI exception$e")
-        }
+        nfcDialogMessages = NFCScanningBottomDialog.NFCDialogMessages(
+            nfcFail = args.dataModel.configModel.version!!.nfcFailed,
+            nfcScanningDescription = args.dataModel.configModel.version!!.nfcDialogDescription,
+            nfcScanningTitle = args.dataModel.configModel.version!!.nfcDialogTitle
+        )
 
         setToolBarTitle(
             nfcTitle,
@@ -148,11 +145,14 @@ class NFCScanFragment : Fragment() {
         viewModel.get.observe(viewLifecycleOwner) {
             if (it != null) {
                 CoroutineScope(Dispatchers.Main).launch {
-                    binding.animationView.makeItCenter()
+                    requireActivity().supportFragmentManager.let {
+                        val args = Bundle()
+                        args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
+                        nfcScanningModal.arguments = args
+                        nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
+                    }
                 }
 
-                binding.animationView.playAnimation()
-                showTexts(false)
                 viewModel.scanNFC(
                     it,
                     requireContext(),
@@ -170,9 +170,7 @@ class NFCScanFragment : Fragment() {
                     Timber.i("NFC is scanned properly")
 
                     CoroutineScope(Dispatchers.Main).launch {
-                        binding.animationView.hide()
-                        binding.animationDone.show()
-                        binding.animationDone.playAnimation()
+                        nfcScanningModal.nfcScanningDoneAnimations()
                         delay(1000)
 
                         viewModel.clearNFCState()
@@ -185,6 +183,7 @@ class NFCScanFragment : Fragment() {
                                 // only as true/false
                             )
 
+                        nfcScanningModal.dismiss()
                         findNavController().clearBackStack(R.id.homeKYCFragment)
                         findNavController().popBackStack(R.id.homeKYCFragment, false)
                     }
@@ -195,9 +194,9 @@ class NFCScanFragment : Fragment() {
                     //Show message to user to re-scan NFC
                     Timber.i("NFC scanning failed")
                     CoroutineScope(Dispatchers.Main).launch {
-                        binding.animationView.putTopOfIt(binding.linearLayout)
-                        showTexts(true)
-                        binding.animationView.pauseAnimation()
+                        nfcScanningModal.showError()
+                        delay(1000)
+                        nfcScanningModal.dismiss()
                     }
                 }
 
@@ -205,23 +204,11 @@ class NFCScanFragment : Fragment() {
                     //Navigate HomeKYCFragment
                     Timber.i("NFC scanning failed, OutOfMaxAttempt")
                     CoroutineScope(Dispatchers.Main).launch {
+
+                        //Closing the NFC scanning dialog
+                        nfcScanningModal.dismiss()
+
                         viewModel.clearNFCState()
-                        binding.animationView.hide()
-
-                        binding.linearLayout.makeItCenter()
-
-                        binding.textNfc.text =
-                            args.dataModel.configModel.version!!.nfcFailedScreenText1
-                        binding.textNfc.show()
-                        delay(1000)
-                        binding.nfcDesc1.text =
-                            args.dataModel.configModel.version!!.nfcFailedScreenText2
-                        binding.nfcDesc1.show()
-                        delay(1000)
-                        binding.nfcDesc2.text =
-                            args.dataModel.configModel.version!!.nfcFailedScreenText3
-                        binding.nfcDesc2.show()
-                        delay(1000)
 
                         if (args.dataModel.nfcOnly) {
                             findNavController().clearBackStack(R.id.homeKYCFragment)
@@ -252,21 +239,6 @@ class NFCScanFragment : Fragment() {
         }
     }
 
-    private fun View.makeItCenter() {
-        val constraintSet = ConstraintSet()
-        constraintSet.clone(binding.parentLayout)
-        constraintSet.centerHorizontally(this.id, ConstraintSet.PARENT_ID)
-        constraintSet.centerVertically(this.id, ConstraintSet.PARENT_ID)
-        constraintSet.applyTo(binding.parentLayout)
-    }
-
-    private fun View.putTopOfIt(view: View){
-        val constraintSet = ConstraintSet()
-        constraintSet.clone(binding.parentLayout)
-        constraintSet.clear(view.id)
-        constraintSet.connect(this.id, ConstraintSet.BOTTOM, view.id, ConstraintSet.TOP)
-        constraintSet.applyTo(binding.parentLayout)
-    }
     override fun onPause() {
         super.onPause()
         viewModel.setNfcEnable(false)
@@ -274,12 +246,5 @@ class NFCScanFragment : Fragment() {
 
     private fun startNfcSettingsActivity() {
         startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
-    }
-
-    private fun showTexts(show: Boolean) {
-        binding.textNfc.show(show)
-        binding.nfcDesc1.show(show)
-        binding.nfcDesc2.show(show)
-        binding.nfcDesc3.show(show)
     }
 }

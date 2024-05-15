@@ -5,8 +5,10 @@ import ai.amani.amani_sdk.databinding.FragmentHomeKycBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.extentions.debugToast
+import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.logUploadResult
+import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.parcelable
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.ConfigModel
@@ -17,6 +19,8 @@ import ai.amani.sdk.model.NFCScanScreenModel
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.SelectDocumentTypeModel
 import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.binding.setText
+import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
@@ -29,10 +33,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -161,6 +168,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         MainActivity.hideSelectButton{
             debugToast("There is an exception while hiding the select button via $it")
         }
+
+        viewModel.listenAmaniEvents()
     }
 
     private fun getIntent() {
@@ -209,7 +218,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                                 viewModel.getAppConfig()!!.generalConfigs
                             )
                         )
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
                 }
 
                 is HomeKYCLogicEvent.Finish.LoginFailed -> {
@@ -241,6 +250,14 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 else -> {}
             }
         }
+
+        lifecycleScope.launch {
+            viewModel.navigateTo.collect{
+                if (it is NavigationCommands.NavigateDirections) {
+                    findNavController().navigateSafely(it.direction)
+                }
+            }
+        }
     }
 
     private fun setCustomUI() {
@@ -250,16 +267,26 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         setFlag(viewModel.getDocList()!!)
 
         customizeToolBar(
-            viewModel.getAppConfig()!!.generalConfigs.topBarBackground,
-            viewModel.getAppConfig()!!.generalConfigs.topBarFontColor,
-            viewModel.getAppConfig()!!.generalConfigs.topBarFontColor,
-            viewModel.getAppConfig()!!.generalConfigs.mainTitleText
+            viewModel.getAppConfig()!!.generalConfigs?.topBarBackground,
+            viewModel.getAppConfig()!!.generalConfigs?.topBarFontColor,
+            viewModel.getAppConfig()!!.generalConfigs?.topBarFontColor,
+            viewModel.getAppConfig()!!.generalConfigs?.mainTitleText
         )
 
-        binding.imageViewPoweredByAmani.setColorFilter(Color.parseColor(viewModel.getAppConfig()!!.generalConfigs.appFontColor))
+        //TODO: To make the ui same as app screens, static color, future plan make it as dynamic
+        binding.imageViewPoweredByAmani.setColorFilter(Color.parseColor("#909090"))
 
-        binding.recyclerViewLayout.setBackgroundColor(Color.parseColor(viewModel.getAppConfig()!!.generalConfigs.appBackground))
-        binding.recyclerViewLayout.show()
+        //TODO: Add this string to remote config for dynamic ui
+        binding.uploadDocumentDescription.let {
+            it.text = "Please upload the following documents"
+            it.setTextColor(Color.parseColor(
+                viewModel.getAppConfig()!!.generalConfigs?.appFontColor
+            ))
+        }
+        binding.uploadDocumentDescription.text = viewModel.getAppConfig()?.generalConfigs?.mainDescriptionText
+
+        binding.parentLayout.setBackgroundColor(Color.parseColor(viewModel.getAppConfig()!!.generalConfigs?.appBackground))
+        binding.parentLayout.show()
     }
 
     private fun renderRecyclerView() {
@@ -282,34 +309,31 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         binding.recyclerView.adapter = mAdapter
     }
 
-    override fun onOnItemSelected(version: ai.amani.sdk.model.customer.Rule) {
-        viewModel.navigateScreen(version!!) {
+    override fun onOnItemSelected(version: ai.amani.sdk.model.customer.Rule, adapterPosition: Int) {
+        viewModel.navigateScreen(version!!, adapterPosition) {
             when (it) {
                 ScreenRoutes.SelfieCaptureScreen -> {
                     val action =
                         HomeKYCFragmentDirections.actionHomeKYCFragmentToSelfieCaptureFragment(
                             ConfigModel(
-                                version = viewModel.getVersion(),
-                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs,
+                                viewModel.getVersion(),
+                                viewModel.getAppConfig()!!.generalConfigs,
                                 featureConfig = viewModel.featureConfigModel()
                             )
                         )
 
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
                 }
 
                 ScreenRoutes.IDFrontSideScreen -> {
-
-                    val action =
-                        HomeKYCFragmentDirections.actionHomeKYCFragmentToIDCaptureFrontSideFrag(
-                            ConfigModel(
-                                version = viewModel.getVersion(),
-                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs,
-                                featureConfig = viewModel.featureConfigModel()
-                            )
+                    val action = HomeKYCFragmentDirections.actionHomeKYCFragmentToIDCaptureFrontSideFrag(
+                        dataModel = ConfigModel(
+                            version = viewModel.getVersion(),
+                            generalConfigs =  viewModel.getAppConfig()!!.generalConfigs,
+                            featureConfig = viewModel.featureConfigModel()
                         )
-                    findNavController().navigate(action)
-
+                    )
+                    findNavController().navigateSafely(action)
                 }
 
                 ScreenRoutes.SelectDocumentTypeScreen -> {
@@ -317,11 +341,12 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         HomeKYCFragmentDirections.actionHomeKYCFragmentToSelectDocumentTypeFragment(
                             SelectDocumentTypeModel(
                                 versionList =  viewModel.getVersionList()!!,
-                                generalConfigs =  viewModel.getAppConfig(),
+                                generalConfigs = viewModel.getAppConfig(),
+                                currentVersionID =  version.id!!,
                                 featureConfig = viewModel.featureConfigModel()
                             )
                         )
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
                 }
 
                 ScreenRoutes.NFCScanScreen -> {
@@ -338,7 +363,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                                 nfcOnly = true
                             )
                         )
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
 
                 }
 
@@ -351,7 +376,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         )
                     )
 
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
 
                 }
 
@@ -365,7 +390,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                             )
                         )
 
-                    findNavController().navigate(action)
+                    findNavController().navigateSafely(action)
                 }
 
                 else -> {}
@@ -391,4 +416,5 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         }
         mAdapter?.setFlags(flags)
     }
+
 }

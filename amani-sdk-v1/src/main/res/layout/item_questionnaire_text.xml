@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    tools:ignore="MissingDefaultResource">
+
+    <LinearLayout
+        android:id="@+id/survey_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/answer_questions"
+            android:textSize="16sp" android:fontFamily="@font/rubik_300"
+            android:textColor="@color/black"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="@dimen/dp_16"
+            android:layout_marginEnd="@dimen/dp_16" />
+    </LinearLayout>
+
+    <com.google.android.material.divider.MaterialDivider
+        app:dividerColor="@color/light_gray"
+        android:id="@+id/first_divider_text"
+        android:layout_width="match_parent"
+        android:layout_marginTop="@dimen/dp_10"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:layout_marginBottom="@dimen/dp_10"
+        android:visibility="gone"
+        android:layout_height="@dimen/dp_1" />
+
+    <TextView
+        android:id="@+id/questionTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:fontFamily="@font/rubik_400"
+        android:textColor="@color/color_black"
+        android:textSize="16sp"
+        tools:text="Is someone you met online directing you to buy cryptocurrency?" />
+
+    <EditText
+        android:id="@+id/answerEditText"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dp_50"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:background="@drawable/button_border"
+        android:fontFamily="@font/rubik_400"
+        android:hint="@string/type_your_answer_here"
+        android:paddingHorizontal="@dimen/dp_16"
+        android:layout_marginTop="@dimen/dp_10"
+        android:textColor="@color/color_black"
+        android:cursorVisible="true"
+        android:paddingStart="@dimen/dp_15"
+        android:inputType="textCapSentences"
+        android:textCursorDrawable="@drawable/edit_text_cursor"
+        android:textColorHint="@color/light_gray"
+        android:textSize="@dimen/sp_16" />
+
+    <com.google.android.material.divider.MaterialDivider
+        app:dividerColor="@color/light_gray"
+        android:id="@+id/last_divider_text"
+        android:layout_width="match_parent"
+        android:layout_marginTop="@dimen/dp_10"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:layout_marginBottom="@dimen/dp_10"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:layout_height="@dimen/dp_1" />
+
+</LinearLayout>

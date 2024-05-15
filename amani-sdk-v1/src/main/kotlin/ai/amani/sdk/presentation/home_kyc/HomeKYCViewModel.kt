@@ -20,11 +20,13 @@ import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
 import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
+import ai.amani.sdk.presentation.common.BaseViewModel
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
+import ai.amani.sdk.utils.AppConstant.STATUS_PENDING_REVIEW
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -53,7 +55,7 @@ open class HomeKYCViewModel constructor(
     private val nfcRepository: NFCRepositoryImp,
     private val signatureRepository: SignatureRepoImp,
     private val documentRepository: DocumentRepoImp
-) : ViewModel() {
+) : BaseViewModel() {
 
     /*Responsible for UI State Management */
     private var _uiState: MutableLiveData<HomeKYCState> = MutableLiveData(HomeKYCState.Loading)
@@ -63,18 +65,34 @@ open class HomeKYCViewModel constructor(
     private var _logicEvent: MutableLiveData<HomeKYCLogicEvent> = MutableLiveData(HomeKYCLogicEvent.Empty)
     val logicEvent: LiveData<HomeKYCLogicEvent> = _logicEvent
 
-
-    private var selectedStepNumber = 0
+    private var selectedStepIDNumber = ""
 
     private var profileInfoModel : ProfileInfoModel = ProfileInfoModel()
     private var featureConfig : FeatureConfig = FeatureConfig()
 
-
     fun getAppConfig(): ResGetConfig? = CachingHomeKYC.appConfig
 
     fun getDocList(): ArrayList<Rule> {
+        CachingHomeKYC.onlyKYCRules?.let {
+            return it
+        }
        val list = CachingHomeKYC.customerDetail!!.rules as ArrayList<Rule>?
-        return list!!.sort()
+       val sortedList =  list!!.sort()
+        val result = CachingHomeKYC.appConfig?.stepConfigs?.filter { element1 ->
+            sortedList.any {
+                element2 -> element2.id == element1.id && element1.identifier == "kyc"
+                    || element1.identifier == ""
+            }
+        }
+
+      val kycRules =  list.filter { rule ->
+            result!!.any{
+                it.id == rule.id
+            }
+        }
+
+        CachingHomeKYC.onlyKYCRules = ArrayList(kycRules)
+        return CachingHomeKYC.onlyKYCRules!!
     }
 
     fun getVersion(): Version? = CachingHomeKYC.version
@@ -98,7 +116,7 @@ open class HomeKYCViewModel constructor(
         loginRepository.login(
             activity = activity,
             tcNumber = getProfileInfoModel().registerConfig!!.tcNumber,
-            token = getProfileInfoModel().registerConfig!!.token,
+            token = getProfileInfoModel().registerConfig!!.token!!,
             lang = getProfileInfoModel().registerConfig!!.language,
             location = getProfileInfoModel().registerConfig!!.location,
             onStart = {
@@ -151,12 +169,32 @@ open class HomeKYCViewModel constructor(
             },
 
             onError = {
+                Timber.e("Fetch customer detail error: $it")
             },
 
-            onComplete = {
-                checkCustomerStatus(it)
-                CachingHomeKYC.customerDetail = it
-                _uiState.value = HomeKYCState.Loaded
+            onComplete = {customerDetail ->
+                CachingHomeKYC.customerDetail = customerDetail
+                hasStepsBeforeOrAfterKYCFlow(
+                    CachingHomeKYC.appConfig!!,
+                    stepsBeforeKYC = { steps ->
+                        //There is steps before KYC, checking the first step then navigate for that
+                        navigateBeforeOrAfterKYCFlowScreens(steps)
+
+                    },
+                    stepsAfterKYC = { afterKycSteps ->
+                        //If there is no steps before KYC continue with KYC process
+                        if (checkKYCStepsAreApproved(customerDetail)) navigateBeforeOrAfterKYCFlowScreens(afterKycSteps)
+                        else _uiState.value = HomeKYCState.Loaded
+                    },
+
+                    no = {
+                        if (checkKYCStepsAreApproved(customerDetail)){
+                            _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
+                        } else {
+                            _uiState.value = HomeKYCState.Loaded
+                        }
+                    }
+                )
             }
         )
     }
@@ -165,12 +203,17 @@ open class HomeKYCViewModel constructor(
      * APPROVED, postValue to [HomeKYCLogicEvent.Finish.ProfileApproved] as [_logicEvent]
      * @param customerDetail: Current customer data that fetched
      */
-    private fun checkCustomerStatus(customerDetail: CustomerDetailResult?) {
-        if (customerDetail == null) return
-        if (customerDetail.status == null) return
-        if (customerDetail.status.equals(STATUS_APPROVED, ignoreCase = true)){
-            _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
+    private fun checkKYCStepsAreApproved(customerDetail: CustomerDetailResult?): Boolean {
+        var size = 0
+        var approvedStep = 0
+        customerDetail?.rules?.forEach {
+            if (it.identifier == "kyc" || it.identifier == "") {
+                size += 1
+                if (it.status == STATUS_APPROVED) approvedStep += 1
+            }
         }
+
+        return size == approvedStep
     }
 
     /** Provides the upload according to SelfieType
@@ -326,10 +369,17 @@ open class HomeKYCViewModel constructor(
 
     fun navigateScreen(
         rule: Rule,
+        adapterPosition: Int,
         route: (route: ScreenRoutes) -> Unit
     ) {
+        selectedStepIDNumber = getDocList()[adapterPosition].id!!
         //Creating VersionList
-        setVersionList(rule)
+        try {
+            setVersionList(rule)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
 
         //Setting current selecting version from VersionList
         setCurrentVersion(
@@ -351,7 +401,7 @@ open class HomeKYCViewModel constructor(
                         route.invoke(ScreenRoutes.SelfieCaptureScreen)
                     }
 
-                    AmaniDocumentTypes.PASSPORT, AmaniDocumentTypes.IDENTIFICATION-> {
+                    AmaniDocumentTypes.PASSPORT-> {
                         route.invoke(ScreenRoutes.IDFrontSideScreen)
                     }
 
@@ -405,20 +455,20 @@ open class HomeKYCViewModel constructor(
     /** Sets Version List accordingly selected rule
      * @param rule : Selected rule from adapter
      **/
-    private fun setVersionList(rule : Rule) {
+    @Throws
+    private fun setVersionList(rule : Rule){
         CachingHomeKYC.versionsList = mutableListOf()
-        selectedStepNumber = rule.sortOrder!!
         val stepConfig: StepConfig = CachingHomeKYC.appConfig!!.getStepConfig(rule.sortOrder!!)
-        val documentLists: List<DocumentList> =
-            stepConfig.getmDocuments()
+        val documentLists: List<DocumentList?> =
+            stepConfig.mDocuments!!
         for (documentList in documentLists) {
-            for (version in documentList.versions) {
-                version.setDocumentId(documentList.id)
-                version.setStepId(rule.sortOrder!!)
+            for (version in documentList!!.versions!!) {
+                version.documentId = documentList.id.toString()
+                version.stepId = rule.sortOrder!!
             }
             //Creating version list accordingly sort order from remote config
             //Sort order is a row number of current document
-            CachingHomeKYC.versionsList!!.addAll(documentList.versions)
+            CachingHomeKYC.versionsList!!.addAll(documentList.versions!!)
 
         }
     }
@@ -427,8 +477,8 @@ open class HomeKYCViewModel constructor(
      *  that show the button loader */
     private fun setLoaderStatus() {
         repeat(getDocList()!!.size) {
-            if (getDocList()!![it]!!.sortOrder == selectedStepNumber) {
-                getDocList()!![it]!!.isShowLoader = true
+            if (getDocList()!![it]!!.id == selectedStepIDNumber) {
+                CachingHomeKYC.onlyKYCRules!![it].isShowLoader = true
             }
         }
     }
@@ -465,8 +515,8 @@ open class HomeKYCViewModel constructor(
         }
 
         if (!registerConfig.birthDate.isNullOrEmpty() &&
-                !registerConfig.expireDate.isNullOrEmpty() &&
-                !registerConfig.documentNumber.isNullOrEmpty()) {
+            !registerConfig.expireDate.isNullOrEmpty() &&
+            !registerConfig.documentNumber.isNullOrEmpty()) {
             profileInfoModel.mrzModel = MRZModel(
                 registerConfig.birthDate,
                 registerConfig.expireDate,
@@ -477,7 +527,7 @@ open class HomeKYCViewModel constructor(
         profileInfoModel.registerConfig = registerConfig
     }
 
-    private fun listenAmaniEvents() {
+    fun listenAmaniEvents() {
 
         Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack{
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
@@ -486,9 +536,6 @@ open class HomeKYCViewModel constructor(
 
             override fun profileStatus(profileStatus: ProfileStatus) {
                 Timber.d("Profile status received")
-                if (profileStatus.status.equals(STATUS_APPROVED, ignoreCase = true)){
-                    _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
-                }
             }
 
             override fun stepsResult(stepsResult: StepsResult?) {
@@ -502,9 +549,49 @@ open class HomeKYCViewModel constructor(
                     e.printStackTrace()
                 }
 
+                val steps = stepsResult!!.result.filter { result ->
+                    getDocList().any { rule ->
+                        rule.id == result.id
+                    }
+                }
+
+                //Refreshing the UI with fresh steps
                 _logicEvent.postValue(HomeKYCLogicEvent.Refresh(StepsResultModelMapper.map(
-                    stepsResult = stepsResult
+                    stepsResult = StepsResult(ArrayList(steps))
                 )))
+
+                //Copy original list to make mutable list
+                val kycArrayList = getDocList().map { it.status }
+                    .toMutableList()
+
+                //Update mutable list rule status accordingly recent socket result
+                getDocList().forEachIndexed{ index ,rule ->
+                    steps.forEach {
+                        if (rule.id == it.id) {
+                            kycArrayList[index] = it.status
+                        }
+                    }
+                }
+
+                //Checking the KYC steps approved ot not
+                var approvedSteps = 0
+                kycArrayList.forEach {
+                    // All KYC steps should be approved
+                    if(it == STATUS_APPROVED) approvedSteps += 1
+                }
+
+                if (approvedSteps >= kycArrayList.size) {
+                    //Check after kyc steps is existing to navigate for those steps
+                    hasOnlyStepsAfterKYCFlow(
+                        appConfig = CachingHomeKYC.appConfig!!,
+                        steps = {
+                            navigateBeforeOrAfterKYCFlowScreens(steps = it)
+                        },
+                        no = {
+                            _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
+                        }
+                    )
+                }
             }
         })
     }
@@ -513,4 +600,136 @@ open class HomeKYCViewModel constructor(
         listenAmaniEvents()
     }
 
+    private fun hasOnlyStepsAfterKYCFlow(
+        appConfig: ResGetConfig,
+        steps: (steps: ArrayList<StepConfig>) -> Unit = {},
+        no: () -> Unit
+    ) {
+        hasStepsBeforeOrAfterKYCFlow(
+            appConfig = appConfig,
+            stepsBeforeKYC = {
+                //We are only taking care of steps before at KYC in that time
+                no.invoke()
+            },
+            stepsAfterKYC = {
+                steps.invoke(it)
+            },
+            no = {
+                no.invoke()
+            }
+        )
+    }
+
+    private fun hasStepsBeforeOrAfterKYCFlow(
+        appConfig: ResGetConfig,
+        stepsBeforeKYC: (steps: ArrayList<StepConfig>) -> Unit = {},
+        stepsAfterKYC: (steps: ArrayList<StepConfig>) -> Unit = {},
+        no: () -> Unit
+    ) {
+        val identifierScreenListBeforeKYCFlow = arrayListOf<StepConfig>()
+        val identifierScreenListAfterKYCFlow = arrayListOf<StepConfig>()
+
+        //All steps in mutable array list to mutate it
+        var steps = ArrayList(appConfig.stepConfigs)
+
+        steps = ArrayList(steps.filter { step->
+            CachingHomeKYC.customerDetail!!.rules!!.any { rule ->
+                step.id == rule.id
+            }
+        })
+
+        //The first index of where the KYC steps begins
+        var firstIndexOfKYC = 9999
+        steps.forEachIndexed { index, step ->
+            //Identifier is kyc or empty its the first index of KYC
+            if (step.identifier == "" || step.identifier == "kyc") {
+                if (firstIndexOfKYC == 9999) firstIndexOfKYC = index
+            }
+        }
+
+        // Remove elements with value equal to kyc or its empty
+        val iterator = steps.iterator()
+        while (iterator.hasNext()) {
+            val element = iterator.next()
+            if (element.identifier == "" || element.identifier == "kyc") {
+                iterator.remove()
+            }
+        }
+
+        val identifierRuleList = CachingHomeKYC.customerDetail!!.rules?.filter { customerDetailRule ->
+            steps.any { stepConfigRule ->
+                customerDetailRule.id == stepConfigRule.id
+            }
+        }
+
+        steps.forEachIndexed{ index, step ->
+            AppConstant.STEPS_BEFORE_KYC_FLOW.forEach {
+                if (step.identifier == it) {
+                   if (identifierRuleList!![index].status != STATUS_APPROVED) {
+                      if (index < firstIndexOfKYC){
+                          identifierScreenListBeforeKYCFlow.add(step)
+                      } else{
+                          identifierScreenListAfterKYCFlow.add(step)
+                      }
+                   }
+                }
+            }
+        }
+
+        //Invoking steps before KYC flow if its not empty
+        if (identifierScreenListBeforeKYCFlow.isNotEmpty()) {
+            stepsBeforeKYC.invoke(identifierScreenListBeforeKYCFlow)
+        }
+
+        //Invoking steps after KYC flow if its not empty
+        if (identifierScreenListAfterKYCFlow.isNotEmpty()) {
+            stepsAfterKYC.invoke(identifierScreenListAfterKYCFlow)
+        }
+
+        //If both list is empty there is not extra/additional steps other then KYC flow
+        if (identifierScreenListBeforeKYCFlow.isEmpty()
+            && identifierScreenListAfterKYCFlow.isEmpty()){
+            no.invoke()
+        }
+    }
+
+    private fun navigateBeforeOrAfterKYCFlowScreens(steps: ArrayList<StepConfig>) {
+        when(steps.first().identifier) {
+            "profile_info" -> {
+                navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToProfileInfoFragment(
+                    OTPScreenArgModel(
+                        steps = steps,
+                        config = CachingHomeKYC.appConfig!!.generalConfigs!!
+                    )
+                ))
+            }
+
+            "phone_otp" -> {
+                navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToVerifyPhoneFragment(
+                    OTPScreenArgModel(
+                        steps = steps,
+                        config = CachingHomeKYC.appConfig!!.generalConfigs!!
+                    )
+                ))
+            }
+
+            "email_otp" -> {
+                navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToVerifyEmailFragment(
+                    OTPScreenArgModel(
+                        steps = steps,
+                        config = CachingHomeKYC.appConfig!!.generalConfigs!!
+                    )
+                ))
+            }
+
+            AppConstant.IDENTIFIER_QUESTIONNAIRE -> {
+                navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToQuestionnaireFragment(
+                    OTPScreenArgModel(
+                        steps = steps,
+                        config = CachingHomeKYC.appConfig!!.generalConfigs!!
+                    )
+                ))
+            }
+        }
+    }
 }

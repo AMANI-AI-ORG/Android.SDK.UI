@@ -10,7 +10,9 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class RegisterConfig(
     val tcNumber: String,
-    val token: String,
+    val token: String? = null,
+    val authEmail: String? = null,
+    val autPassword: String? = null,
     val language: String = "tr",
     val location: Boolean = true,
     val userFullName: String? = null,

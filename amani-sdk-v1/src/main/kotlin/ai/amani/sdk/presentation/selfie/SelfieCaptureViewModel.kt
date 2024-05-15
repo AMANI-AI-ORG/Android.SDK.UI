@@ -47,7 +47,7 @@ class SelfieCaptureViewModel: ViewModel() {
                     }
 
                     is SelfieCaptureUIState.SecondAnimation -> {
-                        _uiState.value = SelfieCaptureUIState.Navigate(SelfieType.PoseEstimation(version!!.selfieType))
+                        _uiState.value = SelfieCaptureUIState.Navigate(SelfieType.PoseEstimation(version!!.selfieType!!))
                     }
 
                     else -> {
@@ -77,7 +77,7 @@ class SelfieCaptureViewModel: ViewModel() {
             }
 
             else -> {
-                setCurrentSelfieType(SelfieType.PoseEstimation(version.selfieType))
+                setCurrentSelfieType(SelfieType.PoseEstimation(version.selfieType!!))
             }
         }
     }

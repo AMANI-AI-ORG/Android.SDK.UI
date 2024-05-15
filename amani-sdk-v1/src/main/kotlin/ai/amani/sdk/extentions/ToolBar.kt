@@ -27,6 +27,7 @@ fun Fragment.customizeToolBar(
         backImgColor
     )
 
+    MainActivity.isBackButtonEnabled(isEnabled = true)
     findNavController().currentDestination!!.label = title
 }
 

@@ -4,6 +4,7 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureBackBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.extentions.gone
+import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.removeChildFragment
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
@@ -98,7 +99,13 @@ class IDCaptureBackSideFrag : Fragment() {
             return
         }
 
-        Amani.sharedInstance().IDCapture().hologramDetection(false)
+        Amani.sharedInstance().IDCapture().videoRecord(args.dataModel.featureConfig.idCaptureVideoRecord)
+
+        if (args.dataModel.version?.type.equals("TUR_ID_1")) {
+            Amani.sharedInstance().IDCapture().hologramDetection(
+                args.dataModel.featureConfig.idCaptureHologramDetection
+            )
+        }
 
         idCaptureFragmentBackSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
@@ -112,8 +119,7 @@ class IDCaptureBackSideFrag : Fragment() {
                 //First for blocking possible memory leaks when child is still on back stack
                 //Second for ui, when back pressed from preview view child fragment is opening before
                 //the animation is end that we do not prefer
-                //removeChildFragment(idCaptureFragmentBackSide)
-
+                removeChildFragment(idCaptureFragmentBackSide)
 
                 try {
                     val file: File? =
@@ -127,9 +133,7 @@ class IDCaptureBackSideFrag : Fragment() {
                             )
                         )
 
-                    requireActivity().runOnUiThread {
-                        findNavController().navigate(action)
-                    }
+                    findNavController().navigateSafely(action)
 
                 } catch (e: Exception) {
                     e.printStackTrace()

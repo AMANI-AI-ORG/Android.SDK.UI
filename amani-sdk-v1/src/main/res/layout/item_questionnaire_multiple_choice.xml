@@ -1,0 +1,80 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:id="@+id/linear_layout"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/survey_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/answer_questions"
+            android:textSize="16sp"
+            android:fontFamily="@font/rubik_300"
+            android:textColor="@color/black"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="@dimen/dp_16"
+            android:layout_marginEnd="@dimen/dp_16" />
+    </LinearLayout>
+
+    <com.google.android.material.divider.MaterialDivider
+        app:dividerColor="@color/light_gray"
+        android:id="@+id/first_divider_multiple"
+        android:layout_width="match_parent"
+        android:layout_marginTop="@dimen/dp_10"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:layout_marginBottom="@dimen/dp_10"
+        android:visibility="gone"
+        android:layout_height="@dimen/dp_1" />
+
+    <TextView
+        android:id="@+id/questionTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:fontFamily="@font/rubik_400"
+        android:textColor="@color/color_black"
+        android:textSize="16sp"
+        tools:text="What is your main purpose for buying/selling coins from us ? *" />
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/dp_16"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="@dimen/dp_16"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="10dp">
+
+        <RadioGroup
+            android:id="@+id/answersContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center_vertical|start"
+            android:paddingStart="10dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:paddingEnd="16dp" />
+
+    </androidx.cardview.widget.CardView>
+
+    <com.google.android.material.divider.MaterialDivider
+        app:dividerColor="@color/light_gray"
+        android:id="@+id/last_divider_multiple"
+        android:layout_width="match_parent"
+        android:layout_marginTop="10dp"
+        android:layout_marginHorizontal="@dimen/dp_16"
+        android:layout_marginBottom="@dimen/dp_10"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:layout_height="@dimen/dp_1" />
+
+</LinearLayout>

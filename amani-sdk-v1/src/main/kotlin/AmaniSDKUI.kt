@@ -33,7 +33,7 @@ object AmaniSDKUI {
         activity: Activity,
         idNumber: String,
         resultLauncher: ActivityResultLauncher<Intent>,
-        authToken: String,
+        authToken: String? = null,
         language: String = "tr",
         geoLocation: Boolean = true,
         birthDate: String? = null,

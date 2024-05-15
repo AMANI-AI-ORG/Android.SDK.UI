@@ -9,10 +9,11 @@
 
     <style name="SmallFont">
         <item name="android:textSize">14sp</item>
-        <item name="android:textStyle">bold</item>
+        <item name="fontFamily">@font/rubik_500</item>
     </style>
 
     <style name="MediumFont">
+        <item name="fontFamily">@font/rubik_500</item>
         <item name="android:textSize">15sp</item>
     </style>
 
@@ -20,4 +21,20 @@
         <item name="android:textSize">18sp</item>
     </style>
 
+    <style name="DatePickerStyle" parent="Theme.AppCompat.Light.Dialog">
+        <!-- Customize your colors here -->
+        <item name="colorControlActivated">@color/purple_amani_color</item> <!-- Example color for activated state -->
+        <item name="backgroundColor">#FFFFFF</item>
+        <item name="colorAccent">@color/purple_amani_color</item>
+    </style>
+
+    <style name="BottomSheetTheme" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/bottomSheetStyle</item>
+    </style>
+
+    <style name="bottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/background_nfc_dialog</item>
+    </style>
+
 </resources>
+

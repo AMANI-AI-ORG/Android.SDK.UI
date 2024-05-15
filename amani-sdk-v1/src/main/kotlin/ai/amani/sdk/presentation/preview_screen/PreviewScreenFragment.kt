@@ -4,6 +4,7 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentPreviewScreenBinding
 import ai.amani.sdk.extentions.alertDialog
 import ai.amani.sdk.extentions.hide
+import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -69,13 +70,13 @@ class PreviewScreenFragment : Fragment() {
                                     args.previewScreenModel.configModel.generalConfigs
                                 )
                             )
-                        findNavController().navigate(action)
+                        findNavController().navigateSafely(action)
                     }
 
                     ScreenRoutes.HomeKYCScreen -> {
                         findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
                             HomeKYCResultModel(
-                                args.previewScreenModel.configModel.version!!.documentId,
+                                args.previewScreenModel.configModel.version!!.documentId!!,
                                 args.previewScreenModel.configModel.version!!.type,
                                 args.previewScreenModel.selfieType
                             )
@@ -96,7 +97,7 @@ class PreviewScreenFragment : Fragment() {
                                     nfcOnly = false
                                 )
                             )
-                        findNavController().navigate(action)
+                        findNavController().navigateSafely(action)
                     }
                     else -> {
 

@@ -14,4 +14,4 @@ data class ConfigModel (
     val version: Version?,
     val generalConfigs: GeneralConfigs? = null,
     val featureConfig: FeatureConfig = FeatureConfig()
-    ): Parcelable
+): Parcelable

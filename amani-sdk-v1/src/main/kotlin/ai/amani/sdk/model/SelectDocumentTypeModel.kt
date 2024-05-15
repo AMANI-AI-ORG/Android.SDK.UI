@@ -13,5 +13,6 @@ import kotlinx.parcelize.Parcelize
 data class SelectDocumentTypeModel(
     val versionList: List<Version?>,
     val generalConfigs: ResGetConfig?,
+    val currentVersionID: String = "",
     val featureConfig: FeatureConfig = FeatureConfig()
 ): Parcelable

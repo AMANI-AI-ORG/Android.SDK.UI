@@ -75,16 +75,20 @@ fun CustomButton.setPropertyTryAgainButton(
     val appBackgroundColor =
         if (generalConfigs.appBackground != null) generalConfigs.appBackground else ColorConstant.COLOR_BLACK
     val secondaryButtonText =
-        if (generalConfigs.secorndaryButtonTextColor != null) generalConfigs.secorndaryButtonTextColor else ColorConstant.COLOR_BLACK
+        if (generalConfigs.secondaryButtonTextColor != null) generalConfigs.secondaryButtonTextColor else ColorConstant.COLOR_BLACK
     val secondaryButtonBorder =
-        if (generalConfigs.secorndaryButtonBorderColor != null) generalConfigs.secorndaryButtonBorderColor else ColorConstant.COLOR_BLACK
+        if (generalConfigs.secondaryButtonBorderColor != null) generalConfigs.secondaryButtonBorderColor else ColorConstant.COLOR_BLACK
         val buttonRadius =
         if (generalConfigs.buttonRadiusAndroid != null) generalConfigs.buttonRadiusAndroid else 20
 
     this.setTextProperty(tryAgain, secondaryButtonText)
-    this.setBackgroundDrawable(
-        ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null), appBackgroundColor,
-        4, secondaryButtonBorder, 0f, null, true, buttonRadius)
+    if (appBackgroundColor != null) {
+        if (buttonRadius != null) {
+            this.setBackgroundDrawable(
+                ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null), appBackgroundColor,
+                4, secondaryButtonBorder, 0f, null, true, buttonRadius)
+        }
+    }
 }
 
 @BindingAdapter("buttonConfirm")
@@ -103,9 +107,13 @@ fun CustomButton.setPropertyConfirmButton(
         if (generalConfigs.buttonRadiusAndroid != null) generalConfigs.buttonRadiusAndroid else 20
 
     this.setTextProperty(confirmText, primaryButtonText)
-    this.setBackgroundDrawable(
-        ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null), primaryButtonBackground,
-        4, primaryButtonBackground, 0f, null, true, buttonRadius)
+    if (primaryButtonBackground != null) {
+        if (buttonRadius != null) {
+            this.setBackgroundDrawable(
+                ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null), primaryButtonBackground,
+                4, primaryButtonBackground, 0f, null, true, buttonRadius)
+        }
+    }
 }
 
 @BindingAdapter("setBackgroundColor")
@@ -139,6 +147,8 @@ fun ProgressBar.setProgressLoaderColor(
 ) {
     color?.let {
         this.progressTintList = ColorStateList.valueOf(Color.parseColor(color))
+    }?: run {
+        this.progressTintList = ColorStateList.valueOf(Color.parseColor(ColorConstant.DEFAULT_LOADER_COLOR))
     }
 }
 

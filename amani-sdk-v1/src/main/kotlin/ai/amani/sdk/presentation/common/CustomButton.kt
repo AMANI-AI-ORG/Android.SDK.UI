@@ -24,6 +24,10 @@ class CustomButton : AppCompatButton {
         defStyleAttr
     ) {}
 
+    init {
+        this.isAllCaps = false
+    }
+
     /**
      * @param drawable    custom drawable
      * @param solidColor  main background color
