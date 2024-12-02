@@ -13,5 +13,6 @@ object AmaniDocumentTypes {
     const val NFC = "NF"
     const val SIGNATURE = "SG"
     const val PHYSICAL_CONTRACT = "IB"
+    const val VISA = "VA"
 
 }

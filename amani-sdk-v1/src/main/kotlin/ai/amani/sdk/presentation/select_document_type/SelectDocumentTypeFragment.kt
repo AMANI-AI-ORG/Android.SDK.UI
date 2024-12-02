@@ -8,6 +8,7 @@ import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
 import ai.amani.sdk.presentation.select_document_type.adapter.DocumentAdapter
 import ai.amani.sdk.utils.ColorConstant
 import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.presentation.home_kyc.HomeKYCFragmentDirections
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -28,7 +29,7 @@ import timber.log.Timber
  * @Author: zekiamani
  * @Date: 12.09.2022
  */
-class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener {
+class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener {
 
     private lateinit var binding: FragmentSelectDocumentTypeBinding
     private val args: SelectDocumentTypeFragmentArgs by navArgs()
@@ -54,8 +55,6 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
         ) {
             when (it) {
                 ScreenRoutes.IDFrontSideScreen -> {
-                    Timber.d("ID Capture is selected by user")
-
                     val action =
                         SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToIDCaptureFrontSideFrag(
                             ConfigModel(
@@ -68,7 +67,16 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
                 }
 
                 else -> {
-                    Timber.d("Un-known")
+                    val action =
+                        SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToIDCaptureFrontSideFrag(
+                            ConfigModel(
+                                version = version,
+                                generalConfigs =  args.dataModel.generalConfigs!!.generalConfigs,
+                                featureConfig = args.dataModel.featureConfig
+                            )
+                        )
+
+                    findNavController().navigateSafely(action)
                 }
             }
         }
@@ -82,7 +90,8 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
         val color: String = if (appConfig.generalConfigs!!.appFontColor != null
         ) appConfig.generalConfigs?.appFontColor!! else ColorConstant.COLOR_BLACK
 
-        val matchingStepConfig = appConfig.stepConfigs.find { it.id == args.dataModel.currentVersionID }
+        val matchingStepConfig =
+            appConfig.stepConfigs.find { it.id == args.dataModel.currentVersionID }
 
         setToolBarTitle(
             matchingStepConfig?.documentSelectionTitle,
@@ -103,7 +112,13 @@ class SelectDocumentTypeFragment: Fragment(), DocumentAdapter.IDocumentListener 
         )
         binding.recyclerView.itemAnimator = DefaultItemAnimator()
         binding.recyclerView.isNestedScrollingEnabled = false
-        binding.recyclerView.adapter = DocumentAdapter(versionList, this, args.dataModel.generalConfigs!!.generalConfigs)
+        val modifiedVersionList = versionList.filter {
+            it?.isHidden == false || it?.isHidden == null
+        }
+        binding.recyclerView.adapter = DocumentAdapter(
+            modifiedVersionList,
+            this,
+            args.dataModel.generalConfigs!!.generalConfigs
+        )
     }
-
 }

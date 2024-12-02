@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation.select_document_type
 
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
+import ai.amani.sdk.utils.AmaniDocumentTypes
 import androidx.lifecycle.ViewModel
 import datamanager.model.config.Version
 
@@ -16,10 +17,15 @@ class SelectDocumentTypeViewModel: ViewModel() {
         route: (route: ScreenRoutes) -> Unit
     ) {
         when(version.documentId) {
-            "ID" , "PA", "DL" -> {
+            AmaniDocumentTypes.IDENTIFICATION ,
+            AmaniDocumentTypes.PASSPORT,
+            AmaniDocumentTypes.DRIVING_LICENSE-> {
                 route.invoke(ScreenRoutes.IDFrontSideScreen)
+            }
+
+            else -> {
+                route.invoke(ScreenRoutes.PhysicalContractScreen)
             }
         }
     }
-
 }

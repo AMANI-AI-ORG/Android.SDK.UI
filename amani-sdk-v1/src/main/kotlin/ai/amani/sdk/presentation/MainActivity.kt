@@ -8,6 +8,7 @@ import ai.amani.sdk.extentions.setColorFilter
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.presentation.common.OnBackPressedDispatcher.backPressed
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation.nfc.NFCActivationState
 import ai.amani.sdk.presentation.nfc.NFCSharedViewModel
 import ai.amani.sdk.utils.AppConstant
@@ -100,11 +101,11 @@ class MainActivity: AppCompatActivity() {
            }
        }
 
-       fun hideSelectButton(exception : (e: Exception) -> Unit) {
+       fun hideSelectButton() {
            try {
                binding.buttonSelectPdf.hide()
            } catch (e: Exception) {
-               exception.invoke(e)
+               e.printStackTrace()
            }
        }
 
@@ -230,5 +231,9 @@ class MainActivity: AppCompatActivity() {
         finish()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        CachingHomeKYC.clearCache()
+    }
 
 }

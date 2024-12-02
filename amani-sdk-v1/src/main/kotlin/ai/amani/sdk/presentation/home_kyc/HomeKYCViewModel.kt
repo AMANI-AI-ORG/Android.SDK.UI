@@ -401,7 +401,8 @@ open class HomeKYCViewModel constructor(
                         route.invoke(ScreenRoutes.SelfieCaptureScreen)
                     }
 
-                    AmaniDocumentTypes.PASSPORT-> {
+                    AmaniDocumentTypes.PASSPORT, AmaniDocumentTypes.IDENTIFICATION,
+                    AmaniDocumentTypes.DRIVING_LICENSE, AmaniDocumentTypes.VISA -> {
                         route.invoke(ScreenRoutes.IDFrontSideScreen)
                     }
 
@@ -426,15 +427,8 @@ open class HomeKYCViewModel constructor(
             } else {
                 when (documentID) {
 
-                    AmaniDocumentTypes.PASSPORT -> {
-                        route.invoke(ScreenRoutes.SelectDocumentTypeScreen)
-                    }
-
-                    AmaniDocumentTypes.IDENTIFICATION -> {
-                        route.invoke(ScreenRoutes.SelectDocumentTypeScreen)
-                    }
-
-                    AmaniDocumentTypes.DRIVING_LICENSE -> {
+                    AmaniDocumentTypes.PASSPORT, AmaniDocumentTypes.IDENTIFICATION,
+                    AmaniDocumentTypes.DRIVING_LICENSE, AmaniDocumentTypes.VISA, AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
                         route.invoke(ScreenRoutes.SelectDocumentTypeScreen)
                     }
 
@@ -446,6 +440,10 @@ open class HomeKYCViewModel constructor(
                             // process properly. In this section no need to show pop up to user for now
                             Timber.e("MRZModel field is empty to start process of NFCOnly")
                         }
+                    }
+
+                    AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
+                        route.invoke(ScreenRoutes.PhysicalContractScreen)
                     }
                 }
             }
@@ -515,8 +513,8 @@ open class HomeKYCViewModel constructor(
         }
 
         if (!registerConfig.birthDate.isNullOrEmpty() &&
-            !registerConfig.expireDate.isNullOrEmpty() &&
-            !registerConfig.documentNumber.isNullOrEmpty()) {
+                !registerConfig.expireDate.isNullOrEmpty() &&
+                !registerConfig.documentNumber.isNullOrEmpty()) {
             profileInfoModel.mrzModel = MRZModel(
                 registerConfig.birthDate,
                 registerConfig.expireDate,
