@@ -14,6 +14,7 @@ import android.nfc.Tag
 import androidx.fragment.app.FragmentActivity
 import datamanager.model.autocrop.Mrz
 import datamanager.model.customer.Errors
+import timber.log.Timber
 
 /**
  * @Author: zekiamani
@@ -46,11 +47,17 @@ class NFCRepositoryImp: NFCRepository {
         onComplete: (mrz: MRZResult) -> Unit,
         onError: (error : AmaniError) -> Unit
     ) {
-
         Amani.sharedInstance().IDCapture().getMRZ(
-            type,
-            onComplete,
-            onError
+            type = type,
+            onComplete = {
+                Timber.d("Birthdate: ${it.mRZBirthDate}")
+                Timber.d("Expirydate: ${it.mRZExpiryDate}")
+                Timber.d("DocumentNumber: ${it.mRZDocumentNumber}")
+                onComplete.invoke(it)
+            },
+            onError = {
+                onError.invoke(it)
+            }
         )
     }
 

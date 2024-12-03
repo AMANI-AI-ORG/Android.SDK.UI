@@ -123,7 +123,7 @@ class SelfieCaptureFragment: Fragment() {
                     }
                 }
             })
-        replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment)
+        replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment!!)
     }
 
     /** Navigates the Selfie Pose Estimation Fragment*/
@@ -237,7 +237,7 @@ class SelfieCaptureFragment: Fragment() {
                                     binding.selfieAnimationSecond.slideLeft{
                                         initSelfiePoseEstimation(
                                             requestedOrderNumber = args.dataModel.version!!.selfieType!!,
-                                            videoRecord  = args.dataModel.featureConfig.selfieCaptureVideoRecord
+                                            videoRecord  = args.dataModel.version!!.videoRecord
                                         )
                                     }
                                 }

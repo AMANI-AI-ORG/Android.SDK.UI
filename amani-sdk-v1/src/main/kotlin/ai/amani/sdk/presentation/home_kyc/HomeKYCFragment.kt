@@ -159,16 +159,24 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                             }
                         )
                     }
+
+                    else -> {
+                        viewModel.uploadDocument(
+                            activity = requireActivity(),
+                            docType = it.docType,
+                            genericDocumentFlow = it.genericDocumentFlow,
+                            onCompleted = { documentUploadResult ->
+                                logUploadResult(documentUploadResult, AmaniDocumentTypes.PHYSICAL_CONTRACT)
+                            }
+                        )
+                    }
                 }
             }
     }
 
     override fun onResume() {
         super.onResume()
-        MainActivity.hideSelectButton{
-            debugToast("There is an exception while hiding the select button via $it")
-        }
-
+        MainActivity.hideSelectButton()
         viewModel.listenAmaniEvents()
     }
 
@@ -317,8 +325,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         HomeKYCFragmentDirections.actionHomeKYCFragmentToSelfieCaptureFragment(
                             ConfigModel(
                                 viewModel.getVersion(),
-                                viewModel.getAppConfig()!!.generalConfigs,
-                                featureConfig = viewModel.featureConfigModel()
+                                viewModel.getAppConfig()!!.generalConfigs
                             )
                         )
 
@@ -328,9 +335,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 ScreenRoutes.IDFrontSideScreen -> {
                     val action = HomeKYCFragmentDirections.actionHomeKYCFragmentToIDCaptureFrontSideFrag(
                         dataModel = ConfigModel(
-                            version = viewModel.getVersion(),
-                            generalConfigs =  viewModel.getAppConfig()!!.generalConfigs,
-                            featureConfig = viewModel.featureConfigModel()
+                            viewModel.getVersion(),
+                            viewModel.getAppConfig()!!.generalConfigs
                         )
                     )
                     findNavController().navigateSafely(action)

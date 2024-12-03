@@ -1,6 +1,5 @@
-package ai.amani.sdk
+package ai.amani.sample
 
-import ai.amani.amani_sdk.BuildConfig
 import android.app.Application
 import timber.log.Timber
 

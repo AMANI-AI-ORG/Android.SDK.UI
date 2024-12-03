@@ -9,6 +9,7 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import androidx.lifecycle.*
 import androidx.lifecycle.viewmodel.CreationExtras
+import timber.log.Timber
 
 /**
  * @Author: zekiamani
@@ -16,19 +17,19 @@ import androidx.lifecycle.viewmodel.CreationExtras
  */
 class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp): ViewModel() {
 
-    private val _intent = MutableLiveData<Intent>()
+    private val _intent = MutableLiveData<Intent?>(null)
     private val _nfcActivationState = MutableLiveData<NFCActivationState>(NFCActivationState.Empty)
     private val _nfcScanState = MutableLiveData<NFCScanState>(NFCScanState.Empty)
     private val maxAttempt = 3
     private var currentAttempt = 0
 
-    val get: LiveData<Intent> = _intent
+    val get: LiveData<Intent?> = _intent
 
     val nfcActivationState: LiveData<NFCActivationState> = _nfcActivationState
 
     val nfcScanState: LiveData<NFCScanState> = _nfcScanState
 
-    fun set(intent: Intent?) { _intent.value = intent!! }
+    fun set(intent: Intent?) { _intent.value = intent }
 
     fun setNfcEnable(boolean: Boolean) {
         if (boolean) {
@@ -43,8 +44,10 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
         expireDate: String,
         documentNumber: String
     ) {
+        Timber.d("NFC Scan is triggered")
 
-        val tag = intent.extras!!.parcelable<Tag>(NfcAdapter.EXTRA_TAG);
+        val tag = intent.extras!!.parcelable<Tag>(NfcAdapter.EXTRA_TAG)
+
         nfcRepository.scan(
             tag!!,
             context,
@@ -52,10 +55,12 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
             expireDate,
             documentNumber,
             onComplete = {
+                Timber.d("NFC onComplete is triggered")
                 _nfcScanState.value = NFCScanState.Success
             },
             
             onFailure = {
+                Timber.d("NFC onFailure is triggered")
                 currentAttempt += 1
                 if (currentAttempt >= maxAttempt) {
                     currentAttempt = 0
@@ -66,7 +71,6 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
             }
         )
     }
-
 
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {

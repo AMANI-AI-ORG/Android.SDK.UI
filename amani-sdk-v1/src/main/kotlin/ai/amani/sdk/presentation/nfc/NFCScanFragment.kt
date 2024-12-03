@@ -242,6 +242,7 @@ class NFCScanFragment : Fragment() {
     override fun onPause() {
         super.onPause()
         viewModel.setNfcEnable(false)
+        viewModel.set(null)
     }
 
     private fun startNfcSettingsActivity() {

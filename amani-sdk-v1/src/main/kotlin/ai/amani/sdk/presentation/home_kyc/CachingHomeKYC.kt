@@ -9,7 +9,7 @@ import datamanager.model.config.Version
  * @Author: zekiamani
  * @Date: 6.12.2022
  */
-object CachingHomeKYC {
+internal object CachingHomeKYC {
 
     var appConfig: ResGetConfig? = null
 
@@ -20,4 +20,12 @@ object CachingHomeKYC {
     var versionsList : MutableList<Version>? = null
 
     var onlyKYCRules: ArrayList<Rule>? = null
+
+    fun clearCache() {
+        appConfig = null
+        customerDetail = null
+        version = null
+        versionsList = null
+        onlyKYCRules = null
+    }
 }

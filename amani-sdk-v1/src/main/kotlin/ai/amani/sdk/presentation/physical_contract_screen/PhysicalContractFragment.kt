@@ -1,6 +1,6 @@
 package ai.amani.sdk.presentation.physical_contract_screen
 
-import ai.amani.amani_sdk.BuildConfig
+import ai.amani.BuildConfig
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentPhysicalContractBinding
 import ai.amani.sdk.Amani
@@ -87,9 +87,7 @@ class PhysicalContractFragment: Fragment() {
                             findNavController().clearBackStack(R.id.homeKYCFragment)
                             findNavController().popBackStack(R.id.homeKYCFragment, false)
 
-                            MainActivity.hideSelectButton{
-                                debugToast("There is an exception while hiding the select button via $it")
-                            }
+                            MainActivity.hideSelectButton()
 
                         } else {
                             if (BuildConfig.DEBUG) {
@@ -136,9 +134,7 @@ class PhysicalContractFragment: Fragment() {
                     }
                     val listOfUri = arrayListOf(uri)
 
-                    MainActivity.hideSelectButton{
-                        debugToast("There is an exception while hiding the select button via $it")
-                    }
+                    MainActivity.hideSelectButton()
 
                     findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
                         HomeKYCResultModel(

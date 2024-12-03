@@ -11,6 +11,8 @@ import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter.MyViewHolder
 import ai.amani.sdk.utils.AppConstant
+import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
+import ai.amani.sdk.utils.AppConstant.STATUS_PENDING_REVIEW
 import ai.amani.sdk.utils.AppConstant.STEPS_BEFORE_KYC_FLOW
 import android.content.Context
 import android.graphics.Color
@@ -55,6 +57,7 @@ class KYCAdapter(
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
 
         val stepConfig = appConfig!!.getStepConfig(mDocumentList[position].sortOrder!!)
+        val steps = appConfig!!.stepConfigs
 
         // If identifier is instance of invisible identifiers, do not show it
         if (!isRuleVisible(stepConfig)) {
@@ -317,47 +320,32 @@ class KYCAdapter(
             }
         }
 
-        // TODO Mandatory steps check will be added here from ViewModel not here
         /*---- Current Button Activation Check----
-        * To activate a button there is 2 mandatory check
-        * 1) Phase; if phase defined at remote config, Phase 1 is active else is de-active
-        * 2) mandatoryStepID; If mandatoryStepID is defined at remote config, check the mandatoryStepID's
+        * To activate a button
+        * mandatoryStepID; If mandatoryStepID is defined at remote config, check the mandatoryStepID's
         * status to activate current button.
         * For example; There is ButtonA(id = 54, mandatoryStepID = null), ButtonB (id = 55, mandatoryStepID =null),
         * ButtonC(id = 56,mandatoryStepID = 54). In this case, ButtonC cannot be activated before ButtonA status is Approved.
         * When ButtonA status ButtonC will be activated.
         */
-        /*     if (stepConfig.getPhase() == 1) {
-            if (getFlags() == mDocumentList.size() ) {
-                activateButton(holder);
-            } else {
-                deactivateButton(holder);
-            }
+
+        if (stepConfig.mandatoryStepIDs == null) {
+            activateButton(holder)
         } else {
-            int databaseId = 0;
-            List<Integer> listOfMandatoryStepID = stepConfig.getMandatoryStepID();
-            if (listOfMandatoryStepID == null) {
-                activateButton(holder);
-            } else {
-                StepConfig stepConfig_ = SessionManager.getStepConfig(mContext,position);
-                if (stepConfig_ != null) databaseId = stepConfig_.getId();
-                if (databaseId != 0) {
-                    boolean mandatoryStep = false ;
-                    for (int i= 0; i < mDocumentList.size(); i++) {
-                        for (int k = 0; k < listOfMandatoryStepID.size(); k ++ ) {
-                            if (mDocumentList.get(i).getId().equals(listOfMandatoryStepID.get(k))) {
-                                mandatoryStep = mDocumentList.get(i).getStatus().equals(STATUS_APPROVED);
-                            }
-                        }
-                    }
-                    if (mandatoryStep) {
-                        activateButton(holder);
-                    } else {
-                        deactivateButton(holder);
+            var activateStep = false
+            mDocumentList.forEach { step ->
+                stepConfig.mandatoryStepIDs!!.forEach { mandatoryStepId ->
+                    if (mandatoryStepId == step.id) {
+                      if (step.status == STATUS_APPROVED || step.status == STATUS_PENDING_REVIEW) {
+                          activateStep = true
+                      } else activateStep = false
                     }
                 }
             }
-        }*/
+
+            if (activateStep) activateButton(holder)
+            else deactivateButton(holder)
+        }
     }
 
     fun setDocumentList(documentList: List<Rule>?) {
@@ -393,6 +381,7 @@ class KYCAdapter(
                     }
                 }
             }
+            notifyDataSetChanged()
         } catch (e: IndexOutOfBoundsException) {
             e.printStackTrace()
         }
@@ -429,7 +418,7 @@ class KYCAdapter(
      * @param holder: ViewHolder at adapter
      */
     private fun activateButton(holder: MyViewHolder) {
-        holder.mBinding.textOfButton.isClickable = true
+        holder.mBinding.linearBg.isClickable = true
         holder.mBinding.linearBg.alpha = 1f
     }
 
@@ -438,7 +427,7 @@ class KYCAdapter(
      * @param holder: ViewHolder at adapter
      */
     private fun deactivateButton(holder: MyViewHolder) {
-        holder.mBinding.textOfButton.isClickable = false
+        holder.mBinding.linearBg.isClickable = false
         holder.mBinding.linearBg.alpha = 0.5f
     }
 

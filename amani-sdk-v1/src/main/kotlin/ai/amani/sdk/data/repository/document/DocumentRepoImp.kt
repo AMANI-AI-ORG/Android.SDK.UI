@@ -45,7 +45,7 @@ class DocumentRepoImp: DocumentRepository {
 
                 val docList = arrayListOf<FileWithType>()
                 val pdfData = activity.contentResolver.openInputStream(genericDocumentFlow.dataList.first())?.readBytes()
-                docList.add(FileWithType(pdfData!!, "pdf"))
+                docList.add(FileWithType(pdfData!!, "application/pdf"))
 
                 Amani.sharedInstance().Document().upload(
                     activity,
