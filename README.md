@@ -10,7 +10,7 @@ Amani SDK-UI package is an interface package prepared using Amani-SDK-V2. You ca
 The minimum requirements for the SDK are:
 
 * minSdkVersion 21
-* compileSdkVersion 33
+* compileSdkVersion 34
 
 ## How do I get set up? ##
 
