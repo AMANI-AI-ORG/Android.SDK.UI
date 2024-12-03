@@ -68,11 +68,10 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
 
                 else -> {
                     val action =
-                        SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToIDCaptureFrontSideFrag(
+                        SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToPhysicalContractFragment(
                             ConfigModel(
                                 version = version,
-                                generalConfigs =  args.dataModel.generalConfigs!!.generalConfigs,
-                                featureConfig = args.dataModel.featureConfig
+                                generalConfigs = args.dataModel.generalConfigs!!.generalConfigs
                             )
                         )
 

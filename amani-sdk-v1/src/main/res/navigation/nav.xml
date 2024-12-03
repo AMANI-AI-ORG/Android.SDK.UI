@@ -99,6 +99,9 @@
         <action
             android:id="@+id/action_selectDocumentTypeFragment_to_IDCaptureFrontSideFrag"
             app:destination="@id/IDCaptureFrontSideFrag" />
+        <action
+            android:id="@+id/action_selectDocumentTypeFragment_to_physicalContractFragment"
+            app:destination="@id/physicalContractFragment" />
         <argument
             android:name="dataModel"
             app:nullable="false"
