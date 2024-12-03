@@ -37,6 +37,7 @@ android {
 allprojects {
     repositories {
         maven { url 'https://jitpack.io' }
+        maven { url = "https://jfrog.amani.ai/artifactory/amani-sdk" }
     }
 }
             
