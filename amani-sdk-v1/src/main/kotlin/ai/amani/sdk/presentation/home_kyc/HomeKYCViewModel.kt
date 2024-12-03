@@ -26,7 +26,6 @@ import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
-import ai.amani.sdk.utils.AppConstant.STATUS_PENDING_REVIEW
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -46,7 +45,7 @@ import timber.log.Timber
  */
 
 
-open class HomeKYCViewModel constructor(
+open class HomeKYCViewModel(
     private val loginRepository: LoginRepoImp,
     private val configRepository: ConfigRepositoryImp,
     private val customerDetailRepoImp: CustomerDetailRepoImp,
@@ -62,7 +61,8 @@ open class HomeKYCViewModel constructor(
     val uiState: LiveData<HomeKYCState> = _uiState
 
     /*Responsible for Logic Events */
-    private var _logicEvent: MutableLiveData<HomeKYCLogicEvent> = MutableLiveData(HomeKYCLogicEvent.Empty)
+    private var _logicEvent: MutableLiveData<HomeKYCLogicEvent> =
+        MutableLiveData(HomeKYCLogicEvent.Empty)
     val logicEvent: LiveData<HomeKYCLogicEvent> = _logicEvent
 
     private var selectedStepIDNumber = ""
@@ -183,8 +183,9 @@ open class HomeKYCViewModel constructor(
                     },
                     stepsAfterKYC = { afterKycSteps ->
                         //If there is no steps before KYC continue with KYC process
-                        if (checkKYCStepsAreApproved(customerDetail)) navigateBeforeOrAfterKYCFlowScreens(afterKycSteps)
-                        else _uiState.value = HomeKYCState.Loaded
+                        if (checkKYCStepsAreApproved(customerDetail)) {
+                            navigateBeforeOrAfterKYCFlowScreens(afterKycSteps)
+                        } else _uiState.value = HomeKYCState.Loaded
                     },
 
                     no = {
@@ -345,28 +346,6 @@ open class HomeKYCViewModel constructor(
         )
     }
 
-    companion object {
-        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(
-                modelClass: Class<T>,
-                extras: CreationExtras
-            ): T {
-
-                return HomeKYCViewModel(
-                    LoginRepoImp(),
-                    ConfigRepositoryImp(),
-                    CustomerDetailRepoImp(),
-                    SelfieCaptureRepoImp(),
-                    IDCaptureRepoImp(),
-                    NFCRepositoryImp(),
-                    SignatureRepoImp(),
-                    DocumentRepoImp()
-                ) as T
-            }
-        }
-    }
-
     fun navigateScreen(
         rule: Rule,
         adapterPosition: Int,
@@ -411,7 +390,7 @@ open class HomeKYCViewModel constructor(
                             route.invoke(ScreenRoutes.NFCScanScreen)
                         } else {
                             // MRZ must be provided for every user from client side to start NFCOnly
-                            // process properly. In this section no need to show pop up to user for now
+                            // process properly.
                             Timber.e("MRZModel field is empty to start process of NFCOnly")
                         }
                     }
@@ -428,7 +407,8 @@ open class HomeKYCViewModel constructor(
                 when (documentID) {
 
                     AmaniDocumentTypes.PASSPORT, AmaniDocumentTypes.IDENTIFICATION,
-                    AmaniDocumentTypes.DRIVING_LICENSE, AmaniDocumentTypes.VISA, AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
+                    AmaniDocumentTypes.DRIVING_LICENSE, AmaniDocumentTypes.VISA,
+                    AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
                         route.invoke(ScreenRoutes.SelectDocumentTypeScreen)
                     }
 
@@ -467,7 +447,6 @@ open class HomeKYCViewModel constructor(
             //Creating version list accordingly sort order from remote config
             //Sort order is a row number of current document
             CachingHomeKYC.versionsList!!.addAll(documentList.versions!!)
-
         }
     }
 
@@ -529,7 +508,8 @@ open class HomeKYCViewModel constructor(
 
         Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack{
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
-                Timber.e("Amani SDK error type: $type Amani error: ${error?.firstNotNullOf { it?.errorCode }}")
+                Timber.e("Amani SDK error type: $type Amani error: " +
+                        "${error?.firstNotNullOf { it?.errorCode }}")
             }
 
             override fun profileStatus(profileStatus: ProfileStatus) {
@@ -541,7 +521,8 @@ open class HomeKYCViewModel constructor(
 
                 try {
                     repeat(stepsResult!!.result.size) {
-                        Timber.d("Step result ID: ${stepsResult.result[it].sortOrder} , Status: ${stepsResult.result[it].status}")
+                        Timber.d("Step result ID: ${stepsResult.result[it].sortOrder} ," +
+                                " Status: ${stepsResult.result[it].status}")
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -693,7 +674,7 @@ open class HomeKYCViewModel constructor(
 
     private fun navigateBeforeOrAfterKYCFlowScreens(steps: ArrayList<StepConfig>) {
         when(steps.first().identifier) {
-            "profile_info" -> {
+            AppConstant.IDENTIFIER_PROFILE_INFO -> {
                 navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToProfileInfoFragment(
                     OTPScreenArgModel(
                         steps = steps,
@@ -702,7 +683,7 @@ open class HomeKYCViewModel constructor(
                 ))
             }
 
-            "phone_otp" -> {
+            AppConstant.IDENTIFIER_PHONE_OTP -> {
                 navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToVerifyPhoneFragment(
                     OTPScreenArgModel(
                         steps = steps,
@@ -711,7 +692,7 @@ open class HomeKYCViewModel constructor(
                 ))
             }
 
-            "email_otp" -> {
+            AppConstant.IDENTIFIER_EMAIL_OTP -> {
                 navigateTo(HomeKYCFragmentDirections.actionHomeKYCFragmentToVerifyEmailFragment(
                     OTPScreenArgModel(
                         steps = steps,
@@ -727,6 +708,28 @@ open class HomeKYCViewModel constructor(
                         config = CachingHomeKYC.appConfig!!.generalConfigs!!
                     )
                 ))
+            }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(
+                modelClass: Class<T>,
+                extras: CreationExtras
+            ): T {
+
+                return HomeKYCViewModel(
+                    LoginRepoImp(),
+                    ConfigRepositoryImp(),
+                    CustomerDetailRepoImp(),
+                    SelfieCaptureRepoImp(),
+                    IDCaptureRepoImp(),
+                    NFCRepositoryImp(),
+                    SignatureRepoImp(),
+                    DocumentRepoImp()
+                ) as T
             }
         }
     }
