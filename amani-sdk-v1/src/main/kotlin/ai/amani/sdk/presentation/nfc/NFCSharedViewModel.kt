@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation.nfc
 import ai.amani.sdk.data.repository.nfc.NFCRepositoryImp
 import ai.amani.sdk.extentions.deviceNFCState
 import ai.amani.sdk.extentions.parcelable
+import ai.amani.sdk.model.MRZModel
 import android.content.Context
 import android.content.Intent
 import android.nfc.NfcAdapter
@@ -19,7 +20,7 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
 
     private val _intent = MutableLiveData<Intent?>(null)
     private val _nfcActivationState = MutableLiveData<NFCActivationState>(NFCActivationState.Empty)
-    private val _nfcScanState = MutableLiveData<NFCScanState>(NFCScanState.Empty)
+    private val _nfcScanState = MutableLiveData<NFCScanState>(NFCScanState.ReadyToScan)
     private val maxAttempt = 3
     private var currentAttempt = 0
 
@@ -28,6 +29,12 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
     val nfcActivationState: LiveData<NFCActivationState> = _nfcActivationState
 
     val nfcScanState: LiveData<NFCScanState> = _nfcScanState
+
+    var mrzData = MRZModel()
+
+    fun setMRZ(mrzModel: MRZModel) {
+        mrzData = mrzModel
+    }
 
     fun set(intent: Intent?) { _intent.value = intent }
 
@@ -39,21 +46,18 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
 
     fun scanNFC(
         intent: Intent,
-        context: Context,
-        birthDate: String,
-        expireDate: String,
-        documentNumber: String
+        context: Context
     ) {
         Timber.d("NFC Scan is triggered")
 
         val tag = intent.extras!!.parcelable<Tag>(NfcAdapter.EXTRA_TAG)
 
         nfcRepository.scan(
-            tag!!,
-            context,
-            birthDate,
-            expireDate,
-            documentNumber,
+            tag = tag!!,
+            context = context,
+            birthDate = mrzData.birthDate,
+            expireDate = mrzData.expireDate,
+            documentNumber = mrzData.docNumber,
             onComplete = {
                 Timber.d("NFC onComplete is triggered")
                 _nfcScanState.value = NFCScanState.Success
@@ -66,6 +70,12 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
                     currentAttempt = 0
                     _nfcScanState.value = NFCScanState.OutOfMaxAttempt
                 } else {
+                    it?.let { error ->
+                        if (error == "Invalid key") {
+                            _nfcScanState.value = NFCScanState.ShowMRZCheck
+                            return@let
+                        }
+                    }
                     _nfcScanState.value = NFCScanState.Failure
                 }
             }
@@ -103,12 +113,20 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
     }
 
     /**
+     * Continue button is clicked. MRZ values are checked.
+     * State ready to scan NFC
+     */
+    fun continueBtnClick() {
+        _nfcScanState.value = NFCScanState.ReadyToScan
+    }
+
+    /**
      * It should be called while navigate screen to another screen due to android life cycle
      * that why its activity view model that alive all activity life cycle that cause
      * NFCScan is still same when user come back to this screen if its not cleared while navigation.
      */
     fun clearNFCState() {
-        _nfcScanState.value = NFCScanState.Empty
+        _nfcScanState.value = NFCScanState.ReadyToScan
     }
 }
 
@@ -119,8 +137,9 @@ sealed interface NFCActivationState {
 }
 
 sealed interface NFCScanState {
-    object Empty : NFCScanState
-    object Success: NFCScanState
-    object Failure: NFCScanState
-    object OutOfMaxAttempt: NFCScanState
+    data object ReadyToScan : NFCScanState
+    data object ShowMRZCheck: NFCScanState
+    data object Success: NFCScanState
+    data object Failure : NFCScanState
+    data object OutOfMaxAttempt: NFCScanState
 }

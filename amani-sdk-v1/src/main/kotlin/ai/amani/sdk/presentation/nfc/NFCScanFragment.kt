@@ -4,10 +4,10 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentNfcScanBinding
 import ai.amani.sdk.extentions.alertDialog
 import ai.amani.sdk.extentions.hide
-import ai.amani.sdk.extentions.setColor
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.HomeKYCResultModel
+import ai.amani.sdk.presentation.otp.profile_info.DatePickerHandler
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.ColorConstant
@@ -15,12 +15,15 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +44,8 @@ class NFCScanFragment : Fragment() {
     private val viewModel: NFCSharedViewModel by activityViewModels{NFCSharedViewModel.Factory}
     private val nfcScanningModal by lazy { NFCScanningBottomDialog() }
     private var nfcDialogMessages: NFCScanningBottomDialog.NFCDialogMessages = NFCScanningBottomDialog.NFCDialogMessages()
+    private lateinit var expiryDatePicker: DatePickerHandler
+    private lateinit var birthDatePicker: DatePickerHandler
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -87,41 +92,19 @@ class NFCScanFragment : Fragment() {
 
     private fun setCustomUI() {
         val nfcTitle =
-            if (args.dataModel.configModel.version!!.nfcTitle != null)
-                args.dataModel.configModel.version!!.nfcTitle else resources.getString(
-                R.string.nfc_title
-            )
+            args.dataModel.configModel.version!!.nfcTitle
         val nfcDescription1 =
-            if (args.dataModel.configModel.version!!.nfcDescription1 != null)
-                args.dataModel.configModel.version!!.nfcDescription1 else resources.getString(
-                R.string.nfc_hold_your_card
-            )
+            args.dataModel.configModel.version!!.nfcDescription1
         val nfcDescription2 =
-            if (args.dataModel.configModel.version!!.nfcDescription2 != null)
-                args.dataModel.configModel.version!!.nfcDescription2 else resources.getString(
-                R.string.nfc_keep_still
-            )
+            args.dataModel.configModel.version!!.nfcDescription2
         val nfcDescription3 =
-            if (args.dataModel.configModel.version!!.nfcDescription3 != null)
-                args.dataModel.configModel.version!!.nfcDescription3 else resources.getString(
-                R.string.nfc_reading_completed
-            )
-        val nfcPleaseHold =
-            if (args.dataModel.configModel.version!!.nfcPleaseHold != null)
-                args.dataModel.configModel.version!!.nfcPleaseHold else resources.getString(
-                R.string.nfc_hold_your_card
-            )
+            args.dataModel.configModel.version!!.nfcDescription3
+        args.dataModel.configModel.version!!.nfcPleaseHold
         val appFontColor =
-            if (args.dataModel.configModel.generalConfigs!!.appFontColor != null)
-                args.dataModel.configModel.generalConfigs!!.appFontColor
-            else ColorConstant.COLOR_BLACK
+            args.dataModel.configModel.generalConfigs!!.appFontColor
         val appBackGroundColor: Int =
-            if (args.dataModel.configModel.generalConfigs!!.appBackground != null)
-                Color.parseColor(args.dataModel.configModel.generalConfigs!!.appBackground)
-            else Color.BLACK
-        val nfcAnimationColor =
-            if (args.dataModel.configModel.version!!.nfcAnimationColor != null)
-                args.dataModel.configModel.version!!.nfcAnimationColor else appFontColor
+            Color.parseColor(args.dataModel.configModel.generalConfigs!!.appBackground)
+        args.dataModel.configModel.version!!.nfcAnimationColor
 
         binding.nfcDesc1.setTextProperty(nfcDescription1, appFontColor)
         binding.nfcDesc2.setTextProperty(nfcDescription2, appFontColor)
@@ -139,6 +122,61 @@ class NFCScanFragment : Fragment() {
             nfcTitle,
             appFontColor
         )
+
+        binding.birthDateInput.setText(args.dataModel.mrzModel.birthDate)
+        binding.expiryDateInput.setText(args.dataModel.mrzModel.expireDate)
+        binding.docNumberInput.setText(args.dataModel.mrzModel.docNumber)
+
+        viewModel.setMRZ(
+            args.dataModel.mrzModel
+        )
+
+        binding.docNumberInput.addTextChangedListener(object : TextWatcher{
+            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+            }
+
+            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+            }
+
+            override fun afterTextChanged(p0: Editable?) {
+                viewModel.mrzData.docNumber = p0.toString()
+            }
+        })
+
+        binding.continueBtn.setOnClickListener {
+            viewModel.continueBtnClick()
+        }
+
+        binding.birthDateInput.setOnClickListener {
+            birthDatePicker.showDatePickerDialog(dateFormat = "yy-MM-dd")
+        }
+
+        binding.expiryDateInput.setOnClickListener {
+            expiryDatePicker.showDatePickerDialog(dateFormat = "yy-MM-dd")
+        }
+
+        binding.continueBtn.setBackgroundDrawable(
+            ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null),
+            args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
+            4, args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
+            0f, null,
+            true, args.dataModel.configModel.generalConfigs!!.buttonRadiusAndroid)
+
+        expiryDatePicker = DatePickerHandler(
+            context = requireContext(),
+            listener = {
+                binding.expiryDateInput.setText(it.replace("-", ""))
+                viewModel.mrzData.expireDate = it.replace("-", "")
+            }
+        )
+
+        birthDatePicker = DatePickerHandler(
+            context = requireContext(),
+            listener = {
+                binding.birthDateInput.setText(it.replace("-", ""))
+                viewModel.mrzData.birthDate = it.replace("-", "")
+            }
+        )
     }
 
     private fun observeLiveEvent() {
@@ -149,16 +187,13 @@ class NFCScanFragment : Fragment() {
                         val args = Bundle()
                         args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
                         nfcScanningModal.arguments = args
-                        nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
+                       if (!nfcScanningModal.isVisible) nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
                     }
                 }
 
                 viewModel.scanNFC(
                     it,
-                    requireContext(),
-                    args.dataModel.mrzModel.birthDate,
-                    args.dataModel.mrzModel.expireDate,
-                    args.dataModel.mrzModel.expirationDate
+                    requireContext()
                 )
             }
         }
@@ -169,7 +204,7 @@ class NFCScanFragment : Fragment() {
                     //Navigate HomeKYCFragment
                     Timber.i("NFC is scanned properly")
 
-                    CoroutineScope(Dispatchers.Main).launch {
+                    lifecycleScope.launch(Dispatchers.Main) {
                         nfcScanningModal.nfcScanningDoneAnimations()
                         delay(1000)
 
@@ -193,7 +228,7 @@ class NFCScanFragment : Fragment() {
                 is NFCScanState.Failure ->{
                     //Show message to user to re-scan NFC
                     Timber.i("NFC scanning failed")
-                    CoroutineScope(Dispatchers.Main).launch {
+                    lifecycleScope.launch(Dispatchers.Main) {
                         nfcScanningModal.showError()
                         delay(1000)
                         nfcScanningModal.dismiss()
@@ -203,7 +238,7 @@ class NFCScanFragment : Fragment() {
                 is NFCScanState.OutOfMaxAttempt ->{
                     //Navigate HomeKYCFragment
                     Timber.i("NFC scanning failed, OutOfMaxAttempt")
-                    CoroutineScope(Dispatchers.Main).launch {
+                    lifecycleScope.launch(Dispatchers.Main){
 
                         //Closing the NFC scanning dialog
                         nfcScanningModal.dismiss()
@@ -232,8 +267,21 @@ class NFCScanFragment : Fragment() {
 
                 }
 
-                else -> {
-                    //Ignore when state Empty.
+                is NFCScanState.ReadyToScan -> {
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        viewModel.setNfcEnable(true)
+                        binding.infoLayout.show()
+                        binding.mrzCheckLayout.hide()
+                    }
+                }
+
+                is NFCScanState.ShowMRZCheck -> {
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        viewModel.setNfcEnable(false)
+                        viewModel.set(null)
+                        binding.infoLayout.hide()
+                        binding.mrzCheckLayout.show()
+                    }
                 }
             }
         }
