@@ -5,6 +5,9 @@ import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.AppConstant
+import ai.amani.voice_assistant.AmaniVoiceAssistant
+import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
+import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.ComponentActivity
@@ -27,6 +30,7 @@ object AmaniSDKUI {
             amaniVersion,
             UploadSource.KYC
         )
+
     }
 
     fun goToKycActivity(

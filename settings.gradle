@@ -13,6 +13,10 @@ dependencyResolutionManagement {
         maven {
             url = "https://jfrog.amani.ai/artifactory/amani-sdk"
         }
+
+        maven {
+            url = "https://jitpack.io"
+        }
     }
 }
 rootProject.name = "SampleAmaniUI2"

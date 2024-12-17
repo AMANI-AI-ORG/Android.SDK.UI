@@ -2,11 +2,15 @@ package ai.amani.sdk.presentation.congratulations_screen
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentCongratulationsBinding
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.presentation.binding.setText
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.ProfileStatus
+import ai.amani.voice_assistant.AmaniVoiceAssistant
+import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
+import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -39,6 +43,24 @@ class CongratulationsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        VoiceAssistantSDKManager.play(
+            context = requireContext(),
+            key = AmaniVAVoiceKeys.VOICE_SUCCESS,
+            callBack = object : AmaniVAPlayerCallBack {
+                override fun onPlay() {
+
+                }
+
+                override fun onStop() {
+
+                }
+
+                override fun onFailure(exception: Exception) {
+
+                }
+            }
+        )
 
         setCustomUI()
 
@@ -81,5 +103,10 @@ class CongratulationsFragment : Fragment() {
         )
         requireActivity().setResult(Activity.RESULT_OK, returnIntent)
         requireActivity().finish()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        VoiceAssistantSDKManager.stop()
     }
 }
