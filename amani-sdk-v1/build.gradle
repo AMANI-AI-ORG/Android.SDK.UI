@@ -76,6 +76,8 @@ dependencies {
     api 'com.jakewharton.timber:timber:5.0.1'
     implementation 'com.hbb20:ccp:2.5.3' // CountryCodePicker library
     implementation 'net.yslibrary.keyboardvisibilityevent:keyboardvisibilityevent:3.0.0-RC3'
+
+    implementation 'com.github.zekiamani:Android.SDK.AmaniVoiceAssistant:1.0.0alpha63'
 }
 
 afterEvaluate {

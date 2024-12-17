@@ -5,6 +5,9 @@ import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.AppConstant
+import ai.amani.voice_assistant.AmaniVoiceAssistant
+import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
+import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.ComponentActivity
@@ -26,6 +29,20 @@ object AmaniSDKUI {
             sharedSecret,
             amaniVersion,
             UploadSource.KYC
+        )
+
+        //TODO change static URL with dynamic 
+        AmaniVoiceAssistant.init(
+            url = "https://gist.githubusercontent.com/munir-amani/70bbb480b1ea8b761169397004a37a4d/raw/44aed46c7635100d3e99ec0baf8562e87a2a173d/ttsVoices.json",
+            callBack = object : AmaniVAInitCallBack {
+                override fun onSuccess(voices: List<TTSVoice>) {
+
+                }
+
+                override fun onFailure(exception: Exception) {
+
+                }
+            }
         )
     }
 

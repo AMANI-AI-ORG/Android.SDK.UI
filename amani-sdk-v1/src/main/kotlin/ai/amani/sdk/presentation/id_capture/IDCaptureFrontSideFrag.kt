@@ -8,6 +8,9 @@ import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.modules.document_capture.camera.BitmapUtils
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.AppConstant
+import ai.amani.voice_assistant.AmaniVoiceAssistant
+import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
+import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.animation.Animator
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -49,6 +52,23 @@ class IDCaptureFrontSideFrag : Fragment() {
 
         listenAnimation()
 
+        AmaniVoiceAssistant.play(
+            context = requireContext(),
+            key = AmaniVAVoiceKeys.VOICE_ID0,
+            callBack = object : AmaniVAPlayerCallBack {
+                override fun onPlay() {
+
+                }
+
+                override fun onStop() {
+
+                }
+
+                override fun onFailure(exception: Exception) {
+
+                }
+            }
+        )
     }
 
     private fun playAnimation() {
@@ -150,5 +170,10 @@ class IDCaptureFrontSideFrag : Fragment() {
             args.dataModel.version!!.steps[0].captureTitle,
             args.dataModel.generalConfigs!!.appFontColor
         )
+    }
+
+    override fun onStop() {
+        super.onStop()
+        AmaniVoiceAssistant.stop()
     }
 }
