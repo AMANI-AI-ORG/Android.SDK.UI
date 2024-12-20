@@ -10,6 +10,9 @@ import ai.amani.sdk.modules.document_capture.camera.BitmapUtils
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.OnFailurePoseEstimation
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.PoseEstimationObserver
 import ai.amani.sdk.presentation.MainActivity
+import ai.amani.voice_assistant.AmaniVoiceAssistant
+import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
+import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -61,6 +64,18 @@ class SelfieCaptureFragment: Fragment() {
         binding.dataModel = args.dataModel
 
         observeUiState()
+
+        AmaniVoiceAssistant.play(requireContext(), "VOICE_SE0", callBack = object : AmaniVAPlayerCallBack{
+            override fun onFailure(exception: Exception) {
+
+            }
+
+            override fun onPlay() {
+            }
+
+            override fun onStop() {
+            }
+        })
     }
 
     /** Navigates the Manual Selfie Fragment*/
@@ -272,5 +287,10 @@ class SelfieCaptureFragment: Fragment() {
     override fun onResume() {
         super.onResume()
         setToolBarTitle()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AmaniVoiceAssistant.stop()
     }
 }
