@@ -254,6 +254,7 @@ class NFCScanFragment : Fragment() {
                         nfcScanningModal.showError()
                         delay(1000)
                         nfcScanningModal.dismiss()
+                        viewModel.setState(NFCScanState.ShowMRZCheck)
                     }
                 }
 

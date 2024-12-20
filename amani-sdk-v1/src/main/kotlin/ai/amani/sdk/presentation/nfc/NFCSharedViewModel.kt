@@ -82,6 +82,10 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
         )
     }
 
+    fun setState(state: NFCScanState) {
+        _nfcScanState.value = state
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
