@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation.congratulations_screen
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentCongratulationsBinding
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.presentation.binding.setText
@@ -43,7 +44,7 @@ class CongratulationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        AmaniVoiceAssistant.play(
+        VoiceAssistantSDKManager.play(
             context = requireContext(),
             key = AmaniVAVoiceKeys.VOICE_SUCCESS,
             callBack = object : AmaniVAPlayerCallBack {
@@ -106,6 +107,6 @@ class CongratulationsFragment : Fragment() {
 
     override fun onStop() {
         super.onStop()
-        AmaniVoiceAssistant.stop()
+        VoiceAssistantSDKManager.stop()
     }
 }

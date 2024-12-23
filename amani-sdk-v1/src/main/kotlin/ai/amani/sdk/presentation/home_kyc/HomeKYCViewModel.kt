@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation.home_kyc
 
 import ai.amani.amani_sdk.R
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.data.mapper.StepsResultModelMapper
 import ai.amani.sdk.data.repository.config.ConfigRepositoryImp
 import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
@@ -26,6 +27,9 @@ import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
+import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
+import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
+import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -157,6 +161,22 @@ open class HomeKYCViewModel(
             onComplete = {
                 Timber.i("Get app config is succeed")
                 CachingHomeKYC.appConfig = it
+                it.generalConfigs?.let { generalConfig ->
+                    generalConfig.ttsVoices?.let {
+                        VoiceAssistantSDKManager.init(
+                            url = it,
+                            callBack = object : AmaniVAInitCallBack {
+                                override fun onFailure(exception: Exception) {
+
+                                }
+
+                                override fun onSuccess(voices: List<TTSVoice>) {
+
+                                }
+                            }
+                        )
+                    }
+                }
                 fetchCustomerDetail()
             }
         )

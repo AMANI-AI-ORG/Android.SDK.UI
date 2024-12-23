@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation.nfc
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentNfcScanBinding
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.alertDialog
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.setToolBarTitle
@@ -67,7 +68,7 @@ class NFCScanFragment : Fragment() {
         setCustomUI()
         observeLiveEvent()
 
-        AmaniVoiceAssistant.play(
+        VoiceAssistantSDKManager.play(
             context = requireContext(),
             key = AmaniVAVoiceKeys.VOICE_NFC,
             callBack = object : AmaniVAPlayerCallBack {
@@ -314,7 +315,7 @@ class NFCScanFragment : Fragment() {
         super.onPause()
         viewModel.setNfcEnable(false)
         viewModel.set(null)
-        AmaniVoiceAssistant.stop()
+        VoiceAssistantSDKManager.stop()
     }
 
     private fun startNfcSettingsActivity() {

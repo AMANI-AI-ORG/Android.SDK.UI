@@ -31,19 +31,6 @@ object AmaniSDKUI {
             UploadSource.KYC
         )
 
-        //TODO change static URL with dynamic 
-        AmaniVoiceAssistant.init(
-            url = "https://gist.githubusercontent.com/munir-amani/70bbb480b1ea8b761169397004a37a4d/raw/9ad200113d016db661905de94dd822f9609c9623/ttsVoices.json",
-            callBack = object : AmaniVAInitCallBack {
-                override fun onSuccess(voices: List<TTSVoice>) {
-
-                }
-
-                override fun onFailure(exception: Exception) {
-
-                }
-            }
-        )
     }
 
     fun goToKycActivity(

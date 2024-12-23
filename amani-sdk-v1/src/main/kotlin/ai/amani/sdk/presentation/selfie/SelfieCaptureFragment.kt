@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation.selfie
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentSelfieCaptureBinding
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.*
 import ai.amani.sdk.interfaces.IFragmentCallBack
 import ai.amani.sdk.model.PreviewScreenModel
@@ -291,6 +292,6 @@ class SelfieCaptureFragment: Fragment() {
 
     override fun onPause() {
         super.onPause()
-        AmaniVoiceAssistant.stop()
+        VoiceAssistantSDKManager.stop()
     }
 }

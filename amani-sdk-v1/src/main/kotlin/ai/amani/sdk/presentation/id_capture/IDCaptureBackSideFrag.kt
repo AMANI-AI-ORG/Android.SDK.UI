@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation.id_capture
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureBackBinding
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.removeChildFragment
@@ -56,7 +57,7 @@ class IDCaptureBackSideFrag : Fragment() {
 
         listenAnimation()
 
-        AmaniVoiceAssistant.play(
+        VoiceAssistantSDKManager.play(
             context = requireContext(),
             key = AmaniVAVoiceKeys.VOICE_ID1,
             callBack = object : AmaniVAPlayerCallBack {
@@ -176,6 +177,6 @@ class IDCaptureBackSideFrag : Fragment() {
 
     override fun onStop() {
         super.onStop()
-        AmaniVoiceAssistant.stop()
+        VoiceAssistantSDKManager.stop()
     }
 }
