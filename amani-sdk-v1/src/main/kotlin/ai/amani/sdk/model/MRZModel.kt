@@ -9,7 +9,7 @@ import kotlinx.parcelize.Parcelize
  */
 @Parcelize
 data class MRZModel(
-    val birthDate: String,
-    val expireDate: String,
-    val expirationDate: String
+    var birthDate: String = "",
+    var expireDate: String = "",
+    var docNumber: String = ""
 ): Parcelable

@@ -68,7 +68,7 @@ class NFCRepositoryImp: NFCRepository {
         expireDate: String,
         documentNumber: String,
         onComplete: () -> Unit,
-        onFailure: () -> Unit
+        onFailure: (String?) -> Unit
     ) {
         Amani.sharedInstance().ScanNFC().start(
             tag,
@@ -76,9 +76,9 @@ class NFCRepositoryImp: NFCRepository {
             birthDate,
             expireDate,
             documentNumber
-        ) { _, isSuccess, _ ->
+        ) { _, isSuccess, error ->
             if (isSuccess) onComplete.invoke()
-            else onFailure.invoke()
+            else onFailure.invoke(error)
         }
     }
 }

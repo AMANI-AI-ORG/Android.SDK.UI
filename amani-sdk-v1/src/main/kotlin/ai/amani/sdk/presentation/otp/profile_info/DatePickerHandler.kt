@@ -17,7 +17,7 @@ class DatePickerHandler(private val context: Context, listener: (String) -> Unit
        onDateSelectedListener = listener
    }
 
-    fun showDatePickerDialog() {
+    fun showDatePickerDialog(dateFormat: String = "yyyy-MM-dd") {
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
@@ -27,7 +27,12 @@ class DatePickerHandler(private val context: Context, listener: (String) -> Unit
             context,
             R.style.DatePickerStyle,
             { _, selectedYear, selectedMonth, selectedDay ->
-                val selectedDate = formatDate(selectedYear, selectedMonth, selectedDay)
+                val selectedDate = formatDate(
+                    format = dateFormat,
+                    year = selectedYear,
+                    month =selectedMonth,
+                    day =selectedDay
+                )
                 onDateSelectedListener?.invoke(selectedDate)
             },
             year,
@@ -40,10 +45,10 @@ class DatePickerHandler(private val context: Context, listener: (String) -> Unit
         datePickerDialog.getButton(DatePickerDialog.BUTTON_NEGATIVE).setTextColor(Color.BLACK)
     }
 
-    private fun formatDate(year: Int, month: Int, day: Int): String {
+    private fun formatDate(format: String, year: Int, month: Int, day: Int): String {
         val calendar = Calendar.getInstance()
         calendar.set(year, month, day)
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dateFormat = SimpleDateFormat(format, Locale.getDefault())
         return dateFormat.format(calendar.time)
     }
 }

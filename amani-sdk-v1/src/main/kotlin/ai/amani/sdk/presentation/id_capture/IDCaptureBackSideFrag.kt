@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation.id_capture
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureBackBinding
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.removeChildFragment
@@ -12,6 +13,9 @@ import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.modules.document_capture.camera.BitmapUtils
 import ai.amani.sdk.presentation.MainActivity
+import ai.amani.voice_assistant.AmaniVoiceAssistant
+import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
+import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.animation.Animator
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -52,6 +56,24 @@ class IDCaptureBackSideFrag : Fragment() {
         playAnimation()
 
         listenAnimation()
+
+        VoiceAssistantSDKManager.play(
+            context = requireContext(),
+            key = AmaniVAVoiceKeys.VOICE_ID1,
+            callBack = object : AmaniVAPlayerCallBack {
+                override fun onPlay() {
+
+                }
+
+                override fun onStop() {
+
+                }
+
+                override fun onFailure(exception: Exception) {
+
+                }
+            }
+        )
 
     }
 
@@ -151,5 +173,10 @@ class IDCaptureBackSideFrag : Fragment() {
             args.dataModel.version!!.steps[1].captureTitle,
             args.dataModel.generalConfigs!!.appFontColor
         )
+    }
+
+    override fun onStop() {
+        super.onStop()
+        VoiceAssistantSDKManager.stop()
     }
 }
