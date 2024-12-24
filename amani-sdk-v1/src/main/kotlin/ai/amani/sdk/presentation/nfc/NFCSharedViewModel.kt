@@ -71,10 +71,8 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
                     _nfcScanState.value = NFCScanState.OutOfMaxAttempt
                 } else {
                     it?.let { error ->
-                        if (error == "Invalid key") {
-                            _nfcScanState.value = NFCScanState.ShowMRZCheck
-                            return@let
-                        }
+                        _nfcScanState.value = NFCScanState.ShowMRZCheck
+                        return@let
                     }
                     _nfcScanState.value = NFCScanState.Failure
                 }
