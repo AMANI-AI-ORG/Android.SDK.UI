@@ -19,7 +19,7 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "SampleAmaniUI2"
+rootProject.name = "AmaniSDKUI"
 
 include ':app'                  // Sample that runs the AmaniSDK module
 
