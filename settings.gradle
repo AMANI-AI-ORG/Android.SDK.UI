@@ -21,7 +21,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AmaniSDKUI"
 
-include ':app'                  // Sample that runs the AmaniSDK module
-
-include ':amani-sdk-v1'    // Module that is responsible for only usage
-                                // of AmaniSDK in proper and fully configurable way
+include ':app'  // Sample that runs the AmaniSDK module
