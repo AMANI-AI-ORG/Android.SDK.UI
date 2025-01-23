@@ -109,6 +109,14 @@ class MainActivity: AppCompatActivity() {
            }
        }
 
+        fun showSelectButton() {
+            try {
+                binding.buttonSelectPdf.show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
        fun isBackButtonEnabled(isEnabled: Boolean = true) {
            binding.backButton.isClickable = isEnabled
        }

@@ -18,6 +18,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -52,6 +53,7 @@ class PhysicalContractFragment: Fragment() {
         initPhysicalContract()
 
         clickEvents()
+
     }
 
     private fun initPhysicalContract() {
@@ -119,10 +121,10 @@ class PhysicalContractFragment: Fragment() {
     }
 
     private fun pickPdfFileFromStorage() {
-        getContent.launch("application/pdf")
+        getContent?.launch("application/pdf")
     }
 
-    private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    private var getContent: ActivityResultLauncher<String>? = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             Timber.d("PDF file is taken from gallery")
             if (it.scheme == "content") {
@@ -149,5 +151,15 @@ class PhysicalContractFragment: Fragment() {
                 }
             }
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        MainActivity.hideSelectButton()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        MainActivity.showSelectButton()
     }
 }
