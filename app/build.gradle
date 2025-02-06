@@ -10,6 +10,7 @@ android {
 
     namespace 'ai.amani.sample'
 
+
     defaultConfig {
         applicationId "ai.amani.sample"
         minSdk 21
@@ -18,6 +19,7 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
     }
 
     buildTypes {
@@ -54,6 +56,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         buildConfig = true
     }
 
