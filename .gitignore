@@ -207,3 +207,4 @@ feature-amani-sdk/password.properties
 .idea/misc.xml
 .idea/misc.xml
 app/src/main/kotlin/ai/amani/sample/TestCredentials.kt
+credential.properties

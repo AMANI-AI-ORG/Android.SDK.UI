@@ -10,6 +10,9 @@ android {
 
     namespace 'ai.amani.sample'
 
+    def localProperties = new Properties()
+    localProperties.load(new FileInputStream(rootProject.file("credential.properties")))
+
     defaultConfig {
         applicationId "ai.amani.sample"
         minSdk 21
@@ -18,6 +21,9 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "TOKEN", localProperties['TOKEN']
+        buildConfigField "String", "SERVER_URL", localProperties['SERVER_URL']
     }
 
     buildTypes {
@@ -54,6 +60,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         buildConfig = true
     }
 

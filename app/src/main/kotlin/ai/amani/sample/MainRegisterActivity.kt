@@ -1,6 +1,7 @@
 package ai.amani.sample
 
 import AmaniSDKUI
+import ai.amani.BuildConfig
 import ai.amani.base.utility.AmaniVersion
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.utils.AppConstant
@@ -42,9 +43,16 @@ class MainRegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register_main)
 
+        //To activate SSL pinning with raw file
+        //AmaniSDKUI.setSSLPinning(context = this, certificate = R.raw.certifica)
+
+        //To activate SSL pinning with InputStream
+        //val inputStream = this.resources.openRawResource(R.raw.certifica)
+        //AmaniSDKUI.setSSLPinning(inputStream)
+
         AmaniSDKUI.init(
             activity = this,
-            serverURL = TestCredentials.SERVER_URL,
+            serverURL = ai.amani.sample.BuildConfig.SERVER_URL,
             amaniVersion = AmaniVersion.V2,
             sharedSecret = null
         )
@@ -66,7 +74,7 @@ class MainRegisterActivity : AppCompatActivity() {
                 activity = this,
                 resultLauncher = resultLauncher,
                 idNumber = inputIdLabel.text.toString(),
-                authToken = TestCredentials.TOKEN,
+                authToken = ai.amani.sample.BuildConfig.TOKEN,
                 language = "tr",
                 geoLocation = true,
                 birthDate = inputBirthDateLabel.text.toString(),
