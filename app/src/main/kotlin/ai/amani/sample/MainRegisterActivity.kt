@@ -42,9 +42,16 @@ class MainRegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register_main)
 
+        //To activate SSL pinning with raw file
+        //AmaniSDKUI.setSSLPinning(context = this, certificate = R.raw.certifica)
+
+        //To activate SSL pinning with InputStream
+        //val inputStream = this.resources.openRawResource(R.raw.certifica)
+        //AmaniSDKUI.setSSLPinning(inputStream)
+
         AmaniSDKUI.init(
             activity = this,
-            serverURL = TestCredentials.SERVER_URL,
+            serverURL = "TestCredentials.SERVER_URL",
             amaniVersion = AmaniVersion.V2,
             sharedSecret = null
         )

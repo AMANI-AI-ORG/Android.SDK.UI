@@ -11,7 +11,6 @@ object AppConstant {
     const val STATUS_NOT_UPLOADED = "NOT_UPLOADED"
     const val STATUS_PENDING_REVIEW = "PENDING_REVIEW"
     const val STATUS_AUTOMATICALLY_REJECTED = "AUTOMATICALLY_REJECTED"
-    const val ID_CAPTURE_TIME_OUT = 15
     const val SIGNATURE_NUMBER = 1
     const val REGISTER_CONFIG = "register_config"
     const val KYC_RESULT = "kyc_result"
@@ -21,6 +20,10 @@ object AppConstant {
     const val IDENTIFIER_QUESTIONNAIRE = "questionnaire"
     const val FEATURE_CONFIG = "feature_config"
 
+    /**
+     * Time Out Seconds to activate manual capture in IDCapture session
+     */
+    var ID_CAPTURE_TIME_OUT = 45
 
     /**
      * Holds the list of identifier names of the steps that will not shown as button.
