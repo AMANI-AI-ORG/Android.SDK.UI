@@ -10,6 +10,7 @@ import ai.amani.sdk.extentions.removeChildFragment
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
+import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.BitmapUtils
@@ -164,6 +165,9 @@ class IDCaptureBackSideFrag : Fragment() {
 
         idCaptureFragmentBackSide?.let {
             replaceChildFragmentWithoutBackStack(R.id.child_of_id_back, it)
+        }?:run {
+            showSnackbar("Configuration error, ID capture could not launch")
+            findNavController().popBackStack()
         }
     }
 

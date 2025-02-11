@@ -3,6 +3,7 @@ package ai.amani.sample
 import AmaniSDKUI
 import ai.amani.BuildConfig
 import ai.amani.base.utility.AmaniVersion
+import ai.amani.sdk.DynamicFeature
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
@@ -52,11 +53,30 @@ class MainRegisterActivity : AppCompatActivity() {
         //val inputStream = this.resources.openRawResource(R.raw.certifica)
         //AmaniSDKUI.setSSLPinning(inputStream)
 
+        /* Dynamic Feature usages samples, select one configuration accordingly your needs. :
+        //Enables Auto Selfie Capture && ID Capture
+        val enabledFeatures1 = listOf(
+            DynamicFeature.SELFIE_AUTO,
+            DynamicFeature.ID_CAPTURE
+        )
+
+        //Enables Pose Estimation && ID Capture && NFC Scan
+        val enabledFeatures2 = listOf(
+            DynamicFeature.SELFIE_POSE_ESTIMATION,
+            DynamicFeature.ID_CAPTURE,
+            DynamicFeature.NFC_SCAN
+        )
+
+        //Enables all features
+        val enabledFeatures3 = DynamicFeature.allFeatures
+        */
+
         AmaniSDKUI.init(
             activity = this,
             serverURL = "TestCredentials.SERVER_URL",
             amaniVersion = AmaniVersion.V2,
-            sharedSecret = null
+            sharedSecret = null,
+            enabledFeatures = DynamicFeature.allFeatures
         )
 
         registerButton.setOnClickListener {
@@ -66,11 +86,6 @@ class MainRegisterActivity : AppCompatActivity() {
             AmaniSDKUI.setSelfieCaptureVideoRecord(false)
 
             hideKeyboard()
-
-            if (inputIdLabel.text.isNullOrEmpty() && inputIdLabel.text.isNullOrBlank()) {
-                Toast.makeText(this, "Please enter your ID", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
 
             AmaniSDKUI.goToKycActivity(
                 activity = this,

@@ -28,11 +28,11 @@ class LoginRepoImp : LoginRepository {
 
         runCatching{
             Amani.sharedInstance().initAmani(
-                activity,
-                tcNumber,
-                token,
-                location,
-                lang
+                activity = activity,
+                id = tcNumber,
+                token =token,
+                geoLocation =location,
+                lang = lang
             ) { isSucess ->
                 loginResultModel = LoginResultModelMapper.map(
                     isSucess
@@ -63,12 +63,12 @@ class LoginRepoImp : LoginRepository {
 
         runCatching{
             Amani.sharedInstance().initAmani(
-                activity,
-                tcNumber,
-                email,
-                password,
-                location,
-                lang
+                activity =activity,
+                id = tcNumber,
+                email = email,
+                password = password,
+                geoLocation = location,
+                lang = lang
             ) { isSucess ->
                 loginResultModel = LoginResultModelMapper.map(
                     isSucess

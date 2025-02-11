@@ -1,5 +1,6 @@
 import ai.amani.base.utility.AmaniVersion
 import ai.amani.sdk.Amani
+import ai.amani.sdk.DynamicFeature
 import ai.amani.sdk.UploadSource
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
@@ -38,14 +39,16 @@ object AmaniSDKUI {
         activity: Activity,
         serverURL: String,
         amaniVersion: AmaniVersion = AmaniVersion.V2,
-        sharedSecret: String? = null
+        sharedSecret: String? = null,
+        enabledFeatures: List<DynamicFeature> = DynamicFeature.allFeatures
     ){
         Amani.init(
-            activity,
-            serverURL,
-            sharedSecret,
-            amaniVersion,
-            UploadSource.KYC
+            context = activity,
+            server = serverURL,
+            sharedSecret = sharedSecret,
+            version = amaniVersion,
+            uploadSource = UploadSource.KYC,
+            enabledFeatures = enabledFeatures
         )
 
     }

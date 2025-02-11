@@ -5,6 +5,7 @@ import ai.amani.amani_sdk.databinding.FragmentSignatureBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.modules.signature.interfaces.ISignatureStartCallBack
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -50,7 +51,7 @@ class SignatureFragment: Fragment() {
     }
 
     private fun initDigitalSignatureFragment() {
-        val fragment =
+        val fragment: Fragment? =
             Amani.sharedInstance().Signature().start(requireContext(), SIGNATURE_NUMBER,
                 object : ISignatureStartCallBack {
                     override fun cb(bitmap: Bitmap?, countOfSignature: Int) {
@@ -67,8 +68,12 @@ class SignatureFragment: Fragment() {
                     }
                 })
 
-        replaceChildFragmentWithoutBackStack(R.id.child_of_digital_signature_screen, fragment)
-
+        fragment?.let {
+            replaceChildFragmentWithoutBackStack(R.id.child_of_digital_signature_screen, it)
+        }?:run {
+            showSnackbar("Configuration error, Signature could not launch")
+            findNavController().popBackStack()
+        }
     }
 
     private fun clickEvents() {

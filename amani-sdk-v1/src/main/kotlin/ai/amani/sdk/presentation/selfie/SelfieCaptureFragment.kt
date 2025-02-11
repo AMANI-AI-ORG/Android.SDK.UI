@@ -96,7 +96,12 @@ class SelfieCaptureFragment: Fragment() {
             }
         })
 
-        replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment)
+        selfieFragment?.let {
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        }?:run {
+            showSnackbar("Configuration error, Selfie Capture could not launch")
+            findNavController().popBackStack()
+        }
     }
 
     /** Navigates the Auto Selfie Fragment*/
@@ -137,7 +142,12 @@ class SelfieCaptureFragment: Fragment() {
                     }
                 }
             })
-        replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment!!)
+        selfieFragment?.let {
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        }?:run {
+            showSnackbar("Configuration error, Auto Selfie Capture could not launch")
+            findNavController().popBackStack()
+        }
     }
 
     /** Navigates the Selfie Pose Estimation Fragment*/
@@ -171,7 +181,10 @@ class SelfieCaptureFragment: Fragment() {
             )
             .build(requireContext())
         selfieFragment?.let {
-            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment)
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        }?:run {
+            showSnackbar("Configuration error, Pose Estimation could not launch")
+            findNavController().popBackStack()
         }
     }
 
@@ -192,6 +205,7 @@ class SelfieCaptureFragment: Fragment() {
 
                 findNavController().navigateSafely(action)
             }?: run {
+                findNavController().popBackStack()
             }
         }
 

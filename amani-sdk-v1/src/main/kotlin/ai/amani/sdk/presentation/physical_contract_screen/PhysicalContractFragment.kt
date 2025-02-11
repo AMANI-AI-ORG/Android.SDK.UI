@@ -7,6 +7,7 @@ import ai.amani.sdk.Amani
 import ai.amani.sdk.extentions.debugToast
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.modules.document.DocBuilder
 import ai.amani.sdk.modules.document.interfaces.IDocumentCallBack
@@ -104,6 +105,9 @@ class PhysicalContractFragment: Fragment() {
                 R.id.child_of_physical_contract ,
                 it
             )
+        }?:run {
+            showSnackbar("Configuration error, Physical Contract Screen could not launch")
+            findNavController().popBackStack()
         }
     }
 

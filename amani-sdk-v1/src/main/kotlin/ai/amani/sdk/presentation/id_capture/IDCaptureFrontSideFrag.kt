@@ -4,12 +4,14 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureFrontBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
+import ai.amani.sdk.extentions.debugToast
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.removeChildFragment
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
+import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.AppConstant
@@ -167,6 +169,9 @@ class IDCaptureFrontSideFrag : Fragment() {
         }
         idCaptureFragmentFrontSide?.let {
             replaceChildFragmentWithoutBackStack(R.id.child_of_id_front, it)
+        }?:run {
+            showSnackbar("Configuration error, ID Capture could not launch")
+            findNavController().popBackStack()
         }
     }
 
