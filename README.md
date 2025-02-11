@@ -1,7 +1,9 @@
 # Amani SDK-UI #
 ![AmaniSDKHeader](https://user-images.githubusercontent.com/75306240/187692619-726115b8-3a92-4c7d-b85d-44a75d6556c1.png)
 
-[![](https://jitpack.io/v/ai.amani/Android.SDK.UI.svg)](https://jitpack.io/#ai.amani/Android.SDK.UI)
+![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI)
+
+
 
 Amani SDK-UI package is an interface package prepared using Amani-SDK-V2. You can use this package directly by cloning and modifying it, or you can install the AAR package via jitpack with the following implementation without changing the interface.
 
