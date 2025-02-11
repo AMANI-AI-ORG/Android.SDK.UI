@@ -65,12 +65,11 @@ val enabledFeatures: List<DynamicFeature> = listOf(
 
 )
 
-Amani.init(
-    context = requireContext(), //Pointer of your current Activity context
-    server = "your_server_url", //Server URL
-    version = AmaniVersion.V1,  //Amani Backend Version, Non-Mandatory, Default value is V2
+AmaniSDKUI.init(
+    activity = requireContext(), //Pointer of your current Activity context
+    serverURL = "your_server_url", //Server URL
+    amaniVersion = AmaniVersion.V1,  //Amani Backend Version, Non-Mandatory, Default value is V2
     sharedSecret = "your shared secret", //Shared Secret for additional security, Non-Mandatory, Default value is null
-    uploadSource = UploadSource.KYC, //Defines source for every data upload, Non-Mandatory, Default is KYC
     enabledFeatures = enabledFeatures //Enables dynamic features of SDK, Non-Mandatory, Default is all features
     //Each property you will use must be specified here in advance.
     //If you try to use a feature that you have not specified here in SDK, AmaniEvent will
