@@ -74,11 +74,13 @@ class KYCAdapter(
             .indeterminateDrawable
             .setColorFilter(Color.parseColor(loaderColor), PorterDuff.Mode.SRC_IN)
         holder.mBinding.progressBar.indeterminateDrawable.setTint(Color.WHITE)
+
         if (mDocumentList[position].isShowLoader) {
             holder.mBinding.progressBar.show()
         } else {
             holder.mBinding.progressBar.hide()
         }
+
         Timber.d("Title: ${mDocumentList[position].title}," +
                 " Sort Order ${mDocumentList[position].sortOrder}" +
                 " Step Id ${mDocumentList[position].id}" +

@@ -23,6 +23,7 @@ class DocumentRepoImp: DocumentRepository {
         onComplete: (result: UploadResultModel) -> Unit,
         genericDocumentFlow: GenericDocumentFlow
     ) {
+        onStart.invoke()
         var uploadResultModel: UploadResultModel
 
         when (genericDocumentFlow) {

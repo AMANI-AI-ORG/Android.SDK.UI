@@ -350,16 +350,15 @@ open class HomeKYCViewModel(
     fun uploadDocument(
         activity: FragmentActivity,
         genericDocumentFlow: GenericDocumentFlow = GenericDocumentFlow.DataFromCamera ,
-        docType: String,
+        docType: String = CachingHomeKYC.version?.type?: "TUR_IB_0",
         onCompleted: (uploadRes: UploadResultModel) -> Unit
     ) {
-        setLoaderStatus()
-
         documentRepository.upload(
             activity = activity,
             docType = docType,
             onStart = {
-                //
+                setLoaderStatus()
+                _logicEvent.value = HomeKYCLogicEvent.Refresh(CachingHomeKYC.onlyKYCRules)
             },
             onComplete = onCompleted,
             genericDocumentFlow = genericDocumentFlow
