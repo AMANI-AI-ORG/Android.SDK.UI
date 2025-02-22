@@ -12,7 +12,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class KYCResult(
     val httpErrorCode: Int? = null,
-    val generalException: Exception? = null,
+    val generalException: Throwable? = null,
     val profileStatus: String = ProfileStatus.INCOMPLETE
 ):Parcelable, JSONConvertable
 

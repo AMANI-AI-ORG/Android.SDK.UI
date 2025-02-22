@@ -66,7 +66,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.1"
 
     // AmaniSDK impl
-    def amani_sdk = "3.4.17-lite"
+    def amani_sdk = "3.4.19-lite"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph
@@ -90,7 +90,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.2.0-lite'
+                version = '1.2.1-lite'
             }
         }
     }

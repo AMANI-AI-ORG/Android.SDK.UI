@@ -12,11 +12,13 @@ import ai.amani.sdk.data.repository.login.LoginRepoImp
 import ai.amani.sdk.data.repository.nfc.NFCRepositoryImp
 import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.data.repository.signature.SignatureRepoImp
+import ai.amani.sdk.extentions.getFirstErrorCode
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.*
 import ai.amani.sdk.model.amani_events.error.AmaniError
+import ai.amani.sdk.model.amani_events.error.AmaniErrorTypes
 import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
 import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
@@ -190,6 +192,7 @@ open class HomeKYCViewModel(
 
             onError = {
                 Timber.e("Fetch customer detail error: $it")
+                _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(it!!))
             },
 
             onComplete = {customerDetail ->
@@ -350,7 +353,7 @@ open class HomeKYCViewModel(
     fun uploadDocument(
         activity: FragmentActivity,
         genericDocumentFlow: GenericDocumentFlow = GenericDocumentFlow.DataFromCamera ,
-        docType: String,
+        docType: String = CachingHomeKYC.version?.type?: "TUR_IB_0",
         onCompleted: (uploadRes: UploadResultModel) -> Unit
     ) {
         setLoaderStatus()
@@ -359,7 +362,8 @@ open class HomeKYCViewModel(
             activity = activity,
             docType = docType,
             onStart = {
-                //
+                setLoaderStatus()
+                _logicEvent.value = HomeKYCLogicEvent.Refresh(CachingHomeKYC.onlyKYCRules)
             },
             onComplete = onCompleted,
             genericDocumentFlow = genericDocumentFlow
@@ -530,6 +534,14 @@ open class HomeKYCViewModel(
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
                 Timber.e("Amani SDK error type: $type Amani error: " +
                         "${error?.firstNotNullOf { it?.errorCode }}")
+
+                if (type == AmaniErrorTypes.LOGIN.name) {
+                    _logicEvent.postValue(
+                        HomeKYCLogicEvent.Finish.LoginFailed(
+                            httpErroCode = error.getFirstErrorCode()
+                        )
+                    )
+                }
             }
 
             override fun profileStatus(profileStatus: ProfileStatus) {

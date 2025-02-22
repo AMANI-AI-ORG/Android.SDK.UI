@@ -196,29 +196,36 @@ class MainActivity: AppCompatActivity() {
 
             when (it) {
                 is NFCActivationState.Enable -> {
-                    val adapter = NfcAdapter.getDefaultAdapter(this)
+                    try {
+                        val adapter = NfcAdapter.getDefaultAdapter(this)
 
-                    if (adapter != null) {
-                        val intent = Intent(applicationContext, this.javaClass)
-                        intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            PendingIntent.getActivity(this, 0, Intent(this, javaClass)
-                                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), FLAG_MUTABLE)
-                        } else{
-                            PendingIntent.getActivity(this, 0, Intent(this, javaClass)
-                                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0)
+                        if (adapter != null) {
+                            val intent = Intent(applicationContext, this.javaClass)
+                            intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                PendingIntent.getActivity(this, 0, Intent(this, javaClass)
+                                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), FLAG_MUTABLE)
+                            } else{
+                                PendingIntent.getActivity(this, 0, Intent(this, javaClass)
+                                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0)
+                            }
+                            val filter = arrayOf(arrayOf("android.nfc.tech.IsoDep"))
+                            adapter.enableForegroundDispatch(this, pendingIntent, null, filter)
                         }
-                        val filter = arrayOf(arrayOf("android.nfc.tech.IsoDep"))
-                        adapter.enableForegroundDispatch(this, pendingIntent, null, filter)
+                    } catch (e: IllegalStateException) {
+                        e.printStackTrace()
                     }
                 }
 
                 is NFCActivationState.Disable -> {
 
-                    val adapter = NfcAdapter.getDefaultAdapter(this)
+                    try {
+                        val adapter = NfcAdapter.getDefaultAdapter(this)
 
-                    adapter?.let {
-                        it.disableForegroundDispatch(this)
+                        adapter?.disableForegroundDispatch(this)
+
+                    } catch (e: IllegalStateException) {
+                        e.printStackTrace()
                     }
                 }
 

@@ -71,14 +71,6 @@ class MainRegisterActivity : AppCompatActivity() {
         val enabledFeatures3 = DynamicFeature.allFeatures
         */
 
-        AmaniSDKUI.init(
-            activity = this,
-            serverURL = "TestCredentials.SERVER_URL",
-            amaniVersion = AmaniVersion.V2,
-            sharedSecret = null,
-            enabledFeatures = DynamicFeature.allFeatures
-        )
-
         registerButton.setOnClickListener {
 
             AmaniSDKUI.setHologramDetection(false)
@@ -92,7 +84,7 @@ class MainRegisterActivity : AppCompatActivity() {
                 resultLauncher = resultLauncher,
                 idNumber = inputIdLabel.text.toString(),
                 authToken = "TestCredentials.TOKEN",
-                language = "tr",
+                language = "en",
                 geoLocation = true,
                 birthDate = inputBirthDateLabel.text.toString(),
                 expireDate = inputExpiryDateLabel.text.toString(),

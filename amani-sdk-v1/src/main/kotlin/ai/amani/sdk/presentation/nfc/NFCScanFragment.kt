@@ -15,6 +15,7 @@ import ai.amani.sdk.utils.ColorConstant
 import ai.amani.voice_assistant.AmaniVoiceAssistant
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
 import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
+import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -51,6 +52,7 @@ class NFCScanFragment : Fragment() {
     private var nfcDialogMessages: NFCScanningBottomDialog.NFCDialogMessages = NFCScanningBottomDialog.NFCDialogMessages()
     private lateinit var expiryDatePicker: DatePickerHandler
     private lateinit var birthDatePicker: DatePickerHandler
+    private var alertDialog: AlertDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -94,7 +96,7 @@ class NFCScanFragment : Fragment() {
             requireContext(),
             disable = {
                 Timber.i("NFC is disabled by user, redirecting message will be popped for enable NFC")
-                alertDialog(
+                alertDialog = alertDialog(
                     args.dataModel.configModel.version!!.enableNfcHeader,
                     args.dataModel.configModel.version!!.enableNfcDescription,
                     args.dataModel.configModel.generalConfigs!!.tryAgainText,
@@ -146,6 +148,28 @@ class NFCScanFragment : Fragment() {
             appFontColor
         )
 
+        binding.birthDateTitle.setTextProperty(
+            args.dataModel.configModel.version?.documentDateOfBirth?:
+            getString(R.string.birth_date_title),
+            appFontColor
+        )
+        binding.expiryDateTitle.setTextProperty(
+            args.dataModel.configModel.version?.documentDateOfExpiry?:
+            getString(R.string.expiry_date_title),
+            appFontColor
+        )
+        binding.documentNumberTitle.setTextProperty(
+            args.dataModel.configModel.version?.documentNoTitle?:
+            getString(R.string.document_number_title),
+            appFontColor
+        )
+
+        binding.nfcConfigureText.setTextProperty(
+            args.dataModel.configModel.version?.nfcConfigureTitle?:
+            getString(R.string.nfc_configure_title),
+            appFontColor
+        )
+
         binding.birthDateInput.setText(args.dataModel.mrzModel.birthDate)
         binding.expiryDateInput.setText(args.dataModel.mrzModel.expireDate)
         binding.docNumberInput.setText(args.dataModel.mrzModel.docNumber)
@@ -184,6 +208,9 @@ class NFCScanFragment : Fragment() {
             4, args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
             0f, null,
             true, args.dataModel.configModel.generalConfigs!!.buttonRadiusAndroid)
+
+        binding.continueBtn.text = args.dataModel.configModel?.generalConfigs?.continueText?:
+        getString(R.string.continue_text)
 
         expiryDatePicker = DatePickerHandler(
             context = requireContext(),
@@ -320,5 +347,15 @@ class NFCScanFragment : Fragment() {
 
     private fun startNfcSettingsActivity() {
         startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        alertDialog?.dismiss()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        alertDialog = null
     }
 }

@@ -59,23 +59,29 @@ allprojects {
 
  
 ```kotlin
-val enabledFeatures: List<DynamicFeature> = listOf(
-    DynamicFeature.ID_CAPTURE,
-    DynamicFeature.NFC_SCAN,
+class App :Application(){
 
-)
+    override fun onCreate() {
+        super.onCreate()
 
-AmaniSDKUI.init(
-    activity = requireContext(), //Pointer of your current Activity context
-    serverURL = "your_server_url", //Server URL
-    amaniVersion = AmaniVersion.V1,  //Amani Backend Version, Non-Mandatory, Default value is V2
-    sharedSecret = "your shared secret", //Shared Secret for additional security, Non-Mandatory, Default value is null
-    enabledFeatures = enabledFeatures //Enables dynamic features of SDK, Non-Mandatory, Default is all features
-    //Each property you will use must be specified here in advance.
-    //If you try to use a feature that you have not specified here in SDK, AmaniEvent will
-    //return an error on onError callback.
-)
+        val enabledFeatures: List<DynamicFeature> = listOf(
+            DynamicFeature.ID_CAPTURE,
+            DynamicFeature.NFC_SCAN,
 
+            )
+
+        AmaniSDKUI.init(
+            applicationContext = this.applicationContext, //Pointer of your all Application
+            serverURL = "your_server_url", //Server URL
+            amaniVersion = AmaniVersion.V1,  //Amani Backend Version, Non-Mandatory, Default value is V2
+            sharedSecret = "your shared secret", //Shared Secret for additional security, Non-Mandatory, Default value is null
+            enabledFeatures = enabledFeatures //Enables dynamic features of SDK, Non-Mandatory, Default is all features
+            //Each property you will use must be specified here in advance.
+            //If you try to use a feature that you have not specified here in SDK, AmaniEvent will
+            //return an error on onError callback.
+        )
+    }
+}
 ```
 
 * Register for result of the KYC process.

@@ -25,6 +25,8 @@ class DocumentRepoImp: DocumentRepository {
     ) {
         var uploadResultModel: UploadResultModel
 
+        onStart.invoke()
+
         when (genericDocumentFlow) {
             is GenericDocumentFlow.DataFromCamera -> {
                 Amani.sharedInstance().Document().upload(

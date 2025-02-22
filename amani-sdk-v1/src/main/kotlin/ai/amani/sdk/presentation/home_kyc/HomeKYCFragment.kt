@@ -23,15 +23,20 @@ import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.presentation.binding.setText
 import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
+import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -41,6 +46,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import networkmanager.common.exception.ApiException
+import retrofit2.HttpException
 import timber.log.Timber
 
 /**
@@ -249,7 +256,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     val returnIntent = Intent()
                     returnIntent.putExtra(AppConstant.KYC_RESULT,
                         KYCResult(
-                            generalException = it.exception
+                            generalException = it.exception,
+                            httpErrorCode = if (it is ApiException) it.erroCode else 0
                         ))
                     requireActivity().setResult(Activity.RESULT_OK, returnIntent)
                     requireActivity().finish()
@@ -306,8 +314,6 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         )
         binding.recyclerView.itemAnimator = DefaultItemAnimator()
         binding.recyclerView.isNestedScrollingEnabled = false
-
-       // val list = viewModel.getDocList()!!.sortedWith(compareBy(ai.amani.sdk.model.customer.Rule::sortOrder, ai.amani.sdk.model.customer.Rule::sortOrder))
 
         mAdapter = KYCAdapter(
             viewModel.getDocList()!!,
@@ -389,15 +395,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                 ScreenRoutes.PhysicalContractScreen -> {
 
-                    val action =
-                        HomeKYCFragmentDirections.actionHomeKYCFragmentToPhysicalContractFragment(
-                            ConfigModel(
-                                viewModel.getVersion(),
-                                viewModel.getAppConfig()!!.generalConfigs
-                            )
-                        )
-
-                    findNavController().navigateSafely(action)
+                    pdfPickerLauncher?.launch("application/pdf")
                 }
 
                 else -> {}
@@ -422,6 +420,31 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
         }
         mAdapter?.setFlags(flags)
+    }
+
+    private var pdfPickerLauncher: ActivityResultLauncher<String>? = registerForActivityResult(
+        ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            if (it.scheme == "content") {
+                requireContext().contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                    val pdfData = requireActivity().contentResolver.openInputStream(uri)?.readBytes()
+                    if (pdfData == null) {
+                        Toast.makeText(requireContext(), "PDF could not take", Toast.LENGTH_LONG).show()
+                        return@let
+                    } else {
+                        val listOfUri = arrayListOf(uri)
+
+                        viewModel.uploadDocument(
+                            activity = requireActivity(),
+                            genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri),
+                            onCompleted = { documentUploadResult ->
+                                logUploadResult(documentUploadResult, AmaniDocumentTypes.PHYSICAL_CONTRACT)
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 
 }

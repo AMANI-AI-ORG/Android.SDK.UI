@@ -70,7 +70,7 @@ fun Fragment.alertDialog(
     fontColor: String?,
     backgroundColor: String?,
     onButtonClick: () -> Unit
-){
+): AlertDialog{
 
     val appFontColorSpan = ForegroundColorSpan(Color.parseColor(fontColor))
     val titleSsBuilder = SpannableStringBuilder(titleText)
@@ -94,6 +94,7 @@ fun Fragment.alertDialog(
     alertDialog.window!!.setDimAmount(0.6F)
     alertDialog.window!!.setBackgroundDrawableResource(R.drawable.dialog_background)
     alertDialog.window!!.decorView.background?.setTint(Color.parseColor(backgroundColor))
+    return alertDialog
 }
 
 

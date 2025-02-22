@@ -36,14 +36,14 @@ object AmaniSDKUI {
      *  @param sharedSecret: Extra security layer. Non mandatory.
      */
     fun init(
-        activity: Activity,
+        applicationContext: Context,
         serverURL: String,
         amaniVersion: AmaniVersion = AmaniVersion.V2,
         sharedSecret: String? = null,
         enabledFeatures: List<DynamicFeature> = DynamicFeature.allFeatures
     ){
         Amani.init(
-            context = activity,
+            context = applicationContext,
             server = serverURL,
             sharedSecret = sharedSecret,
             version = amaniVersion,

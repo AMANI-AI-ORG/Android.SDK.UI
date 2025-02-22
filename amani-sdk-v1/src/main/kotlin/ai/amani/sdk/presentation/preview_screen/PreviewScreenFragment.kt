@@ -12,6 +12,7 @@ import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.model.NFCScanScreenModel
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -34,6 +35,7 @@ class PreviewScreenFragment : Fragment() {
     private lateinit var binding: FragmentPreviewScreenBinding
     private val args: PreviewScreenFragmentArgs by navArgs()
     private val viewModel: PreviewScreenViewModel by activityViewModels { PreviewScreenViewModel.Factory }
+    private var alertDialog: AlertDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -141,7 +143,7 @@ class PreviewScreenFragment : Fragment() {
 
                         is PreviewScreenState.Error -> {
                             binding.progressLoaderCentered.hide()
-                            alertDialog(
+                            alertDialog = alertDialog(
                                 args.previewScreenModel.configModel.generalConfigs!!.tryAgainText,
                                 args.previewScreenModel.configModel.version!!.mrzReadErrorText,
                                 args.previewScreenModel.configModel.generalConfigs!!.okText,
@@ -179,5 +181,15 @@ class PreviewScreenFragment : Fragment() {
                 }
             }
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        alertDialog?.dismiss()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        alertDialog = null
     }
 }

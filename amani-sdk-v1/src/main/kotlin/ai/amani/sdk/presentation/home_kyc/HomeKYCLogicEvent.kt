@@ -18,7 +18,7 @@ sealed class HomeKYCLogicEvent {
 
         class LoginFailed(val httpErroCode: Int = 0)  : HomeKYCLogicEvent()
 
-        class OnError(val exception: Exception): HomeKYCLogicEvent()
+        class OnError(val exception: Throwable): HomeKYCLogicEvent()
     }
 }
 
