@@ -122,6 +122,24 @@ AmaniSDKUI.goToKycActivity(
             )
 ```
 
+## Required Permissions
+
+You must have the folowing keys in your application's manifest file:
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.READ_PHONE_STATE" />
+ <uses-permission android:name="android.permission.NFC" />
+<uses-feature android:name="android.hardware.nfc" android:required="true"/>
+<uses-permission android:name="android.permission.ScanNFC" />
+```
+
 ## ProGuard Rule Usage ##
     
    * If you are using ProGuard in your application, you just need to add this line into your ProGuard Rules!
