@@ -140,6 +140,16 @@ You must have the folowing keys in your application's manifest file:
 <uses-permission android:name="android.permission.ScanNFC" />
 ```
 
+## Gradle Properties
+
+Disable R8 full mode, use AndroidX and enable Jetifier like below;
+
+   ```properties
+    android.enableR8.fullMode=false
+    android.useAndroidX=true
+    android.enableJetifier=true
+ ```
+
 ## ProGuard Rule Usage ##
     
    * If you are using ProGuard in your application, you just need to add this line into your ProGuard Rules!
