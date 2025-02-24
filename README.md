@@ -150,10 +150,20 @@ You must have the folowing keys in your application's manifest file:
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 <uses-permission android:name="android.permission.READ_PHONE_STATE" />
- <uses-permission android:name="android.permission.NFC" />
-<uses-feature android:name="android.hardware.nfc" android:required="true"/>
+<uses-permission android:name="android.permission.NFC" />
+<uses-feature android:name="android.hardware.nfc" android:required="false"/>
 <uses-permission android:name="android.permission.ScanNFC" />
 ```
+
+## Gradle Properties
+
+Disable R8 full mode, use AndroidX and enable Jetifier like below;
+
+   ```properties
+    android.enableR8.fullMode=false
+    android.useAndroidX=true
+    android.enableJetifier=true
+ ```
 
 ## ProGuard Rule Usage ##
     
