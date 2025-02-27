@@ -29,6 +29,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.OnScrollListener
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
@@ -62,7 +63,7 @@ class QuestionnaireFragment : Fragment() {
     }
 
     private fun observeLiveEvent() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.uiState.collect{
                     when(it){
@@ -97,16 +98,20 @@ class QuestionnaireFragment : Fragment() {
             }
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.navigateTo.collect{
                 when(it) {
                    is NavigationCommands.NavigateToHomeScreen -> {
-                       findNavController().clearBackStack(R.id.homeKYCFragment)
-                       findNavController().popBackStack(R.id.homeKYCFragment, false)
+                       viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                           findNavController().clearBackStack(R.id.homeKYCFragment)
+                           findNavController().popBackStack(R.id.homeKYCFragment, false)
+                       }
                     }
 
                    is NavigationCommands.NavigateDirections -> {
-                       findNavController().navigateSafely(it.direction)
+                       viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                           findNavController().navigateSafely(it.direction)
+                       }
                    }
                 }
             }
@@ -126,7 +131,9 @@ class QuestionnaireFragment : Fragment() {
                     }
                     RecyclerView.SCROLL_STATE_DRAGGING -> {
                         // The recyclerView is currently being dragged
-                        hideKeyboard()
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            hideKeyboard()
+                        }
                     }
                     RecyclerView.SCROLL_STATE_SETTLING -> {
                         // The recyclerView is settling (scrolling is finishing)
@@ -163,5 +170,10 @@ class QuestionnaireFragment : Fragment() {
     override fun onPause() {
         super.onPause()
         hideKeyboard()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -22,10 +22,14 @@ internal object CachingHomeKYC {
     var onlyKYCRules: ArrayList<Rule>? = null
 
     fun clearCache() {
-        appConfig = null
-        customerDetail = null
-        version = null
-        versionsList = null
-        onlyKYCRules = null
+        try {
+            appConfig = null
+            customerDetail = null
+            version = null
+            versionsList = null
+            onlyKYCRules = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEventListener
 
@@ -159,12 +160,16 @@ class ProfileInfoFragment : Fragment() {
             viewModel.navigateTo.collect{
                 when(it) {
                     is NavigationCommands.NavigateDirections -> {
-                        findNavController().navigateSafely(it.direction)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            findNavController().navigateSafely(it.direction)
+                        }
                     }
                     
                     is NavigationCommands.NavigateToHomeScreen -> {
-                        findNavController().clearBackStack(R.id.homeKYCFragment)
-                        findNavController().popBackStack(R.id.homeKYCFragment, false)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            findNavController().clearBackStack(R.id.homeKYCFragment)
+                            findNavController().popBackStack(R.id.homeKYCFragment, false)
+                        }
                     }
                 }
             }

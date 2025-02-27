@@ -7,6 +7,7 @@ import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.hideKeyboard
 import ai.amani.sdk.extentions.navigateSafely
+import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.runOnUiThread
 import ai.amani.sdk.extentions.setCustomBackground
 import ai.amani.sdk.extentions.setKeyboardEventListener
@@ -122,25 +123,29 @@ class PhoneCheckFragment: Fragment() {
                     if (isBackPressEnabled) {
                         isBackPressEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()
-                        findNavController().popBackStack()
+                        popBackStackSafely()
                     }
                 }
             })
 
         binding.resendEmailText.setOnClickListener{
-            findNavController().popBackStack()
+            popBackStackSafely()
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.navigateTo.collect{
                 when(it) {
                     is NavigationCommands.NavigateToHomeScreen -> {
-                        findNavController().clearBackStack(R.id.homeKYCFragment)
-                        findNavController().popBackStack(R.id.homeKYCFragment, false)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            findNavController().clearBackStack(R.id.homeKYCFragment)
+                            findNavController().popBackStack(R.id.homeKYCFragment, false)
+                        }
                     }
 
                     is NavigationCommands.NavigateDirections -> {
-                        findNavController().navigateSafely(it.direction)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            findNavController().navigateSafely(it.direction)
+                        }
                     }
                 }
             }

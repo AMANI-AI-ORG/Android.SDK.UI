@@ -7,6 +7,7 @@ import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.debugToast
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
+import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.removeChildFragment
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
@@ -132,9 +133,11 @@ class IDCaptureFrontSideFrag : Fragment() {
 
         Timber.d("VideoRecord ${args.dataModel.version!!.videoRecord}")
 
+        if (MainActivity.binding == null) return
+
        idCaptureFragmentFrontSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
-            MainActivity.binding.fragmentContainerView,
+            MainActivity.binding!!.fragmentContainerView,
             args.dataModel.version!!.type,
             true
         )
@@ -171,8 +174,7 @@ class IDCaptureFrontSideFrag : Fragment() {
             replaceChildFragmentWithoutBackStack(R.id.child_of_id_front, it)
         }?:run {
             showSnackbar("Configuration error, ID Capture could not launch")
-            findNavController().popBackStack()
-        }
+            popBackStackSafely()        }
     }
 
     private fun toolBar() {

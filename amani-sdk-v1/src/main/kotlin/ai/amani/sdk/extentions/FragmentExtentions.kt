@@ -17,7 +17,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEvent.setEventListener
 import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEventListener
 import timber.log.Timber
@@ -165,4 +169,14 @@ fun Fragment.setKeyboardEventListener(listener: KeyboardVisibilityEventListener)
         this.viewLifecycleOwner,
         listener
         )
+}
+
+fun Fragment.popBackStackSafely() {
+    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+        try {
+            findNavController().popBackStack()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }

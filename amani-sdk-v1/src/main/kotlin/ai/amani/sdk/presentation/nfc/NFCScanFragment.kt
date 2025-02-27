@@ -11,8 +11,6 @@ import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.otp.profile_info.DatePickerHandler
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
-import ai.amani.sdk.utils.ColorConstant
-import ai.amani.voice_assistant.AmaniVoiceAssistant
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
 import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.app.AlertDialog
@@ -25,7 +23,6 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -95,18 +92,20 @@ class NFCScanFragment : Fragment() {
         viewModel.checkNFCState(
             requireContext(),
             disable = {
-                Timber.i("NFC is disabled by user, redirecting message will be popped for enable NFC")
-                alertDialog = alertDialog(
-                    args.dataModel.configModel.version!!.enableNfcHeader,
-                    args.dataModel.configModel.version!!.enableNfcDescription,
-                    args.dataModel.configModel.generalConfigs!!.tryAgainText,
-                    args.dataModel.configModel.generalConfigs!!.appFontColor,
-                    args.dataModel.configModel.generalConfigs!!.appBackground,
-                    onButtonClick = {
-                        // Opening NFCSetting Screen for user to enabling NFC
-                        startNfcSettingsActivity()
-                    }
-                )
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    Timber.i("NFC is disabled by user, redirecting message will be popped for enable NFC")
+                    alertDialog = alertDialog(
+                        args.dataModel.configModel.version!!.enableNfcHeader,
+                        args.dataModel.configModel.version!!.enableNfcDescription,
+                        args.dataModel.configModel.generalConfigs!!.tryAgainText,
+                        args.dataModel.configModel.generalConfigs!!.appFontColor,
+                        args.dataModel.configModel.generalConfigs!!.appBackground,
+                        onButtonClick = {
+                            // Opening NFCSetting Screen for user to enabling NFC
+                            startNfcSettingsActivity()
+                        }
+                    )
+                }
             },
             notSupported = {
                 Timber.e("NFC is not supported")
@@ -232,7 +231,7 @@ class NFCScanFragment : Fragment() {
     private fun observeLiveEvent() {
         viewModel.get.observe(viewLifecycleOwner) {
             if (it != null) {
-                CoroutineScope(Dispatchers.Main).launch {
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     requireActivity().supportFragmentManager.let {
                         val args = Bundle()
                         args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
@@ -241,10 +240,12 @@ class NFCScanFragment : Fragment() {
                     }
                 }
 
-                viewModel.scanNFC(
-                    it,
-                    requireContext()
-                )
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    viewModel.scanNFC(
+                        it,
+                        requireContext()
+                    )
+                }
             }
         }
 
@@ -254,7 +255,7 @@ class NFCScanFragment : Fragment() {
                     //Navigate HomeKYCFragment
                     Timber.i("NFC is scanned properly")
 
-                    lifecycleScope.launch(Dispatchers.Main) {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                         nfcScanningModal.nfcScanningDoneAnimations()
                         delay(1000)
 
@@ -268,7 +269,7 @@ class NFCScanFragment : Fragment() {
                                 // only as true/false
                             )
 
-                        nfcScanningModal.dismiss()
+                        nfcScanningModal.dismissSafely()
                         findNavController().clearBackStack(R.id.homeKYCFragment)
                         findNavController().popBackStack(R.id.homeKYCFragment, false)
                     }
@@ -278,10 +279,10 @@ class NFCScanFragment : Fragment() {
                 is NFCScanState.Failure ->{
                     //Show message to user to re-scan NFC
                     Timber.i("NFC scanning failed")
-                    lifecycleScope.launch(Dispatchers.Main) {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                         nfcScanningModal.showError()
                         delay(1000)
-                        nfcScanningModal.dismiss()
+                        nfcScanningModal.dismissSafely()
                         viewModel.setState(NFCScanState.ShowMRZCheck)
                     }
                 }
@@ -289,10 +290,10 @@ class NFCScanFragment : Fragment() {
                 is NFCScanState.OutOfMaxAttempt ->{
                     //Navigate HomeKYCFragment
                     Timber.i("NFC scanning failed, OutOfMaxAttempt")
-                    lifecycleScope.launch(Dispatchers.Main){
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main){
 
                         //Closing the NFC scanning dialog
-                        nfcScanningModal.dismiss()
+                        nfcScanningModal.dismissSafely()
 
                         viewModel.clearNFCState()
 
@@ -319,7 +320,7 @@ class NFCScanFragment : Fragment() {
                 }
 
                 is NFCScanState.ReadyToScan -> {
-                    lifecycleScope.launch(Dispatchers.Main) {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                         viewModel.setNfcEnable(true)
                         binding.infoLayout.show()
                         binding.mrzCheckLayout.hide()
@@ -327,7 +328,7 @@ class NFCScanFragment : Fragment() {
                 }
 
                 is NFCScanState.ShowMRZCheck -> {
-                    lifecycleScope.launch(Dispatchers.Main) {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                         viewModel.setNfcEnable(false)
                         viewModel.set(null)
                         binding.infoLayout.hide()
@@ -351,7 +352,13 @@ class NFCScanFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        alertDialog?.dismiss()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                alertDialog?.dismiss()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     override fun onDestroy() {

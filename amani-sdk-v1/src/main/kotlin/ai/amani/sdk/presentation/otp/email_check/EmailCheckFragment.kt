@@ -7,21 +7,18 @@ import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.hideKeyboard
 import ai.amani.sdk.extentions.navigateSafely
-import ai.amani.sdk.extentions.setCustomBackground
+import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.setKeyboardEventListener
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.presentation.common.NavigationCommands
-import ai.amani.sdk.presentation.common.OnBackPressedDispatcher
-import ai.amani.sdk.presentation.otp.email_verify.EmailVerifyFragmentArgs
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import androidx.activity.OnBackPressedCallback
-import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
@@ -31,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -65,7 +63,7 @@ class EmailCheckFragment: Fragment() {
             .countDownTime(countDownTimeSeconds = 120)
             .startCountdown(countDownState = viewModel.timerState)
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.uiState.collect{
                     when(it) {
@@ -111,7 +109,7 @@ class EmailCheckFragment: Fragment() {
         }
 
         binding.resendEmailText.setOnClickListener{
-            findNavController().popBackStack()
+            popBackStackSafely()
         }
 
         binding.otpInput.setOnFocusChangeListener { v, hasFocus ->
@@ -128,7 +126,7 @@ class EmailCheckFragment: Fragment() {
                     if (isBackPressEnabled) {
                         isBackPressEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()
-                        findNavController().popBackStack()
+                        popBackStackSafely()
                     }
                 }
             })
@@ -137,17 +135,30 @@ class EmailCheckFragment: Fragment() {
             viewModel.onClickVerifyButton(binding.otpInput.text.toString())
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.navigateTo.collect{
                 when (it) {
                     is NavigationCommands.NavigateDirections -> {
-                        hideKeyboard()
-                        findNavController().navigateSafely(it.direction)
+
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            try {
+                                hideKeyboard()
+                                findNavController().navigateSafely(it.direction)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
                     }
 
                     is NavigationCommands.NavigateToHomeScreen -> {
-                        findNavController().clearBackStack(R.id.homeKYCFragment)
-                        findNavController().popBackStack(R.id.homeKYCFragment, false)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            try {
+                                findNavController().clearBackStack(R.id.homeKYCFragment)
+                                findNavController().popBackStack(R.id.homeKYCFragment, false)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
                     }
                 }
             }

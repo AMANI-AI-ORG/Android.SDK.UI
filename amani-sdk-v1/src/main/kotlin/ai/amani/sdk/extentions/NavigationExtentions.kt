@@ -8,6 +8,10 @@ import androidx.navigation.NavDirections
  * @Date: 22.12.2023
  */
 fun NavController.navigateSafely(directions: NavDirections){
-    currentDestination?.getAction(directions.actionId)?.destinationId?:return
-    navigate(directions.actionId,directions.arguments,null)
+    try {
+        currentDestination?.getAction(directions.actionId)?.destinationId?:return
+        navigate(directions.actionId,directions.arguments,null)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
 }
