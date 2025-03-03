@@ -12,11 +12,14 @@ import ai.amani.sdk.data.repository.login.LoginRepoImp
 import ai.amani.sdk.data.repository.nfc.NFCRepositoryImp
 import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.data.repository.signature.SignatureRepoImp
+import ai.amani.sdk.extentions.getFirstErrorCode
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.AmaniEventCallBack
+import ai.amani.sdk.mapper.AmaniEventMapper.asAmaniError
 import ai.amani.sdk.model.*
 import ai.amani.sdk.model.amani_events.error.AmaniError
+import ai.amani.sdk.model.amani_events.error.AmaniErrorTypes
 import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
 import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
@@ -25,10 +28,10 @@ import ai.amani.sdk.presentation.common.BaseViewModel
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
+import ai.amani.sdk.utils.AmaniUIErrorConstants
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
 import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
-import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
 import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
@@ -77,26 +80,30 @@ open class HomeKYCViewModel(
     fun getAppConfig(): ResGetConfig? = CachingHomeKYC.appConfig
 
     fun getDocList(): ArrayList<Rule> {
-        CachingHomeKYC.onlyKYCRules?.let {
-            return it
-        }
-       val list = CachingHomeKYC.customerDetail!!.rules as ArrayList<Rule>?
-       val sortedList =  list!!.sort()
-        val result = CachingHomeKYC.appConfig?.stepConfigs?.filter { element1 ->
-            sortedList.any {
-                element2 -> element2.id == element1.id && element1.identifier == "kyc"
-                    || element1.identifier == ""
+        try {
+            CachingHomeKYC.onlyKYCRules?.let {
+                return it
             }
-        }
-
-      val kycRules =  list.filter { rule ->
-            result!!.any{
-                it.id == rule.id
+            val list = CachingHomeKYC.customerDetail!!.rules as ArrayList<Rule>?
+            val sortedList =  list!!.sort()
+            val result = CachingHomeKYC.appConfig?.stepConfigs?.filter { element1 ->
+                sortedList.any {
+                    element2 -> element2.id == element1.id && element1.identifier == "kyc"
+                        || element1.identifier == ""
+                }
             }
-        }
 
-        CachingHomeKYC.onlyKYCRules = ArrayList(kycRules)
-        return CachingHomeKYC.onlyKYCRules!!
+            val kycRules =  list.filter { rule ->
+                  result!!.any{
+                      it.id == rule.id
+                  }
+              }
+
+            CachingHomeKYC.onlyKYCRules = ArrayList(kycRules)
+            return CachingHomeKYC.onlyKYCRules!!
+        } catch (e: Exception) {
+            return arrayListOf()
+        }
     }
 
     fun getVersion(): Version? = CachingHomeKYC.version
@@ -108,7 +115,9 @@ open class HomeKYCViewModel(
     ) {
 
         if (profileInfoModel.registerConfig == null) {
-            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(NullPointerException()))
+            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(
+                errorCode = AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR
+            ))
             return
         }
 
@@ -135,12 +144,12 @@ open class HomeKYCViewModel(
                         Timber.e("Login is failed, HttpsErrorCode: $error")
 
                         _uiState.value = HomeKYCState.Error(error)
-                        _logicEvent.postValue(HomeKYCLogicEvent.Finish.LoginFailed(error))
+                        _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(error))
                     } ?: run {
                         Timber.e("Login is failed, HttpsErrorCode: null")
 
                         _uiState.value = HomeKYCState.Error()
-                        _logicEvent.postValue(HomeKYCLogicEvent.Finish.LoginFailed(0))
+                        _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(0))
                     }
                 }
             }
@@ -190,6 +199,9 @@ open class HomeKYCViewModel(
 
             onError = {
                 Timber.e("Fetch customer detail error: $it")
+                _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(
+                    AmaniUIErrorConstants.CUSTOMER_DETAIL_FETCH_ERROR)
+                )
             },
 
             onComplete = {customerDetail ->
@@ -205,7 +217,9 @@ open class HomeKYCViewModel(
                         //If there is no steps before KYC continue with KYC process
                         if (checkKYCStepsAreApproved(customerDetail)) {
                             navigateBeforeOrAfterKYCFlowScreens(afterKycSteps)
-                        } else _uiState.value = HomeKYCState.Loaded
+                        } else{
+                            _uiState.value = HomeKYCState.Loaded
+                        }
                     },
 
                     no = {
@@ -350,7 +364,7 @@ open class HomeKYCViewModel(
     fun uploadDocument(
         activity: FragmentActivity,
         genericDocumentFlow: GenericDocumentFlow = GenericDocumentFlow.DataFromCamera ,
-        docType: String,
+        docType: String = CachingHomeKYC.version?.type?: "TUR_IB_0",
         onCompleted: (uploadRes: UploadResultModel) -> Unit
     ) {
         setLoaderStatus()
@@ -359,7 +373,8 @@ open class HomeKYCViewModel(
             activity = activity,
             docType = docType,
             onStart = {
-                //
+                setLoaderStatus()
+                _logicEvent.value = HomeKYCLogicEvent.Refresh(CachingHomeKYC.onlyKYCRules)
             },
             onComplete = onCompleted,
             genericDocumentFlow = genericDocumentFlow
@@ -387,6 +402,7 @@ open class HomeKYCViewModel(
 
         if (CachingHomeKYC.versionsList.isNullOrEmpty()) {
             _uiState.value = HomeKYCState.Error(R.string.error_upload_source)
+            _logicEvent.value = HomeKYCLogicEvent.Finish.OnError(AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR)
             return
         }
 
@@ -503,7 +519,9 @@ open class HomeKYCViewModel(
         featureConfig: FeatureConfig?
     ){
         if (registerConfig == null) {
-            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(NullPointerException()))
+            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(
+                AmaniUIErrorConstants.REGISTER_CONFIG_NULL)
+            )
             return
         }
 
@@ -530,6 +548,14 @@ open class HomeKYCViewModel(
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
                 Timber.e("Amani SDK error type: $type Amani error: " +
                         "${error?.firstNotNullOf { it?.errorCode }}")
+
+                if (type == AmaniErrorTypes.LOGIN.name) {
+                    _logicEvent.postValue(
+                        HomeKYCLogicEvent.Finish.OnError(
+                            errorCode = error.getFirstErrorCode()
+                        )
+                    )
+                }
             }
 
             override fun profileStatus(profileStatus: ProfileStatus) {

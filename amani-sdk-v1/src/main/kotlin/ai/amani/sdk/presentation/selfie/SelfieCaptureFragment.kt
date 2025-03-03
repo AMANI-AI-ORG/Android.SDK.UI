@@ -96,7 +96,12 @@ class SelfieCaptureFragment: Fragment() {
             }
         })
 
-        replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment)
+        selfieFragment?.let {
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        }?:run {
+            showSnackbar("Configuration error, Selfie Capture could not launch")
+            popBackStackSafely()
+        }
     }
 
     /** Navigates the Auto Selfie Fragment*/
@@ -115,8 +120,10 @@ class SelfieCaptureFragment: Fragment() {
             ai.amani.R.color.white,
             ai.amani.R.color.approve_green)
 
+        if (MainActivity.binding == null) return
+
         val selfieFragment = Amani.sharedInstance().AutoSelfieCapture().start("XXX_SE_0",
-            null, MainActivity.binding.fragmentContainerView,object: IFragmentCallBack{
+            null, MainActivity.binding!!.fragmentContainerView,object: IFragmentCallBack{
                 override fun cb(
                     bitmap: Bitmap?,
                     manualButtonActivated: Boolean?,
@@ -137,7 +144,12 @@ class SelfieCaptureFragment: Fragment() {
                     }
                 }
             })
-        replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment!!)
+        selfieFragment?.let {
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        }?:run {
+            showSnackbar("Configuration error, Auto Selfie Capture could not launch")
+            findNavController().popBackStack()
+        }
     }
 
     /** Navigates the Selfie Pose Estimation Fragment*/
@@ -171,7 +183,10 @@ class SelfieCaptureFragment: Fragment() {
             )
             .build(requireContext())
         selfieFragment?.let {
-            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, selfieFragment)
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        }?:run {
+            showSnackbar("Configuration error, Pose Estimation could not launch")
+            findNavController().popBackStack()
         }
     }
 
@@ -192,6 +207,7 @@ class SelfieCaptureFragment: Fragment() {
 
                 findNavController().navigateSafely(action)
             }?: run {
+                findNavController().popBackStack()
             }
         }
 
@@ -206,7 +222,7 @@ class SelfieCaptureFragment: Fragment() {
         CoroutineScope(Dispatchers.Main).launch {
             // repeatOnLifecycle launches the block in a new coroutine every time the
             // lifecycle is in the STARTED state (or above) and cancels it when it's STOPPED.
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 // Trigger the flow and start listening for values.
                 // Note that this happens when lifecycle is STARTED and stops
                 // collecting when the lifecycle is STOPPED

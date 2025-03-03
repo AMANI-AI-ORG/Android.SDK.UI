@@ -76,7 +76,7 @@ class CustomTextView : AppCompatTextView {
      * @param textColor textcolor
      */
     fun setTextProperty(text: String?, textColor: String?) {
-        if (text == null) return
+        if (text.isNullOrBlank()) return
         this.text = text
         this.setTextColor(Color.parseColor(textColor))
     }

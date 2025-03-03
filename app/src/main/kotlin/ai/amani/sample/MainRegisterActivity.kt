@@ -52,13 +52,6 @@ class MainRegisterActivity : AppCompatActivity() {
         //val inputStream = this.resources.openRawResource(R.raw.certifica)
         //AmaniSDKUI.setSSLPinning(inputStream)
 
-        AmaniSDKUI.init(
-            activity = this,
-            serverURL = "TestCredentials.SERVER_URL",
-            amaniVersion = AmaniVersion.V2,
-            sharedSecret = null
-        )
-
         registerButton.setOnClickListener {
 
             AmaniSDKUI.setHologramDetection(false)

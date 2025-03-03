@@ -57,6 +57,17 @@ class NFCScanningBottomDialog : BottomSheetDialogFragment() {
         }
     }
 
+    fun dismissSafely() {
+        try {
+            if (isAdded && !isStateSaved && activity?.isFinishing == false
+                && activity?.isDestroyed == false) {
+                dismissAllowingStateLoss()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun nfcScanningDoneAnimations() {
         stopScanningAnimation()
         playNFCDoneAnimation()

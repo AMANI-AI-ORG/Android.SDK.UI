@@ -6,10 +6,12 @@ import ai.amani.sdk.Amani
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
+import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.removeChildFragment
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
+import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.BitmapUtils
@@ -128,9 +130,11 @@ class IDCaptureBackSideFrag : Fragment() {
             )
         }
 
+        if (MainActivity.binding == null) return
+
         idCaptureFragmentBackSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
-            MainActivity.binding.fragmentContainerView, args.dataModel.version!!.type, false
+            MainActivity.binding!!.fragmentContainerView, args.dataModel.version!!.type, false
         )
         { bitmap: Bitmap?, isManualButtonActivated: Boolean?, file: File? ->
 
@@ -164,7 +168,9 @@ class IDCaptureBackSideFrag : Fragment() {
 
         idCaptureFragmentBackSide?.let {
             replaceChildFragmentWithoutBackStack(R.id.child_of_id_back, it)
-        }
+        }?:run {
+            showSnackbar("Configuration error, ID capture could not launch")
+            popBackStackSafely()        }
     }
 
     private fun toolBar() {

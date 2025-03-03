@@ -15,7 +15,7 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:id="@+id/description_text"
+        android:id="@+id/nfc_configure_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"

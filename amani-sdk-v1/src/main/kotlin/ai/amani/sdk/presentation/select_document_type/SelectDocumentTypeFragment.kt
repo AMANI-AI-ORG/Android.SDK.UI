@@ -16,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DefaultItemAnimator
@@ -23,6 +24,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import datamanager.model.config.ResGetConfig
 import datamanager.model.config.Version
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -50,32 +53,34 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
     }
 
     override fun onOnItemSelected(version: Version?) {
-        viewModel.navigateScreen(
-            version!!
-        ) {
-            when (it) {
-                ScreenRoutes.IDFrontSideScreen -> {
-                    val action =
-                        SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToIDCaptureFrontSideFrag(
-                            ConfigModel(
-                                version = version,
-                                generalConfigs =  args.dataModel.generalConfigs!!.generalConfigs,
-                                featureConfig = args.dataModel.featureConfig
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            viewModel.navigateScreen(
+                version!!
+            ) {
+                when (it) {
+                    ScreenRoutes.IDFrontSideScreen -> {
+                        val action =
+                            SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToIDCaptureFrontSideFrag(
+                                ConfigModel(
+                                    version = version,
+                                    generalConfigs =  args.dataModel.generalConfigs!!.generalConfigs,
+                                    featureConfig = args.dataModel.featureConfig
+                                )
                             )
-                        )
-                    findNavController().navigateSafely(action)
-                }
+                        findNavController().navigateSafely(action)
+                    }
 
-                else -> {
-                    val action =
-                        SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToPhysicalContractFragment(
-                            ConfigModel(
-                                version = version,
-                                generalConfigs = args.dataModel.generalConfigs!!.generalConfigs
+                    else -> {
+                        val action =
+                            SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToPhysicalContractFragment(
+                                ConfigModel(
+                                    version = version,
+                                    generalConfigs = args.dataModel.generalConfigs!!.generalConfigs
+                                )
                             )
-                        )
 
-                    findNavController().navigateSafely(action)
+                        findNavController().navigateSafely(action)
+                    }
                 }
             }
         }

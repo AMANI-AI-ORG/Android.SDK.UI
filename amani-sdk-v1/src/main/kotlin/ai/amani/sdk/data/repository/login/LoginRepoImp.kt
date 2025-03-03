@@ -45,40 +45,4 @@ class LoginRepoImp : LoginRepository {
             onCompleted.invoke(loginResultModel)
         }
     }
-
-    override fun loginWithMailPassword(
-        activity: Activity,
-        tcNumber: String,
-        email: String,
-        password: String,
-        lang: String,
-        location: Boolean,
-        onStart: () -> Unit,
-        onCompleted: (loginResultModel: LoginResultModel) -> Unit
-    ) {
-
-        onStart.invoke()
-
-        var loginResultModel = LoginResultModel()
-
-        runCatching{
-            Amani.sharedInstance().initAmani(
-                activity,
-                tcNumber,
-                email,
-                password,
-                location,
-                lang
-            ) { isSucess ->
-                loginResultModel = LoginResultModelMapper.map(
-                    isSucess
-                )
-
-                onCompleted.invoke(loginResultModel)
-            }
-        }.onFailure {
-            loginResultModel.throwable = it
-            onCompleted.invoke(loginResultModel)
-        }
-    }
 }

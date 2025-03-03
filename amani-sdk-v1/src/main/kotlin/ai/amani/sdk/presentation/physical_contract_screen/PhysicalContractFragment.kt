@@ -5,8 +5,10 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentPhysicalContractBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.extentions.debugToast
+import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.modules.document.DocBuilder
 import ai.amani.sdk.modules.document.interfaces.IDocumentCallBack
@@ -21,8 +23,11 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -80,20 +85,17 @@ class PhysicalContractFragment: Fragment() {
                     ) {
                         Timber.d("Document fragment callback triggered isSuccess: $isSuccess")
                         if (isSuccess) {
-                            findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
-                                HomeKYCResultModel(
-                                    docID = args.value.dataModel.version!!.documentId!!,
-                                    docType = args.value.dataModel.version!!.type,
+                            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                                findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
+                                    HomeKYCResultModel(
+                                        docID = args.value.dataModel.version!!.documentId!!,
+                                        docType = args.value.dataModel.version!!.type,
                                     )
 
-                            findNavController().clearBackStack(R.id.homeKYCFragment)
-                            findNavController().popBackStack(R.id.homeKYCFragment, false)
+                                findNavController().clearBackStack(R.id.homeKYCFragment)
+                                findNavController().popBackStack(R.id.homeKYCFragment, false)
 
-                            MainActivity.hideSelectButton()
-
-                        } else {
-                            if (BuildConfig.DEBUG) {
-                                Toast.makeText(requireContext(), "Generic document result fale", Toast.LENGTH_LONG).show()
+                                MainActivity.hideSelectButton()
                             }
                         }
                     }
@@ -104,6 +106,9 @@ class PhysicalContractFragment: Fragment() {
                 R.id.child_of_physical_contract ,
                 it
             )
+        }?:run {
+            showSnackbar("Configuration error, Physical Contract Screen could not launch")
+            popBackStackSafely()
         }
     }
 
@@ -115,8 +120,10 @@ class PhysicalContractFragment: Fragment() {
     }
 
     private fun clickEvents() {
-        MainActivity.addSelectButtonListener {
-            pickPdfFileFromStorage()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            MainActivity.addSelectButtonListener {
+                pickPdfFileFromStorage()
+            }
         }
     }
 
@@ -128,26 +135,34 @@ class PhysicalContractFragment: Fragment() {
         uri?.let {
             Timber.d("PDF file is taken from gallery")
             if (it.scheme == "content") {
-                requireContext().contentResolver.query(it, null, null, null, null)?.use { cursor ->
-                    val pdfData = requireActivity().contentResolver.openInputStream(uri)?.readBytes()
-                    if (pdfData == null) {
-                        Toast.makeText(requireContext(), "PDF could not take", Toast.LENGTH_LONG).show()
-                        return@let
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        requireContext().contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                            val pdfData = requireActivity().contentResolver.openInputStream(uri)?.readBytes()
+                            if (pdfData == null) {
+                                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                                    Toast.makeText(requireContext(), "PDF could not take", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            val listOfUri = arrayListOf(uri)
+
+                            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                                MainActivity.hideSelectButton()
+
+                                findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
+                                    HomeKYCResultModel(
+                                        docID = args.value.dataModel.version!!.documentId!!,
+                                        docType = args.value.dataModel.version!!.type,
+                                        genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri)
+                                    )
+
+                                findNavController().clearBackStack(R.id.homeKYCFragment)
+                                findNavController().popBackStack(R.id.homeKYCFragment, false)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                    val listOfUri = arrayListOf(uri)
-
-                    MainActivity.hideSelectButton()
-
-                    findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
-                        HomeKYCResultModel(
-                            docID = args.value.dataModel.version!!.documentId!!,
-                            docType = args.value.dataModel.version!!.type,
-                            genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri)
-                        )
-
-                    findNavController().clearBackStack(R.id.homeKYCFragment)
-                    findNavController().popBackStack(R.id.homeKYCFragment, false)
-
                 }
             }
         }
@@ -155,11 +170,15 @@ class PhysicalContractFragment: Fragment() {
 
     override fun onPause() {
         super.onPause()
-        MainActivity.hideSelectButton()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            MainActivity.hideSelectButton()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        MainActivity.showSelectButton()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            MainActivity.showSelectButton()
+        }
     }
 }

@@ -23,18 +23,4 @@ interface LoginRepository {
         onStart: () -> Unit,
         onCompleted: (loginResultModel : LoginResultModel) -> Unit
     )
-
-    @WorkerThread
-    @Annotations.TestEnvironmentCase(
-        "Should be used only for test cases, cause of security reasons")
-    fun loginWithMailPassword(
-        activity: Activity,
-        tcNumber: String,
-        email: String,
-        password: String,
-        lang: String,
-        location: Boolean,
-        onStart: () -> Unit,
-        onCompleted: (loginResultModel : LoginResultModel) -> Unit
-    )
 }

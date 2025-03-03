@@ -70,4 +70,8 @@
     <string name="answer_questions">Please answer the following simple questions to help us serve you better.</string>
     <string name="select">Select</string>
     <string name="description_profile_info">Please fill in your profile information</string>
+    <string name="document_number_title">Document Number</string>
+    <string name="expiry_date_title">Enter your document expiry date</string>
+    <string name="birth_date_title">Birth date</string>
+    <string name="nfc_configure_title">Please check your informations before continue</string>
 </resources>
