@@ -16,7 +16,7 @@ class App :Application(){
         super.onCreate()
 
         AmaniSDKUI.init(
-            applicationContext = this,
+            applicationContext = this.applicationContext,
             serverURL = "TestCredentials.SERVER_URL",
             amaniVersion = AmaniVersion.V2,
             sharedSecret = null
