@@ -13,10 +13,18 @@ import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
 import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
+import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_MUTABLE
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.nfc.NfcAdapter
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
@@ -50,6 +58,7 @@ class NFCScanFragment : Fragment() {
     private lateinit var expiryDatePicker: DatePickerHandler
     private lateinit var birthDatePicker: DatePickerHandler
     private var alertDialog: AlertDialog? = null
+    private var nfcAdapter: NfcAdapter? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,6 +75,8 @@ class NFCScanFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setCustomUI()
         observeLiveEvent()
+
+        nfcAdapter = NfcAdapter.getDefaultAdapter(requireActivity())
 
         VoiceAssistantSDKManager.play(
             context = requireContext(),
@@ -89,6 +100,7 @@ class NFCScanFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewModel.clearNFCState()
+        enableNFCScan()
         viewModel.checkNFCState(
             requireContext(),
             disable = {
@@ -229,26 +241,6 @@ class NFCScanFragment : Fragment() {
     }
 
     private fun observeLiveEvent() {
-        viewModel.get.observe(viewLifecycleOwner) {
-            if (it != null) {
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                    requireActivity().supportFragmentManager.let {
-                        val args = Bundle()
-                        args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
-                        nfcScanningModal.arguments = args
-                       if (!nfcScanningModal.isVisible) nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
-                    }
-                }
-
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                    viewModel.scanNFC(
-                        it,
-                        requireContext()
-                    )
-                }
-            }
-        }
-
         viewModel.nfcScanState.observe(viewLifecycleOwner) {
             when(it) {
                 is NFCScanState.Success -> {
@@ -321,7 +313,7 @@ class NFCScanFragment : Fragment() {
 
                 is NFCScanState.ReadyToScan -> {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                        viewModel.setNfcEnable(true)
+                        enableNFCScan()
                         binding.infoLayout.show()
                         binding.mrzCheckLayout.hide()
                     }
@@ -329,8 +321,7 @@ class NFCScanFragment : Fragment() {
 
                 is NFCScanState.ShowMRZCheck -> {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                        viewModel.setNfcEnable(false)
-                        viewModel.set(null)
+                        disableNFCScan()
                         binding.infoLayout.hide()
                         binding.mrzCheckLayout.show()
                     }
@@ -341,8 +332,7 @@ class NFCScanFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        viewModel.setNfcEnable(false)
-        viewModel.set(null)
+        disableNFCScan()
         VoiceAssistantSDKManager.stop()
     }
 
@@ -361,8 +351,56 @@ class NFCScanFragment : Fragment() {
         }
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
         alertDialog = null
+    }
+
+    private fun enableNFCScan() {
+        if (nfcAdapter == null) nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            val intent = Intent(requireContext(), this.javaClass)
+            intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            val pendingIntent =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.getActivity(
+                        requireContext(), 0, Intent(requireContext(), javaClass)
+                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), FLAG_MUTABLE
+                    )
+                } else {
+                    PendingIntent.getActivity(
+                        requireContext(), 0, Intent(requireContext(), javaClass)
+                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0
+                    )
+                }
+            val filter = arrayOf(arrayOf("android.nfc.tech.IsoDep"))
+            nfcAdapter?.enableForegroundDispatch(requireActivity(), pendingIntent, null, filter)
+            nfcAdapter?.enableReaderMode(requireActivity(), {
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    requireActivity().supportFragmentManager.let {
+                        val args = Bundle()
+                        args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
+                        nfcScanningModal.arguments = args
+                        if (!nfcScanningModal.isVisible) {
+                            nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
+                        }
+                    }
+
+                    viewModel.scanNFC(
+                        it,
+                        requireContext()
+                    )
+                }
+
+            }, NfcAdapter.FLAG_READER_NFC_A or
+                    NfcAdapter.FLAG_READER_NFC_B or
+                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK , null)
+        }
+    }
+
+    private fun disableNFCScan() {
+        nfcAdapter?.disableForegroundDispatch(requireActivity())
     }
 }

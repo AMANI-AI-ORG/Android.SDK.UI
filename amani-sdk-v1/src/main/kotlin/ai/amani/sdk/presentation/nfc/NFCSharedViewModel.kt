@@ -16,17 +16,12 @@ import timber.log.Timber
  * @Author: zekiamani
  * @Date: 26.09.2022
  */
-class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp): ViewModel() {
+class NFCSharedViewModel(private val nfcRepository: NFCRepositoryImp): ViewModel() {
 
-    private val _intent = MutableLiveData<Intent?>(null)
     private val _nfcActivationState = MutableLiveData<NFCActivationState>(NFCActivationState.Empty)
     private val _nfcScanState = MutableLiveData<NFCScanState>(NFCScanState.ReadyToScan)
     private val maxAttempt = 3
     private var currentAttempt = 0
-
-    val get: LiveData<Intent?> = _intent
-
-    val nfcActivationState: LiveData<NFCActivationState> = _nfcActivationState
 
     val nfcScanState: LiveData<NFCScanState> = _nfcScanState
 
@@ -36,8 +31,6 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
         mrzData = mrzModel
     }
 
-    fun set(intent: Intent?) { _intent.value = intent }
-
     fun setNfcEnable(boolean: Boolean) {
         if (boolean) {
             _nfcActivationState.value = NFCActivationState.Enable
@@ -45,15 +38,13 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
     }
 
     fun scanNFC(
-        intent: Intent,
+        tag: Tag,
         context: Context
     ) {
         Timber.d("NFC Scan is triggered")
 
-        val tag = intent.extras!!.parcelable<Tag>(NfcAdapter.EXTRA_TAG)
-
         nfcRepository.scan(
-            tag = tag!!,
+            tag = tag,
             context = context,
             birthDate = mrzData.birthDate,
             expireDate = mrzData.expireDate,
