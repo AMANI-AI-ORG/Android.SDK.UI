@@ -1,6 +1,7 @@
 package ai.amani.sdk.data.repository.nfc
 
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.VibrationManager
 import ai.amani.sdk.data.mapper.UploadResultModelMapper
 import ai.amani.sdk.interfaces.INfcCallBack
 import ai.amani.sdk.interfaces.IUploadCallBack
@@ -22,7 +23,8 @@ import kotlin.math.exp
  * @Author: zekiamani
  * @Date: 26.09.2022
  */
-class NFCRepositoryImp: NFCRepository {
+class NFCRepositoryImp(
+    private val vibrationManager: VibrationManager = VibrationManager): NFCRepository {
 
     override fun upload(
         activity: FragmentActivity,
@@ -72,6 +74,7 @@ class NFCRepositoryImp: NFCRepository {
         onComplete: () -> Unit,
         onFailure: (String?) -> Unit
     ) {
+        vibrationManager.vibrateLoading(context)
         Amani.sharedInstance().ScanNFC().start(
             tag = tag,
             context = context,
@@ -80,10 +83,12 @@ class NFCRepositoryImp: NFCRepository {
             documentNumber = documentNumber,
             callBack = object : NfcResultCallBack {
                 override fun onError(error: String?) {
+                    vibrationManager.vibrateError(context)
                     onFailure.invoke(error)
                 }
 
                 override fun onSuccess(photo: Bitmap?, mrz: String?) {
+                    vibrationManager.vibrateSuccess(context)
                     onComplete.invoke()
                 }
             }
