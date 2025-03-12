@@ -4,6 +4,7 @@ import ai.amani.sdk.Amani
 import ai.amani.sdk.data.mapper.UploadResultModelMapper
 import ai.amani.sdk.interfaces.INfcCallBack
 import ai.amani.sdk.interfaces.IUploadCallBack
+import ai.amani.sdk.interfaces.NfcResultCallBack
 import ai.amani.sdk.model.UploadResultModel
 import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.mrz.MRZResult
@@ -15,6 +16,7 @@ import androidx.fragment.app.FragmentActivity
 import datamanager.model.autocrop.Mrz
 import datamanager.model.customer.Errors
 import timber.log.Timber
+import kotlin.math.exp
 
 /**
  * @Author: zekiamani
@@ -71,14 +73,20 @@ class NFCRepositoryImp: NFCRepository {
         onFailure: (String?) -> Unit
     ) {
         Amani.sharedInstance().ScanNFC().start(
-            tag,
-            context,
-            birthDate,
-            expireDate,
-            documentNumber
-        ) { _, isSuccess, error ->
-            if (isSuccess) onComplete.invoke()
-            else onFailure.invoke(error)
-        }
+            tag = tag,
+            context = context,
+            birthDate = birthDate,
+            expireDate = expireDate,
+            documentNumber = documentNumber,
+            callBack = object : NfcResultCallBack {
+                override fun onError(error: String?) {
+                    onFailure.invoke(error)
+                }
+
+                override fun onSuccess(photo: Bitmap?, mrz: String?) {
+                    onComplete.invoke()
+                }
+            }
+        )
     }
 }

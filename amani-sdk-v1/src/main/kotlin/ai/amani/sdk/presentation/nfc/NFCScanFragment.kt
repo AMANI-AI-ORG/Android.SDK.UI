@@ -402,5 +402,6 @@ class NFCScanFragment : Fragment() {
 
     private fun disableNFCScan() {
         nfcAdapter?.disableForegroundDispatch(requireActivity())
+        nfcAdapter?.disableReaderMode(requireActivity())
     }
 }
