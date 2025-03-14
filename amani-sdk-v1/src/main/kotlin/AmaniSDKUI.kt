@@ -4,15 +4,11 @@ import ai.amani.sdk.UploadSource
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.exception.AmaniException
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.AppConstant
-import ai.amani.voice_assistant.AmaniVoiceAssistant
-import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
-import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.RawRes
 import java.io.InputStream
@@ -112,7 +108,7 @@ object AmaniSDKUI {
         )
 
         resultLauncher.launch(
-            Intent(activity, MainActivity::class.java).apply {
+            Intent(activity, AmaniMainActivity::class.java).apply {
                 this.putExtra(AppConstant.REGISTER_CONFIG, config)
                 this.putExtra(AppConstant.FEATURE_CONFIG, featureConfig)
             }

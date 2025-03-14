@@ -9,7 +9,7 @@ import ai.amani.sdk.interfaces.IFragmentCallBack
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.OnFailurePoseEstimation
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.PoseEstimationObserver
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.BitmapUtils
 import ai.amani.voice_assistant.AmaniVoiceAssistant
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
@@ -120,10 +120,10 @@ class SelfieCaptureFragment: Fragment() {
             ai.amani.R.color.white,
             ai.amani.R.color.approve_green)
 
-        if (MainActivity.binding == null) return
+        if (AmaniMainActivity.binding == null) return
 
         val selfieFragment = Amani.sharedInstance().AutoSelfieCapture().start("XXX_SE_0",
-            null, MainActivity.binding!!.fragmentContainerView,object: IFragmentCallBack{
+            null, AmaniMainActivity.binding!!.fragmentContainerView,object: IFragmentCallBack{
                 override fun cb(
                     bitmap: Bitmap?,
                     manualButtonActivated: Boolean?,
@@ -286,7 +286,7 @@ class SelfieCaptureFragment: Fragment() {
     }
 
     private fun setToolBarTitle() {
-        MainActivity.setToolBar(
+        AmaniMainActivity.setToolBar(
             args.dataModel.version!!.title,
             args.dataModel.generalConfigs!!.appFontColor
         )

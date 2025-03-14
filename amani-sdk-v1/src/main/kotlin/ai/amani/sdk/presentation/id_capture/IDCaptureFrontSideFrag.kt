@@ -4,7 +4,6 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureFrontBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
-import ai.amani.sdk.extentions.debugToast
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.popBackStackSafely
@@ -14,7 +13,7 @@ import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.BitmapUtils
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
@@ -133,11 +132,11 @@ class IDCaptureFrontSideFrag : Fragment() {
 
         Timber.d("VideoRecord ${args.dataModel.version!!.videoRecord}")
 
-        if (MainActivity.binding == null) return
+        if (AmaniMainActivity.binding == null) return
 
        idCaptureFragmentFrontSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
-            MainActivity.binding!!.fragmentContainerView,
+            AmaniMainActivity.binding!!.fragmentContainerView,
             args.dataModel.version!!.type,
             true
         )

@@ -9,11 +9,10 @@ import ai.amani.sdk.extentions.hideKeyboard
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.runOnUiThread
-import ai.amani.sdk.extentions.setCustomBackground
 import ai.amani.sdk.extentions.setKeyboardEventListener
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.presentation.common.NavigationCommands
 import android.os.Bundle
 import android.text.Editable
@@ -104,7 +103,7 @@ class PhoneCheckFragment: Fragment() {
                             //If back press is not available, blocking back press physical and phone
                             //button all together. If its available enable them
                             isBackPressEnabled = it.available
-                            MainActivity.isBackButtonEnabled(isEnabled =  it.available)
+                            AmaniMainActivity.isBackButtonEnabled(isEnabled =  it.available)
                             binding.resendEmailText.isClickable = it.available
                             if (it.available) {
                                 binding.resendEmailText.setTextColor(

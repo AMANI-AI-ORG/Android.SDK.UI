@@ -1,10 +1,8 @@
 package ai.amani.sdk.presentation.physical_contract_screen
 
-import ai.amani.BuildConfig
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentPhysicalContractBinding
 import ai.amani.sdk.Amani
-import ai.amani.sdk.extentions.debugToast
 import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
@@ -12,7 +10,7 @@ import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.modules.document.DocBuilder
 import ai.amani.sdk.modules.document.interfaces.IDocumentCallBack
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import android.net.Uri
 import android.os.Bundle
@@ -95,7 +93,7 @@ class PhysicalContractFragment: Fragment() {
                                 findNavController().clearBackStack(R.id.homeKYCFragment)
                                 findNavController().popBackStack(R.id.homeKYCFragment, false)
 
-                                MainActivity.hideSelectButton()
+                                AmaniMainActivity.hideSelectButton()
                             }
                         }
                     }
@@ -121,7 +119,7 @@ class PhysicalContractFragment: Fragment() {
 
     private fun clickEvents() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            MainActivity.addSelectButtonListener {
+            AmaniMainActivity.addSelectButtonListener {
                 pickPdfFileFromStorage()
             }
         }
@@ -147,7 +145,7 @@ class PhysicalContractFragment: Fragment() {
                             val listOfUri = arrayListOf(uri)
 
                             viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                                MainActivity.hideSelectButton()
+                                AmaniMainActivity.hideSelectButton()
 
                                 findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
                                     HomeKYCResultModel(
@@ -171,14 +169,14 @@ class PhysicalContractFragment: Fragment() {
     override fun onPause() {
         super.onPause()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            MainActivity.hideSelectButton()
+            AmaniMainActivity.hideSelectButton()
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            MainActivity.showSelectButton()
+            AmaniMainActivity.showSelectButton()
         }
     }
 }

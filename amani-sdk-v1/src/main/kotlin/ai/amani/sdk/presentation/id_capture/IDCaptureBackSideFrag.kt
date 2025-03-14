@@ -13,7 +13,7 @@ import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.BitmapUtils
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
 import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
@@ -130,11 +130,11 @@ class IDCaptureBackSideFrag : Fragment() {
             )
         }
 
-        if (MainActivity.binding == null) return
+        if (AmaniMainActivity.binding == null) return
 
         idCaptureFragmentBackSide = Amani.sharedInstance().IDCapture().start(
             requireActivity(),
-            MainActivity.binding!!.fragmentContainerView, args.dataModel.version!!.type, false
+            AmaniMainActivity.binding!!.fragmentContainerView, args.dataModel.version!!.type, false
         )
         { bitmap: Bitmap?, isManualButtonActivated: Boolean?, file: File? ->
 

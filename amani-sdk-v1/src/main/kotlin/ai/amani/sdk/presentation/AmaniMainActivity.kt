@@ -1,7 +1,7 @@
 package ai.amani.sdk.presentation
 
 import ai.amani.amani_sdk.R
-import ai.amani.amani_sdk.databinding.ActivityMainBinding
+import ai.amani.amani_sdk.databinding.AmaniActivityMainBinding
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.setActionBarColor
 import ai.amani.sdk.extentions.show
@@ -28,21 +28,20 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.lang.ref.WeakReference
 
 
 /**
  * @Author: zekiamani
  * @Date: 1.09.2022
  */
-class MainActivity : AppCompatActivity() {
+class AmaniMainActivity : AppCompatActivity() {
 
     private lateinit var navController: NavController
     private val viewModel: NFCSharedViewModel by viewModels { NFCSharedViewModel.Factory }
 
     companion object {
         @SuppressLint("StaticFieldLeak")
-        private var _binding: ActivityMainBinding? = null
+        private var _binding: AmaniActivityMainBinding? = null
         val binding get() = _binding
 
         fun setToolBar(
@@ -143,7 +142,7 @@ class MainActivity : AppCompatActivity() {
 
         _binding = DataBindingUtil.setContentView(
             this,
-            R.layout.activity_main)
+            R.layout.amani_activity_main)
 
 
         val navHostFragment =
@@ -201,7 +200,6 @@ class MainActivity : AppCompatActivity() {
             .addCallback(object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     if (navController.currentDestination?.id!! == R.id.homeKYCFragment) finishActivity()
-                    else this@MainActivity.onBackPressedDispatcher.onBackPressed()
                 }
             })
     }

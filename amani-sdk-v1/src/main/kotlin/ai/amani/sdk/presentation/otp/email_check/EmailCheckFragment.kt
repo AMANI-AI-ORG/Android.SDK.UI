@@ -11,7 +11,7 @@ import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.setKeyboardEventListener
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.presentation.common.NavigationCommands
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -94,7 +94,7 @@ class EmailCheckFragment: Fragment() {
                             //If back press is not available, blocking back press physical and phone
                             //button all together. If its available enable them
                             isBackPressEnabled = it.available
-                            MainActivity.isBackButtonEnabled(it.available)
+                            AmaniMainActivity.isBackButtonEnabled(it.available)
                             binding.resendEmailText.isClickable = it.available
                             if (it.available) {
                                 binding.resendEmailText.setTextColor(
@@ -221,7 +221,7 @@ class EmailCheckFragment: Fragment() {
             4, args.data.config.primaryButtonBackgroundColor,
             0f, null,
             true, args.data.config.buttonRadiusAndroid)
-        MainActivity.isBackButtonEnabled(false)
+        AmaniMainActivity.isBackButtonEnabled(false)
 
         binding.otpInput.customStroke(1, args.data.config.appFontColor,
             args.data.config.buttonRadiusAndroid)

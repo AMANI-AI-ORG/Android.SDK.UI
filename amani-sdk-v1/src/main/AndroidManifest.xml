@@ -13,7 +13,7 @@
         android:name="ai.amani.sample.App"
         android:theme="@style/AppTheme">
         <activity
-            android:name="ai.amani.sdk.presentation.MainActivity"
+            android:name="ai.amani.sdk.presentation.AmaniMainActivity"
             android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>

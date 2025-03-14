@@ -1,6 +1,6 @@
 package ai.amani.sdk.extentions
 
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.PorterDuff
@@ -20,14 +20,14 @@ fun Fragment.customizeToolBar(
     titleTextColor: String?,
     title: String?
 ) {
-    MainActivity.customizeToolBar(
+    AmaniMainActivity.customizeToolBar(
         title,
         titleTextColor,
         backgroundColor,
         backImgColor
     )
 
-    MainActivity.isBackButtonEnabled(isEnabled = true)
+    AmaniMainActivity.isBackButtonEnabled(isEnabled = true)
     findNavController().currentDestination!!.label = title
 }
 
@@ -36,7 +36,7 @@ fun Fragment.setToolBarTitle(
     navigationIconColor: String? = null
 ) {
 
-    MainActivity.setToolBar(
+    AmaniMainActivity.setToolBar(
         title,
         navigationIconColor
     )

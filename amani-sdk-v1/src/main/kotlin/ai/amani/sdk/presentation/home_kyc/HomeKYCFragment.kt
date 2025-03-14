@@ -17,7 +17,7 @@ import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.model.NFCScanScreenModel
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.SelectDocumentTypeModel
-import ai.amani.sdk.presentation.MainActivity
+import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
@@ -43,7 +43,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import networkmanager.common.exception.ApiException
 import timber.log.Timber
 
 /**
@@ -182,7 +181,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     override fun onResume() {
         super.onResume()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            MainActivity.hideSelectButton()
+            AmaniMainActivity.hideSelectButton()
             viewModel.listenAmaniEvents()
         }
     }
