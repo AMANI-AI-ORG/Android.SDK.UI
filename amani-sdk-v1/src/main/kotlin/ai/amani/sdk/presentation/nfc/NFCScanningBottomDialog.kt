@@ -14,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.parcelize.Parcelize
+import timber.log.Timber
 
 class NFCScanningBottomDialog : BottomSheetDialogFragment() {
     private var binding : DialogNfcScanBinding? = null
@@ -62,6 +63,8 @@ class NFCScanningBottomDialog : BottomSheetDialogFragment() {
             if (isAdded && !isStateSaved && activity?.isFinishing == false
                 && activity?.isDestroyed == false) {
                 dismissAllowingStateLoss()
+            } else {
+                Timber.e("NFC Scanning modal dismiss fail because it was not visible")
             }
         } catch (e: Exception) {
             e.printStackTrace()

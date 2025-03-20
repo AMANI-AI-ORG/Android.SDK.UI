@@ -7,7 +7,11 @@ import ai.amani.sdk.extentions.alertDialog
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
+import ai.amani.sdk.model.ConfigModel
+import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
+import ai.amani.sdk.model.MRZModel
+import ai.amani.sdk.model.NFCScanScreenModel
 import ai.amani.sdk.presentation.otp.profile_info.DatePickerHandler
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -37,6 +41,8 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import datamanager.model.config.GeneralConfigs
+import datamanager.model.config.Version
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -53,7 +59,7 @@ class NFCScanFragment : Fragment() {
     private lateinit var binding: FragmentNfcScanBinding
     private val args: NFCScanFragmentArgs by navArgs()
     private val viewModel: NFCSharedViewModel by activityViewModels{NFCSharedViewModel.Factory}
-    private val nfcScanningModal by lazy { NFCScanningBottomDialog() }
+    private var nfcScanningModal: NFCScanningBottomDialog? = NFCScanningBottomDialog()
     private var nfcDialogMessages: NFCScanningBottomDialog.NFCDialogMessages = NFCScanningBottomDialog.NFCDialogMessages()
     private lateinit var expiryDatePicker: DatePickerHandler
     private lateinit var birthDatePicker: DatePickerHandler
@@ -248,9 +254,9 @@ class NFCScanFragment : Fragment() {
                     Timber.i("NFC is scanned properly")
 
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                        nfcScanningModal.nfcScanningDoneAnimations()
+                        nfcScanningModal?.nfcScanningDoneAnimations()
                         delay(1000)
-
+                        nfcScanningModal?.dismissSafely()
                         viewModel.clearNFCState()
                         findNavController().getBackStackEntry(R.id.homeKYCFragment)
                             .savedStateHandle[AmaniDocumentTypes.type] = HomeKYCResultModel(
@@ -261,7 +267,6 @@ class NFCScanFragment : Fragment() {
                                 // only as true/false
                             )
 
-                        nfcScanningModal.dismissSafely()
                         findNavController().clearBackStack(R.id.homeKYCFragment)
                         findNavController().popBackStack(R.id.homeKYCFragment, false)
                     }
@@ -272,9 +277,9 @@ class NFCScanFragment : Fragment() {
                     //Show message to user to re-scan NFC
                     Timber.i("NFC scanning failed")
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                        nfcScanningModal.showError()
+                        nfcScanningModal?.showError()
                         delay(1000)
-                        nfcScanningModal.dismissSafely()
+                        nfcScanningModal?.dismissSafely()
                         viewModel.setState(NFCScanState.ShowMRZCheck)
                     }
                 }
@@ -285,7 +290,7 @@ class NFCScanFragment : Fragment() {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main){
 
                         //Closing the NFC scanning dialog
-                        nfcScanningModal.dismissSafely()
+                        nfcScanningModal?.dismissSafely()
 
                         viewModel.clearNFCState()
 
@@ -355,10 +360,13 @@ class NFCScanFragment : Fragment() {
     override fun onDestroy() {
         super.onDestroy()
         alertDialog = null
+        nfcScanningModal = null
     }
 
     private fun enableNFCScan() {
         if (nfcAdapter == null) nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
+
+        if (activity == null) return
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             val intent = Intent(requireContext(), this.javaClass)
@@ -382,9 +390,9 @@ class NFCScanFragment : Fragment() {
                     requireActivity().supportFragmentManager.let {
                         val args = Bundle()
                         args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
-                        nfcScanningModal.arguments = args
-                        if (!nfcScanningModal.isVisible) {
-                            nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
+                        nfcScanningModal?.arguments = args
+                        if (nfcScanningModal?.isVisible != true) {
+                            nfcScanningModal?.show(it, NFCScanningBottomDialog.TAG)
                         }
                     }
 
