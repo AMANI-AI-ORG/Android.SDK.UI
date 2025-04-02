@@ -32,6 +32,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -72,6 +73,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         super.onViewCreated(view, savedInstanceState)
 
         viewModel.loginSDK(activity = requireActivity())
+
+        backPressListener()
 
         observe()
 
@@ -196,6 +199,18 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 featureConfig = featureConfig
             )
         }
+    }
+
+    private fun backPressListener() {
+        requireActivity().onBackPressedDispatcher
+            .addCallback(object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    val intent = Intent()
+                    intent.putExtra(AppConstant.KYC_RESULT, KYCResult())
+                    requireActivity().setResult(Activity.RESULT_OK, intent)
+                    requireActivity().finish()
+                }
+            })
     }
 
     private fun observe() {

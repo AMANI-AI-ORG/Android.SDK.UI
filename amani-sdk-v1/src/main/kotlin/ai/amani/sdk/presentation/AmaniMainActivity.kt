@@ -153,8 +153,6 @@ class AmaniMainActivity : AppCompatActivity() {
         clickListener()
 
         observeNFCState()
-
-        backPressListener()
     }
 
     private fun clickListener() {
@@ -194,16 +192,6 @@ class AmaniMainActivity : AppCompatActivity() {
             }
         }
     }
-
-    private fun backPressListener() {
-        this.onBackPressedDispatcher
-            .addCallback(object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    if (navController.currentDestination?.id!! == R.id.homeKYCFragment) finishActivity()
-                }
-            })
-    }
-
 
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp() || super.onSupportNavigateUp()
