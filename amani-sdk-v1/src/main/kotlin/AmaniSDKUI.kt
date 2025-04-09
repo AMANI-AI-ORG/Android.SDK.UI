@@ -9,6 +9,7 @@ import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.RawRes
 import java.io.InputStream
@@ -107,12 +108,15 @@ object AmaniSDKUI {
             documentNumber = documentNumber,
         )
 
-        resultLauncher.launch(
-            Intent(activity, AmaniMainActivity::class.java).apply {
-                this.putExtra(AppConstant.REGISTER_CONFIG, config)
-                this.putExtra(AppConstant.FEATURE_CONFIG, featureConfig)
-            }
-        )
+        val intent = Intent(activity, AmaniMainActivity::class.java)
+
+        val bundle = Bundle().apply {
+            putParcelable(AppConstant.REGISTER_CONFIG, config)
+            putParcelable(AppConstant.FEATURE_CONFIG, featureConfig)
+        }
+        bundle.classLoader = RegisterConfig::class.java.classLoader
+        intent.putExtras(bundle)
+        resultLauncher.launch(intent)
     }
 
     /**
