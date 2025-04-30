@@ -62,7 +62,7 @@ allprojects {
  
 ```kotlin   
     AmaniSDKUI.init(
-            activity = this,
+            applicationContext = this,
             serverURL = TestCredentials.SERVER_URL,
             amaniVersion = AmaniVersion.V2,
             sharedSecret = null
