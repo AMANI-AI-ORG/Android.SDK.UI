@@ -13,6 +13,7 @@ import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
+import ai.amani.sdk.interfaces.ExceptionCallBack
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.presentation.MainActivity
 import ai.amani.sdk.utils.AppConstant
@@ -26,8 +27,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.File
 
@@ -135,7 +139,13 @@ class IDCaptureFrontSideFrag : Fragment() {
 
         if (MainActivity.binding == null) return
 
-       idCaptureFragmentFrontSide = Amani.sharedInstance().IDCapture().start(
+       idCaptureFragmentFrontSide = Amani.sharedInstance().IDCapture()
+           .onException(exception = object : ExceptionCallBack {
+               override fun onException(exception: Exception) {
+                   handleCameraException(exception)
+               }
+           })
+           .start(
             requireActivity(),
             MainActivity.binding!!.fragmentContainerView,
             args.dataModel.version!!.type,
@@ -187,5 +197,17 @@ class IDCaptureFrontSideFrag : Fragment() {
     override fun onStop() {
         super.onStop()
         VoiceAssistantSDKManager.stop()
+    }
+
+    private fun handleCameraException(exception: Exception) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                showSnackbar("Please check your back camera is working properly, error: $exception")
+                findNavController().clearBackStack(R.id.homeKYCFragment)
+                findNavController().popBackStack(R.id.homeKYCFragment, false)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

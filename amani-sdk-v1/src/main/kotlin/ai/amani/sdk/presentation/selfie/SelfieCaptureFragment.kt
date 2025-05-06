@@ -5,6 +5,7 @@ import ai.amani.amani_sdk.databinding.FragmentSelfieCaptureBinding
 import ai.amani.sdk.Amani
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.*
+import ai.amani.sdk.interfaces.ExceptionCallBack
 import ai.amani.sdk.interfaces.IFragmentCallBack
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.OnFailurePoseEstimation
@@ -21,6 +22,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -79,7 +81,14 @@ class SelfieCaptureFragment: Fragment() {
 
     /** Navigates the Manual Selfie Fragment*/
     private fun initManualSelfie() {
-        val selfieFragment = Amani.sharedInstance().Selfie().start("XXX_SE_0", object : IFragmentCallBack{
+        val selfieFragment = Amani.sharedInstance().Selfie()
+            .onException(exception = object : ExceptionCallBack {
+                override fun onException(exception: Exception) {
+                    handleCameraException(exception)
+                }
+
+            })
+            .start("XXX_SE_0", object : IFragmentCallBack{
             override fun cb(bitmap: Bitmap?, isDestroyed: Boolean?, file: File?) {
                 if (file != null) {
                    val action = SelfieCaptureFragmentDirections.actionSelfieCaptureFragmentToPreviewScreenFragment(
@@ -116,13 +125,19 @@ class SelfieCaptureFragment: Fragment() {
             "Close enough",
             "Face not found",
             "Hold stable",
-            "Restart in 3 w234234",
+            "Restart in 3",
             ai.amani.R.color.white,
             ai.amani.R.color.approve_green)
 
         if (MainActivity.binding == null) return
 
-        val selfieFragment = Amani.sharedInstance().AutoSelfieCapture().start("XXX_SE_0",
+        val selfieFragment = Amani.sharedInstance().AutoSelfieCapture()
+            .onException(exception = object : ExceptionCallBack {
+                override fun onException(exception: Exception) {
+                    handleCameraException(exception)
+                }
+            })
+            .start("XXX_SE_0",
             null, MainActivity.binding!!.fragmentContainerView,object: IFragmentCallBack{
                 override fun cb(
                     bitmap: Bitmap?,
@@ -163,6 +178,11 @@ class SelfieCaptureFragment: Fragment() {
             .ovalViewAnimationDurationMilSec(500)
             .videoRecord(videoRecord = videoRecord)
             .observe(observable)
+            .onException(exception = object : ExceptionCallBack {
+                override fun onException(exception: Exception) {
+                    handleCameraException(exception)
+                }
+            })
             .userInterfaceColors(
                 ai.amani.R.color.white,
                 ai.amani.R.color.approve_green,
@@ -307,5 +327,17 @@ class SelfieCaptureFragment: Fragment() {
     override fun onPause() {
         super.onPause()
         VoiceAssistantSDKManager.stop()
+    }
+
+    private fun handleCameraException(exception: Exception) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                showSnackbar("Please check your rear camera is working properly, error: $exception")
+                findNavController().clearBackStack(R.id.homeKYCFragment)
+                findNavController().popBackStack(R.id.homeKYCFragment, false)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

@@ -28,7 +28,7 @@ fun Fragment.customizeToolBar(
     )
 
     MainActivity.isBackButtonEnabled(isEnabled = true)
-    findNavController().currentDestination!!.label = title
+    findNavController().currentDestination?.label = title
 }
 
 fun Fragment.setToolBarTitle(

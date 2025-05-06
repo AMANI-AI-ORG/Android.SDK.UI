@@ -27,7 +27,7 @@ class SelfieCaptureRepoImp : SelfieCaptureRepository {
                 .Selfie()
                 .upload(
                     activity,
-                    docType
+                    docType!!
                 ) { isSuccess ->
                     uploadResultSelfie = UploadResultModelMapper.map(
                         isSuccess
