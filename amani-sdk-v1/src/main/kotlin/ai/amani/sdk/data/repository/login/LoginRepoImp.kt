@@ -13,6 +13,12 @@ import android.app.Activity
  */
 class LoginRepoImp : LoginRepository {
 
+    @Volatile
+    private var isLoginDone = false
+
+    @Volatile
+    private var loginResultModel = LoginResultModel()
+
     override fun login(
         activity: Activity,
         tcNumber: String,
@@ -22,9 +28,13 @@ class LoginRepoImp : LoginRepository {
         onStart: () -> Unit,
         onCompleted: (loginResultModel: LoginResultModel) -> Unit
     ) {
+        if(isLoginDone) {
+            onCompleted.invoke(loginResultModel)
+            return
+        }
+
         onStart.invoke()
 
-        var loginResultModel = LoginResultModel()
 
         runCatching{
             Amani.sharedInstance().initAmani(
@@ -37,12 +47,13 @@ class LoginRepoImp : LoginRepository {
                 loginResultModel = LoginResultModelMapper.map(
                     isSucess
                 )
-
                 onCompleted.invoke(loginResultModel)
+                isLoginDone = true
             }
         }.onFailure {
             loginResultModel.throwable = it
             onCompleted.invoke(loginResultModel)
+            isLoginDone = false
         }
     }
 }
