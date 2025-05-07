@@ -342,7 +342,14 @@ class NFCScanFragment : Fragment() {
     }
 
     private fun startNfcSettingsActivity() {
-        startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                if (!isAdded || context == null) return@launch
+                startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     override fun onDestroyView() {

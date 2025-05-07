@@ -172,11 +172,16 @@ fun Fragment.setKeyboardEventListener(listener: KeyboardVisibilityEventListener)
 }
 
 fun Fragment.popBackStackSafely() {
-    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-        try {
-            findNavController().popBackStack()
-        } catch (e: Exception) {
-            e.printStackTrace()
+    try {
+        if (view == null) return
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            try {
+                findNavController().popBackStack()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }
