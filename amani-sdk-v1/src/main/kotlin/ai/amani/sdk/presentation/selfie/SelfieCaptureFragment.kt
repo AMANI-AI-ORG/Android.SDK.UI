@@ -113,10 +113,10 @@ class SelfieCaptureFragment: Fragment() {
             true,
             100,
             10,
-            "Close enough",
-            "Face not found",
-            "Hold stable",
-            "Restart in 3 w234234",
+            args.dataModel.version?.faceIsTooFarText?: "Close enough",
+            args.dataModel.version?.faceNotInsideText?: "Face not found",
+            args.dataModel.version?.holdStableText?: "Please hold stable",
+            args.dataModel.version?.selfieAlertDescription?: "Failed",
             ai.amani.R.color.white,
             ai.amani.R.color.approve_green)
 
@@ -173,13 +173,18 @@ class SelfieCaptureFragment: Fragment() {
                 ai.amani.R.color.white,
                 ai.amani.R.color.white)
             .userInterfaceTexts(
-                "Your face is not inside the area",
-                "Your face is not straight",
-                "Your face is too far from camera",
-                "Please keep straight the phone",
-                "Verification Failed",
-                "Failed",
-                "Try Again"
+                faceNotInside = args.dataModel.version?.faceNotInsideText?: "Your face is not inside the area",
+                faceNotStraight = args.dataModel.version?.faceNotStraightText?: "Your face is not straight",
+                faceIsTooFar = args.dataModel.version?.faceIsTooFarText?: "Your face is too far from camera",
+                holdPhoneVertically = args.dataModel.version?.holdStableText?: "Please keep straight the phone",
+                alertTitle = args.dataModel.version?.selfieAlertTitle?: "Verification Failed",
+                alertDescription = args.dataModel.version?.selfieAlertDescription?: "Failed",
+                alertTryAgain = args.dataModel.version?.selfieAlertTryAgain?: "Try Again",
+                turnLeft = args.dataModel.version?.turnLeftText?: "Turn left",
+                turnRight = args.dataModel.version?.turnRightText?: "Turn right",
+                turnUp = args.dataModel.version?.turnUpText?: "Turn up",
+                turnDown = args.dataModel.version?.turnDownText?: "Turn down",
+                faceStraight = args.dataModel.version?.keepStraightText?: "Look straight",
             )
             .build(requireContext())
         selfieFragment?.let {
