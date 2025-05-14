@@ -11,25 +11,42 @@ import datamanager.model.config.Version
  */
 internal object CachingHomeKYC {
 
-    var appConfig: ResGetConfig? = null
+    // Private lock object for synchronizing access
+    private val lock = Any()
 
-    var customerDetail: CustomerDetailResult? = null
+    @Volatile private var _appConfig: ResGetConfig? = null
+    @Volatile private var _customerDetail: CustomerDetailResult? = null
+    @Volatile private var _version: Version? = null
+    @Volatile private var _versionsList: MutableList<Version>? = null
+    @Volatile private var _onlyKYCRules: ArrayList<Rule>? = null
 
-    var version: Version? = null
+    // Thread-safe public accessors
+    var appConfig: ResGetConfig?
+        get() = synchronized(lock) { _appConfig }
+        set(value) = synchronized(lock) { _appConfig = value }
 
-    var versionsList : MutableList<Version>? = null
+    var customerDetail: CustomerDetailResult?
+        get() = synchronized(lock) { _customerDetail }
+        set(value) = synchronized(lock) { _customerDetail = value }
 
-    var onlyKYCRules: ArrayList<Rule>? = null
+    var version: Version?
+        get() = synchronized(lock) { _version }
+        set(value) = synchronized(lock) { _version = value }
 
-    fun clearCache() {
-        try {
-            appConfig = null
-            customerDetail = null
-            version = null
-            versionsList = null
-            onlyKYCRules = null
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    var versionsList: MutableList<Version>?
+        get() = synchronized(lock) { _versionsList }
+        set(value) = synchronized(lock) { _versionsList = value }
+
+    var onlyKYCRules: ArrayList<Rule>?
+        get() = synchronized(lock) { _onlyKYCRules }
+        set(value) = synchronized(lock) { _onlyKYCRules = value }
+
+    // Clears all cache safely
+    fun clearCache() = synchronized(lock) {
+        _appConfig = null
+        _customerDetail = null
+        _version = null
+        _versionsList = null
+        _onlyKYCRules = null
     }
 }
