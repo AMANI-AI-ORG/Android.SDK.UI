@@ -342,9 +342,12 @@ class NFCScanFragment : Fragment() {
     }
 
     private fun startNfcSettingsActivity() {
+        // Ensure the fragment is currently added to its activity and has a valid context before proceeding.
+        // Prevents IllegalStateException when calling methods that require the fragment to be attached.
+        if (!isAdded || activity == null || context == null) return
+
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                if (!isAdded || context == null) return@launch
                 startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
             } catch (e: Exception) {
                 e.printStackTrace()
