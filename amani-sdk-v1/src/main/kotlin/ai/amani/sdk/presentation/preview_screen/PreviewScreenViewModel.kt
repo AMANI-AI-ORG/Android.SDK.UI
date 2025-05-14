@@ -67,6 +67,7 @@ class PreviewScreenViewModel constructor(private val nfcRepository: NFCRepositor
     ) {
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            val nfcAndroid = version.nfcAndroid?: version.nfc
             setStep(frontSide)
 
             version.steps.apply {
@@ -84,7 +85,7 @@ class PreviewScreenViewModel constructor(private val nfcRepository: NFCRepositor
                             // If current step is back side there is no other side
                             // navigate HomeScreen for upload process
                             if (currentStep == Step.BACK_SIDE) {
-                                if (version.nfcAndroid && deviceHasNFC(context)) {
+                                if (nfcAndroid && deviceHasNFC(context)) {
                                     // NFC is active, navigate to NFC screen
                                     _uiState.value = PreviewScreenState.Loading
                                     nfcRepository.getMRZ(
@@ -146,7 +147,7 @@ class PreviewScreenViewModel constructor(private val nfcRepository: NFCRepositor
                             }
                         }
                         else -> {
-                            if (version.nfcAndroid && deviceHasNFC(context)) {
+                            if (nfcAndroid && deviceHasNFC(context)) {
                                 // NFC is active, navigate to NFC screen
                                 _uiState.value = PreviewScreenState.Loading
                                 nfcRepository.getMRZ(
