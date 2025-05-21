@@ -38,6 +38,7 @@ import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -419,7 +420,22 @@ class NFCScanFragment : Fragment() {
     }
 
     private fun disableNFCScan() {
-        nfcAdapter?.disableForegroundDispatch(requireActivity())
-        nfcAdapter?.disableReaderMode(requireActivity())
+        val activity = activity ?: return
+        //Only disable foreground dispatch if activity is still resumed
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            try {
+                nfcAdapter?.disableForegroundDispatch(activity)
+            } catch (e: IllegalStateException) {
+                Timber.w("DisableForegroundDispatch failed: ${e.message}")
+            }
+        } else {
+            Timber.w("DisableForegroundDispatch skipped — activity not resumed")
+        }
+
+        try {
+            nfcAdapter?.disableReaderMode(activity)
+        } catch (e: IllegalStateException) {
+            Timber.w("DisableReaderMode failed: ${e.message}")
+        }
     }
 }
