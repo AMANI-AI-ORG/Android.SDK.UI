@@ -377,45 +377,59 @@ class NFCScanFragment : Fragment() {
     private fun enableNFCScan() {
         if (nfcAdapter == null) nfcAdapter = NfcAdapter.getDefaultAdapter(requireContext())
 
-        if (activity == null) return
+        val activity = activity ?: return
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            val intent = Intent(requireContext(), this.javaClass)
-            intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            val pendingIntent =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.getActivity(
-                        requireContext(), 0, Intent(requireContext(), javaClass)
-                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), FLAG_MUTABLE
-                    )
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                Timber.w("Skipping NFC setup: Fragment is not resumed")
+                return@launch
+            }
+
+            try {
+                val intent = Intent(requireContext(), this@NFCScanFragment.javaClass).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+
+                val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.getActivity(requireContext(), 0, intent, PendingIntent.FLAG_MUTABLE)
                 } else {
-                    PendingIntent.getActivity(
-                        requireContext(), 0, Intent(requireContext(), javaClass)
-                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0
-                    )
+                    PendingIntent.getActivity(requireContext(), 0, intent, 0)
                 }
-            val filter = arrayOf(arrayOf("android.nfc.tech.IsoDep"))
-            nfcAdapter?.enableForegroundDispatch(requireActivity(), pendingIntent, null, filter)
-            nfcAdapter?.enableReaderMode(requireActivity(), {
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                    requireActivity().supportFragmentManager.let {
-                        val args = Bundle()
-                        args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
-                        nfcScanningModal?.arguments = args
-                        if (nfcScanningModal?.isVisible != true) {
-                            nfcScanningModal?.show(it, NFCScanningBottomDialog.TAG)
+
+                val filter = arrayOf(arrayOf("android.nfc.tech.IsoDep"))
+
+                nfcAdapter?.enableForegroundDispatch(activity, pendingIntent, null, filter)
+
+                nfcAdapter?.enableReaderMode(
+                    activity,
+                    { tag ->
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            try {
+                                activity.supportFragmentManager.let {
+                                    val args = Bundle()
+                                    args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
+                                    nfcScanningModal?.arguments = args
+
+                                    if (nfcScanningModal?.isVisible != true) {
+                                        nfcScanningModal?.show(it, NFCScanningBottomDialog.TAG)
+                                    }
+                                }
+
+                                viewModel.scanNFC(tag, requireContext())
+                            } catch (e: Exception) {
+                                Timber.e( "Error during NFC read: ${e.message}", e)
+                            }
                         }
-                    }
+                    },
+                    NfcAdapter.FLAG_READER_NFC_A or
+                            NfcAdapter.FLAG_READER_NFC_B or
+                            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                    null
+                )
 
-                    viewModel.scanNFC(
-                        it,
-                        requireContext()
-                    )
-                }
-
-            }, NfcAdapter.FLAG_READER_NFC_A or
-                    NfcAdapter.FLAG_READER_NFC_B or
-                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK , null)
+            } catch (e: IllegalStateException) {
+                Timber.e( "Failed to enable foreground dispatch: ${e.message}", e)
+            }
         }
     }
 
