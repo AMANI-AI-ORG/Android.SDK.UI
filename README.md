@@ -1,9 +1,12 @@
-# Amani SDK-UI #
+# Amani SDK UI #
 ![AmaniSDKHeader](https://user-images.githubusercontent.com/75306240/187692619-726115b8-3a92-4c7d-b85d-44a75d6556c1.png)
 
-![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI)
-
-
+![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI) 
+![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
+![Compiler](https://img.shields.io/badge/compileSdk-34-brightgreen)
+![Java](https://img.shields.io/badge/JavaVersion_17-blue)
+![Trending](https://img.shields.io/github/languages/top/AMANI-AI-ORG/Android.SDK.UI)
+![Last Commit](https://img.shields.io/github/last-commit/AMANI-AI-ORG/Android.SDK.UI)
 
 Amani SDK-UI package is an interface package prepared using Amani-SDK-V2. You can use this package directly by cloning and modifying it, or you can install the AAR package via jitpack with the following implementation without changing the interface.
 
@@ -11,14 +14,13 @@ Amani SDK-UI package is an interface package prepared using Amani-SDK-V2. You ca
 
 The minimum requirements for the SDK are:
 
-* minSdkVersion 21
-* compileSdkVersion 34
+* ![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
+* ![Compiler](https://img.shields.io/badge/compileSdk-34-brightgreen)
 
 ## How do I get set up? ##
 
-   * Dependencies:
 
-   1. Add the following dependencies to your Module build.gradle file.
+   1. Add the following dependencies to your Module build.gradle file. Replace Tag with the latest appropriate release as ![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI) 
 ```groovy
 implementation 'com.github.AMANI-AI-ORG:Android.SDK.UI:Tag'
 ```
