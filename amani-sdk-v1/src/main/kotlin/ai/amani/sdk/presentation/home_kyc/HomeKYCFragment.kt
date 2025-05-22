@@ -345,8 +345,9 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         val action =
                             HomeKYCFragmentDirections.actionHomeKYCFragmentToSelfieCaptureFragment(
                                 ConfigModel(
-                                    viewModel.getVersion(),
-                                    viewModel.getAppConfig()!!.generalConfigs
+                                    version = viewModel.getVersion(),
+                                    generalConfigs = viewModel.getAppConfig()!!.generalConfigs,
+                                    featureConfig = viewModel.featureConfigModel()
                                 )
                             )
 

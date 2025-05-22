@@ -270,9 +270,12 @@ class SelfieCaptureFragment: Fragment() {
                                 is SelfieType.PoseEstimation -> {
                                     binding.confirmButton.gone()
                                     binding.selfieAnimationSecond.slideLeft{
+                                        val videoRecord = args.dataModel.featureConfig.selfieCaptureVideoRecord?:
+                                        args.dataModel.version?.videoRecord?: false
+
                                         initSelfiePoseEstimation(
                                             requestedOrderNumber = args.dataModel.version!!.selfieType!!,
-                                            videoRecord  = args.dataModel.version!!.videoRecord
+                                            videoRecord  = videoRecord
                                         )
                                     }
                                 }

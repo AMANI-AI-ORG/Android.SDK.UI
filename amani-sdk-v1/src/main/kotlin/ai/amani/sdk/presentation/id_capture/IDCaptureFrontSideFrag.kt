@@ -125,12 +125,15 @@ class IDCaptureFrontSideFrag : Fragment() {
             return
         }
 
+        val videoRecord = args.dataModel.featureConfig.idCaptureVideoRecord?:
+        args.dataModel.version?.videoRecord?: false
+
         // Setting IDCapture timeOut as default 30 sec
         Amani.sharedInstance().IDCapture().setManualCropTimeOut(AppConstant.ID_CAPTURE_TIME_OUT)
 
-        Amani.sharedInstance().IDCapture().videoRecord(args.dataModel.version!!.videoRecord)
+        Amani.sharedInstance().IDCapture().videoRecord(videoRecord = videoRecord)
 
-        Timber.d("VideoRecord ${args.dataModel.version!!.videoRecord}")
+        Timber.d("VideoRecord state in ID Capture: $videoRecord")
 
         if (AmaniMainActivity.binding == null) return
 

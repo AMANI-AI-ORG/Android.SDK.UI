@@ -9,7 +9,7 @@ import kotlinx.parcelize.Parcelize
  */
 @Parcelize
 data class FeatureConfig(
-    var selfieCaptureVideoRecord: Boolean = false,
-    var idCaptureVideoRecord: Boolean = false,
-    var idCaptureHologramDetection: Boolean = false
+    var selfieCaptureVideoRecord: Boolean? = null,
+    var idCaptureVideoRecord: Boolean? = null,
+    var idCaptureHologramDetection: Boolean? = null
 ): Parcelable

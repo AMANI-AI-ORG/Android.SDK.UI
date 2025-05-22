@@ -122,11 +122,17 @@ class IDCaptureBackSideFrag : Fragment() {
             return
         }
 
-        Amani.sharedInstance().IDCapture().videoRecord(args.dataModel.featureConfig.idCaptureVideoRecord)
+        val videoRecord = args.dataModel.featureConfig.idCaptureVideoRecord?:
+        args.dataModel.version?.videoRecord?: false
+
+        val hologramDetection = args.dataModel.featureConfig.idCaptureHologramDetection?:
+        args.dataModel.version?.hologramDetection?: false
+
+        Amani.sharedInstance().IDCapture().videoRecord(videoRecord = videoRecord)
 
         if (args.dataModel.version?.type.equals("TUR_ID_1")) {
             Amani.sharedInstance().IDCapture().hologramDetection(
-                args.dataModel.featureConfig.idCaptureHologramDetection
+                hologramDetection
             )
         }
 
