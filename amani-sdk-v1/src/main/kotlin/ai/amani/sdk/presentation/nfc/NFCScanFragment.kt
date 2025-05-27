@@ -7,28 +7,19 @@ import ai.amani.sdk.extentions.alertDialog
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
-import ai.amani.sdk.model.ConfigModel
-import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
-import ai.amani.sdk.model.MRZModel
-import ai.amani.sdk.model.NFCScanScreenModel
 import ai.amani.sdk.presentation.otp.profile_info.DatePickerHandler
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
 import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
-import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.PendingIntent
-import android.app.PendingIntent.FLAG_MUTABLE
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
@@ -42,9 +33,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import datamanager.model.config.GeneralConfigs
-import datamanager.model.config.Version
-import kotlinx.coroutines.CoroutineScope
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -358,20 +347,14 @@ class NFCScanFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            try {
-                alertDialog?.dismiss()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        try {
+            alertDialog?.dismiss()
+            nfcScanningModal?.dismissAllowingStateLoss()
+            alertDialog = null
+            nfcScanningModal = null
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-    }
-
-
-    override fun onDestroy() {
-        super.onDestroy()
-        alertDialog = null
-        nfcScanningModal = null
     }
 
     private fun enableNFCScan() {
@@ -405,16 +388,7 @@ class NFCScanFragment : Fragment() {
                     { tag ->
                         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                             try {
-                                activity.supportFragmentManager.let {
-                                    val args = Bundle()
-                                    args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
-                                    nfcScanningModal?.arguments = args
-
-                                    if (nfcScanningModal?.isVisible != true) {
-                                        nfcScanningModal?.show(it, NFCScanningBottomDialog.TAG)
-                                    }
-                                }
-
+                                showNfcScanningModal()
                                 viewModel.scanNFC(tag, requireContext())
                             } catch (e: Exception) {
                                 Timber.e( "Error during NFC read: ${e.message}", e)
@@ -430,6 +404,29 @@ class NFCScanFragment : Fragment() {
             } catch (e: IllegalStateException) {
                 Timber.e( "Failed to enable foreground dispatch: ${e.message}", e)
             }
+        }
+    }
+
+    private fun showNfcScanningModal() {
+        try {
+            val fragmentManager = parentFragmentManager
+
+            if (nfcScanningModal?.isAdded == true || nfcScanningModal?.isVisible == true) return
+
+            fragmentManager.findFragmentByTag(NFCScanningBottomDialog.TAG)?.let { existing ->
+                if (existing is BottomSheetDialogFragment) {
+                    fragmentManager.beginTransaction().remove(existing).commitAllowingStateLoss()
+                }
+            }
+
+            nfcScanningModal = NFCScanningBottomDialog()
+            val args = Bundle()
+            args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
+            nfcScanningModal?.arguments = args
+            nfcScanningModal?.show(fragmentManager, NFCScanningBottomDialog.TAG)
+        } catch (e: IllegalStateException) {
+            Timber.w("Exception while adding fragment")
+            e.printStackTrace()
         }
     }
 
