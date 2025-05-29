@@ -4,6 +4,9 @@ import ai.amani.amani_sdk.R
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.remove
 import ai.amani.sdk.extentions.show
+import ai.amani.sdk.presentation.common.CustomTextView
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation.otp.profile_info.ProfileInfoFragmentArgs
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.text.Editable
@@ -26,7 +29,8 @@ import com.google.android.material.divider.MaterialDivider
 
 class SurveyAdapter(
     private var questionData: ArrayList<SurveyQuestion>,
-    private val surveyCallback: SurveyCallback
+    private val surveyCallback: SurveyCallback,
+    private val args: ProfileInfoFragmentArgs
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     interface SurveyCallback {
         fun onAllQuestionsAnswered(answeredQuestions: List<SurveyResponse>)
@@ -93,11 +97,13 @@ class SurveyAdapter(
     }
 
     inner class TextQuestionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val questionTitle: TextView = itemView.findViewById(R.id.questionTitle)
+        private val questionTitle: CustomTextView = itemView.findViewById(R.id.questionTitle)
         private val answerEditText: EditText = itemView.findViewById(R.id.answerEditText)
         private val headerSurvey: LinearLayout = itemView.findViewById(R.id.survey_header)
         private val firstDivider: MaterialDivider = itemView.findViewById(R.id.first_divider_text)
         private val lastDivider: MaterialDivider = itemView.findViewById(R.id.last_divider_text)
+        private val descriptionText: CustomTextView = itemView.findViewById(R.id.text_question_desc)
+
         fun bind(question: SurveyQuestion, position: Int) {
             if (position == 0) {
                 headerSurvey.show()
@@ -107,7 +113,11 @@ class SurveyAdapter(
                 firstDivider.remove()
             }
 
-            questionTitle.text = question.title
+            questionTitle.setTextProperty(question.title, args.data.config.appFontColor)
+            args.data.steps.first().mDocuments?.first()?.versions
+                ?.first()?.steps?.first()?.captureDescription?.let {
+                    descriptionText.setTextProperty(it, args.data.config.appFontColor)
+                }
             answerEditText.addTextChangedListener(object : TextWatcher{
                 override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
                 }
@@ -127,11 +137,13 @@ class SurveyAdapter(
     }
 
     inner class MultipleChoiceQuestionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val questionTitle: TextView = itemView.findViewById(R.id.questionTitle)
+        private val questionTitle: CustomTextView = itemView.findViewById(R.id.questionTitle)
         private val answersContainer: RadioGroup = itemView.findViewById(R.id.answersContainer)
         private val headerSurvey: LinearLayout = itemView.findViewById(R.id.survey_header)
         private val firstDivider: MaterialDivider = itemView.findViewById(R.id.first_divider_multiple)
         private val lastDivider: MaterialDivider = itemView.findViewById(R.id.last_divider_multiple)
+        private val descriptionText: CustomTextView = itemView.findViewById(R.id.multiple_desc)
+
         fun bind(question: SurveyQuestion, position: Int) {
             if (position == 0) {
                 headerSurvey.show()
@@ -141,7 +153,11 @@ class SurveyAdapter(
                 firstDivider.remove()
             }
 
-            questionTitle.text = question.title
+            questionTitle.setTextProperty(question.title, args.data.config.appFontColor)
+            args.data.steps.first().mDocuments?.first()?.versions
+                ?.first()?.steps?.first()?.captureDescription?.let {
+                    descriptionText.setTextProperty( it, args.data.config.appFontColor)
+                }
             answersContainer.removeAllViews()
 
             for ((index, answer) in question.answers.withIndex()) {
@@ -182,11 +198,13 @@ class SurveyAdapter(
     }
 
     inner class SingleChoiceQuestionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val questionTitle: TextView = itemView.findViewById(R.id.questionTitle)
+        private val questionTitle: CustomTextView = itemView.findViewById(R.id.questionTitle)
         private val answersContainer: RadioGroup = itemView.findViewById(R.id.answersContainer)
         private val headerSurvey: LinearLayout = itemView.findViewById(R.id.survey_header)
         private val firstDivider: MaterialDivider = itemView.findViewById(R.id.first_divider_single)
         private val lastDivider: MaterialDivider = itemView.findViewById(R.id.last_divider_text_single)
+        private val descriptionText: CustomTextView = itemView.findViewById(R.id.single_question_desc)
+
 
         fun bind(question: SurveyQuestion, position: Int) {
             //Add header only for first element of the screen
@@ -198,7 +216,11 @@ class SurveyAdapter(
                 firstDivider.gone()
             }
 
-            questionTitle.text = question.title
+            questionTitle.setTextProperty(question.title, args.data.config.appFontColor)
+            args.data.steps.first().mDocuments?.first()?.versions
+                ?.first()?.steps?.first()?.captureDescription?.let {
+                    descriptionText.setTextProperty(it, args.data.config.appFontColor)
+                }
             answersContainer.removeAllViews()
 
             for ((index, answer) in question.answers.withIndex()) {

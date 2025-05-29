@@ -51,10 +51,10 @@ class QuestionnaireFragment : Fragment() {
 
         setCustomUI()
 
-        binding.recyclerView.adapter = viewModel.surveyAdapter
+        viewModel.setArgs(args = args)
+        binding.recyclerView.adapter = viewModel.surveyAdapter!!
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        viewModel.setArgs(args = args)
         observeLiveEvent()
     }
 

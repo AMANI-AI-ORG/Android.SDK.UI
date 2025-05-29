@@ -32,16 +32,7 @@ class QuestionnaireViewModel : BaseViewModel() {
     private var config: GeneralConfigs? = null
     private var steps: ArrayList<StepConfig> = arrayListOf()
 
-    val surveyAdapter = SurveyAdapter(arrayListOf(), object : SurveyAdapter.SurveyCallback {
-        override fun onAllQuestionsAnswered(answeredQuestions: List<SurveyResponse>) {
-            _uiState.value = QuestionnaireState.SubmitButtonClickable(clickable = true)
-            surveyResponse = answeredQuestions
-        }
-
-        override fun onMissingQuestion() {
-            _uiState.value = QuestionnaireState.SubmitButtonClickable(clickable = false)
-        }
-    })
+    var surveyAdapter: SurveyAdapter? = null
 
     fun setArgs(args: ProfileInfoFragmentArgs) {
         steps = args.data.steps
@@ -52,7 +43,24 @@ class QuestionnaireViewModel : BaseViewModel() {
         }
 
         config = args.data.config
+        initAdapter(args = args)
     }
+
+    private fun initAdapter(args: ProfileInfoFragmentArgs) {
+       surveyAdapter = SurveyAdapter(arrayListOf(), object : SurveyAdapter.SurveyCallback {
+            override fun onAllQuestionsAnswered(answeredQuestions: List<SurveyResponse>) {
+                _uiState.value = QuestionnaireState.SubmitButtonClickable(clickable = true)
+                surveyResponse = answeredQuestions
+            }
+
+            override fun onMissingQuestion() {
+                _uiState.value = QuestionnaireState.SubmitButtonClickable(clickable = false)
+            }
+        },
+            args
+        )
+    }
+
     init {
         getQuestions()
     }
@@ -89,7 +97,7 @@ class QuestionnaireViewModel : BaseViewModel() {
                 _uiState.value = QuestionnaireState.Success
 
                 CoroutineScope(Dispatchers.Main).launch {
-                    surveyAdapter.updateQuestions(surveyList)
+                    surveyAdapter?.updateQuestions(surveyList)
                 }
 
             }, onError = {

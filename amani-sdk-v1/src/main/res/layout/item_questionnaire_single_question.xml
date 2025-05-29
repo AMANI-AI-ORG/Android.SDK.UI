@@ -11,9 +11,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <TextView
+        <ai.amani.sdk.presentation.common.CustomTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:id="@+id/single_question_desc"
             android:text="@string/answer_questions"
             android:textSize="16sp"
             android:fontFamily="@font/rubik_300"
@@ -34,7 +35,7 @@
         android:visibility="gone"
         android:layout_height="@dimen/dp_1" />
 
-    <TextView
+    <ai.amani.sdk.presentation.common.CustomTextView
         android:id="@+id/questionTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
