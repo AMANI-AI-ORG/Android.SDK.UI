@@ -200,11 +200,22 @@ class IDCaptureFrontSideFrag : Fragment() {
     }
 
     private fun handleCameraException(exception: Exception) {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+        lifecycleScope.launch(Dispatchers.Main) {
             try {
-                showSnackbar("Please check your back camera is working properly, error: $exception")
-                findNavController().clearBackStack(R.id.homeKYCFragment)
-                findNavController().popBackStack(R.id.homeKYCFragment, false)
+                // Show SnackBar only if view is available
+                if (isAdded && view != null) {
+                    showSnackbar("Please check your back camera is working properly, error: $exception")
+                }
+
+                val navController = findNavController()
+
+                // Only navigate if this fragment is still the current destination
+                if (navController.currentDestination?.id == R.id.IDCaptureFrontSideFrag) {
+                    navController.clearBackStack(R.id.homeKYCFragment)
+                    navController.popBackStack(R.id.homeKYCFragment, false)
+                } else {
+                    Timber.w( "Skipped navigation because fragment is no longer active")
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
