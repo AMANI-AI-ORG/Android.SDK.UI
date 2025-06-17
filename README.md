@@ -8,7 +8,7 @@
 ![Trending](https://img.shields.io/github/languages/top/AMANI-AI-ORG/Android.SDK.UI)
 ![Last Commit](https://img.shields.io/github/last-commit/AMANI-AI-ORG/Android.SDK.UI)
 
-Amani SDK-UI package is an interface package prepared using Amani-SDK-V2. You can use this package directly by cloning and modifying it, or you can install the AAR package via jitpack with the following implementation without changing the interface.
+Amani UI package is an interface package prepared using Amani Core SDK. You can use this package directly by cloning and modifying it, or you can install the AAR package via jitpack with the following implementation without changing the interface.
 
 ## General Requirements
 
