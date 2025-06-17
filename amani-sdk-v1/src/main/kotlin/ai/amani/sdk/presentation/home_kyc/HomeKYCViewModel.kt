@@ -86,7 +86,7 @@ open class HomeKYCViewModel(
         }
     }
 
-    fun getDocList(): ArrayList<Rule> {
+    fun getDocList(): ArrayList<Rule>? {
         try {
             CachingHomeKYC.onlyKYCRules?.let {
                 return it
@@ -109,9 +109,7 @@ open class HomeKYCViewModel(
             CachingHomeKYC.onlyKYCRules = ArrayList(kycRules)
             return CachingHomeKYC.onlyKYCRules!!
         } catch (e: Exception) {
-            e.printStackTrace()
-            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
-            return arrayListOf()
+            return null
         }
     }
 
@@ -125,12 +123,12 @@ open class HomeKYCViewModel(
 
         if (profileInfoModel.registerConfig == null) {
             _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(
-                errorCode = AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR
+                errorCode = REMOTE_CONFIG_FETCH_ERROR
             ))
             return
         }
 
-        if (_uiState.value == HomeKYCState.Loaded) {
+        if (_uiState.value is HomeKYCState.Loaded) {
             Timber.d("Login is already done")
             return
         }
@@ -227,7 +225,12 @@ open class HomeKYCViewModel(
                         if (checkKYCStepsAreApproved(customerDetail)) {
                             navigateBeforeOrAfterKYCFlowScreens(afterKycSteps)
                         } else{
-                            _uiState.value = HomeKYCState.Loaded
+                            val docList = getDocList()
+                            docList?.let {
+                                _uiState.value = HomeKYCState.Loaded(it)
+                            }?: run {
+                                _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
+                            }
                         }
                     },
 
@@ -235,7 +238,12 @@ open class HomeKYCViewModel(
                         if (checkKYCStepsAreApproved(customerDetail)){
                             _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
                         } else {
-                            _uiState.value = HomeKYCState.Loaded
+                            val docList = getDocList()
+                            docList?.let {
+                                _uiState.value = HomeKYCState.Loaded(it)
+                            }?: run {
+                                _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
+                            }
                         }
                     }
                 )
@@ -395,7 +403,14 @@ open class HomeKYCViewModel(
         adapterPosition: Int,
         route: (route: ScreenRoutes) -> Unit
     ) {
-        selectedStepIDNumber = getDocList()[adapterPosition].id!!
+        val docList = getDocList()
+
+        if (docList == null) {
+            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
+            return
+        }
+
+        selectedStepIDNumber = docList[adapterPosition].id!!
         //Creating VersionList
         try {
             setVersionList(rule)
@@ -411,7 +426,7 @@ open class HomeKYCViewModel(
 
         if (CachingHomeKYC.versionsList.isNullOrEmpty()) {
             _uiState.value = HomeKYCState.Error(R.string.error_upload_source)
-            _logicEvent.value = HomeKYCLogicEvent.Finish.OnError(AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR)
+            _logicEvent.value = HomeKYCLogicEvent.Finish.OnError(REMOTE_CONFIG_FETCH_ERROR)
             return
         }
 
@@ -583,8 +598,10 @@ open class HomeKYCViewModel(
                     e.printStackTrace()
                 }
 
+                val docList = getDocList() ?: return
+
                 val steps = stepsResult!!.result.filter { result ->
-                    getDocList().any { rule ->
+                    docList.any { rule ->
                         rule.id == result.id
                     }
                 }
@@ -595,11 +612,11 @@ open class HomeKYCViewModel(
                 )))
 
                 //Copy original list to make mutable list
-                val kycArrayList = getDocList().map { it.status }
+                val kycArrayList = docList.map { it.status }
                     .toMutableList()
 
                 //Update mutable list rule status accordingly recent socket result
-                getDocList().forEachIndexed{ index ,rule ->
+                docList.forEachIndexed{ index ,rule ->
                     steps.forEach {
                         if (rule.id == it.id) {
                             kycArrayList[index] = it.status

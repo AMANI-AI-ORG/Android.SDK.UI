@@ -17,11 +17,13 @@ import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.model.NFCScanScreenModel
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.SelectDocumentTypeModel
+import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
+import ai.amani.sdk.utils.AmaniUIErrorConstants.CORRUPTED_DOC_LIST
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Intent
@@ -216,10 +218,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     private fun observe() {
         viewModel.uiState.observe(viewLifecycleOwner) {
             when (it) {
-                HomeKYCState.Loading -> binding.progressLoaderCentered.show()
-                HomeKYCState.Loaded -> {
+                is HomeKYCState.Loading -> binding.progressLoaderCentered.show()
+                is HomeKYCState.Loaded -> {
                     binding.progressLoaderCentered.hide()
-                    setCustomUI()
+                    setCustomUI(it.docList)
                 }
                 is HomeKYCState.Error -> {
                     binding.progressLoaderCentered.hide()
@@ -293,11 +295,11 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         }
     }
 
-    private fun setCustomUI() {
+    private fun setCustomUI(data: ArrayList<Rule>) {
         
-        renderRecyclerView()
+        renderRecyclerView(data)
 
-        setFlag(viewModel.getDocList()!!)
+        setFlag(data)
 
         customizeToolBar(
             viewModel.getAppConfig()!!.generalConfigs?.topBarBackground,
@@ -319,7 +321,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         binding.parentLayout.show()
     }
 
-    private fun renderRecyclerView() {
+    private fun renderRecyclerView(docList: ArrayList<Rule>) {
         binding.recyclerView.layoutManager = LinearLayoutManager(
             requireActivity(),
             RecyclerView.VERTICAL,
@@ -329,7 +331,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         binding.recyclerView.isNestedScrollingEnabled = false
 
         mAdapter = KYCAdapter(
-            viewModel.getDocList()!!,
+            docList,
             viewModel.getAppConfig()!!,
             this,
             requireContext()
