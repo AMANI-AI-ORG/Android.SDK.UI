@@ -256,18 +256,21 @@ class SelfieCaptureFragment: Fragment() {
 
                             when(it.navigateTo) {
                                 is SelfieType.Manual -> {
+                                    if (!isAdded) return@collect
                                     binding.confirmButton.gone()
                                     binding.selfieAnimationFirst.slideLeft()
                                     initManualSelfie()
                                 }
 
                                 is SelfieType.Auto -> {
+                                    if (!isAdded) return@collect
                                     binding.confirmButton.gone()
                                     binding.selfieAnimationFirst.slideLeft()
                                     initAutoSelfie()
                                 }
 
                                 is SelfieType.PoseEstimation -> {
+                                    if (!isAdded) return@collect
                                     binding.confirmButton.gone()
                                     binding.selfieAnimationSecond.slideLeft{
                                         val videoRecord = args.dataModel.featureConfig.selfieCaptureVideoRecord?:
