@@ -29,6 +29,8 @@ import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AmaniUIErrorConstants
+import ai.amani.sdk.utils.AmaniUIErrorConstants.CORRUPTED_DOC_LIST
+import ai.amani.sdk.utils.AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
 import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
@@ -77,7 +79,12 @@ open class HomeKYCViewModel(
     private var profileInfoModel : ProfileInfoModel = ProfileInfoModel()
     private var featureConfig : FeatureConfig = FeatureConfig()
 
-    fun getAppConfig(): ResGetConfig? = CachingHomeKYC.appConfig
+    fun getAppConfig(): ResGetConfig? {
+        return CachingHomeKYC.appConfig?: run {
+            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(REMOTE_CONFIG_FETCH_ERROR))
+            return null
+        }
+    }
 
     fun getDocList(): ArrayList<Rule> {
         try {
@@ -102,6 +109,8 @@ open class HomeKYCViewModel(
             CachingHomeKYC.onlyKYCRules = ArrayList(kycRules)
             return CachingHomeKYC.onlyKYCRules!!
         } catch (e: Exception) {
+            e.printStackTrace()
+            _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
             return arrayListOf()
         }
     }
