@@ -4,6 +4,7 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.AmaniActivityMainBinding
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.setActionBarColor
+import ai.amani.sdk.extentions.setScreenEdgePaddings
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
@@ -22,7 +23,9 @@ import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.FragmentContainerView
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -38,6 +41,7 @@ class AmaniMainActivity : AppCompatActivity() {
 
     private lateinit var navController: NavController
     private val viewModel: NFCSharedViewModel by viewModels { NFCSharedViewModel.Factory }
+    private val mainFrameLayout: ConstraintLayout by lazy { findViewById(R.id.full_frame) }
 
     companion object {
         @SuppressLint("StaticFieldLeak")
@@ -144,6 +148,7 @@ class AmaniMainActivity : AppCompatActivity() {
             this,
             R.layout.amani_activity_main)
 
+        setScreenEdgePaddings(container = mainFrameLayout)
 
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment?
