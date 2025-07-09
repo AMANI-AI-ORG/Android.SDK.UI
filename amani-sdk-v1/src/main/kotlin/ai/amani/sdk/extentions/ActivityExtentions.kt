@@ -1,11 +1,12 @@
 package ai.amani.sdk.extentions
 
-import android.R
 import android.graphics.Color
 import android.view.Window
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.FragmentContainerView
 import timber.log.Timber
 
 
@@ -22,5 +23,23 @@ fun AppCompatActivity.setActionBarColor(color: String) {
         window.statusBarColor = Color.parseColor(color)
     } catch (e: Exception) {
         Timber.e(e)
+    }
+}
+
+internal fun AppCompatActivity.setScreenEdgePaddings(container: FragmentContainerView) {
+    //If edge to edge will be using by app && and give padding for system bars
+    try {
+        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+            val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(
+                systemBarsInsets.left,
+                systemBarsInsets.top,
+                systemBarsInsets.right,
+                systemBarsInsets.bottom
+            )
+            insets
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }
