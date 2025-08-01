@@ -172,11 +172,16 @@ fun Fragment.setKeyboardEventListener(listener: KeyboardVisibilityEventListener)
 }
 
 fun Fragment.popBackStackSafely() {
-    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-        try {
-            findNavController().popBackStack()
-        } catch (e: Exception) {
-            e.printStackTrace()
+    if (!isAdded || view == null) return
+
+    try {
+        val navController = findNavController()
+        if (navController.currentDestination != null) {
+            navController.popBackStack()
         }
+    } catch (e: IllegalStateException) {
+        Timber.w("Cannot popBackStack: Fragment not in a valid state", e)
+    } catch (e: Exception) {
+        Timber.e( "Unexpected error while popping back stack", e)
     }
 }
