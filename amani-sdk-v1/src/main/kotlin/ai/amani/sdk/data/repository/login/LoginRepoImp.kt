@@ -35,21 +35,21 @@ class LoginRepoImp : LoginRepository {
 
         onStart.invoke()
 
-
         runCatching{
             Amani.sharedInstance().initAmani(
-                activity,
-                tcNumber,
-                token,
-                location,
-                lang
-            ) { isSucess ->
-                loginResultModel = LoginResultModelMapper.map(
-                    isSucess
-                )
-                onCompleted.invoke(loginResultModel)
-                isLoginDone = true
-            }
+                activity= activity,
+                id =tcNumber,
+                token = token,
+                geoLocation = location,
+                lang = lang,
+                callback = { isSucess ->
+                    loginResultModel = LoginResultModelMapper.map(
+                        isSucess
+                    )
+                    onCompleted.invoke(loginResultModel)
+                    isLoginDone = true
+                }
+            )
         }.onFailure {
             loginResultModel.throwable = it
             onCompleted.invoke(loginResultModel)

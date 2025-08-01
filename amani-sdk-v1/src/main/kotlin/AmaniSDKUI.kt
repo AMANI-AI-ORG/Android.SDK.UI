@@ -38,11 +38,11 @@ object AmaniSDKUI {
         sharedSecret: String? = null
     ){
         Amani.init(
-            applicationContext,
-            serverURL,
-            sharedSecret,
-            amaniVersion,
-            UploadSource.KYC
+            context = applicationContext,
+            server = serverURL,
+            sharedSecret = sharedSecret,
+            version = amaniVersion,
+            uploadSource = UploadSource.KYC
         )
 
     }

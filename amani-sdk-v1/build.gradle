@@ -42,6 +42,12 @@ android {
     viewBinding {
         enabled = true
     }
+
+    packaging {
+        resources {
+            it.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
 }
 
 dependencies {
@@ -65,7 +71,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.7"
 
     // AmaniSDK impl
-    def amani_sdk = "3.5.12"
+    def amani_sdk = "3.5.14"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph
@@ -89,7 +95,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.2.41'
+                version = '1.2.42'
             }
         }
     }
