@@ -47,12 +47,21 @@ allprojects {
             
 ```
 
-4. Add the following pom to the dependencies section of your gradle build ﬁle :
+4. Add the following configuration inside the android {} block of your Gradle build file to prevent compression of .tflite model files during packaging and to exclude a specific metadata file that may cause conflicts during build.
 
 ```groovy
-  aaptOptions {
-    noCompress "tflite"
-}
+
+android {
+    aaptOptions {
+        noCompress "tflite"
+    }
+
+    packaging {
+        resources {
+            it.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
+}                                                               
 ```   
 
 ## Initialization ##
