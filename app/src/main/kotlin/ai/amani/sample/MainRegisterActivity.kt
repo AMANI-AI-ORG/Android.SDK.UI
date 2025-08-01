@@ -43,7 +43,7 @@ class MainRegisterActivity : AppCompatActivity() {
         setContentView(R.layout.activity_register_main)
 
         AmaniSDKUI.init(
-            activity = this,
+            applicationContext = this,
             serverURL = TestCredentials.SERVER_URL,
             amaniVersion = AmaniVersion.V2,
             sharedSecret = null
