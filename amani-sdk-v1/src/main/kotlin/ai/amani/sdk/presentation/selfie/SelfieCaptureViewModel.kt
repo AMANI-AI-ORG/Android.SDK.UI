@@ -82,4 +82,8 @@ class SelfieCaptureViewModel: ViewModel() {
         }
     }
 
+    fun setState(state: SelfieCaptureUIState) {
+        _uiState.value = state
+    }
+
 }

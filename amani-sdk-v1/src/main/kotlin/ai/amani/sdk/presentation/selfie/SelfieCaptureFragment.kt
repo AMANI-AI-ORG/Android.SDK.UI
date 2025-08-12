@@ -286,6 +286,7 @@ class SelfieCaptureFragment: Fragment() {
                                 else -> {}
                             }
 
+                            viewModel.setState(SelfieCaptureUIState.Empty)
                         }
                         else -> {
                             //Ignore else state
