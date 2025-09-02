@@ -15,7 +15,7 @@ Amani UI package is an interface package prepared using Amani Core SDK. You can 
 The minimum requirements for the SDK are:
 
 * ![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
-* ![Compiler](https://img.shields.io/badge/compileSdk-34-brightgreen)
+* ![Compiler](https://img.shields.io/badge/compileSdk-36-brightgreen)
 
 ## How do I get set up? ##
 
@@ -58,26 +58,186 @@ android {
 
     packaging {
         resources {
-            it.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            it.excludes += "META-INF/s/9/OSGI-INF/MANIFEST.MF"
         }
     }
-}                                                               
-```   
+}
+```
 
-## Initialization ##
- 
- * In the application layer, in other words, the init function has to be called before the application even gets up.  
-> **Warning**
-> If you use goToKycActivity() without calling init, you will get the error **RuntimeException("Amani not initialised")** . This method must be called at least once before other methods are called in same activity. If you in another acitivity you may need to call it twice.
+## Configure
 
- 
-```kotlin   
-    AmaniSDKUI.init(
-            applicationContext = this,
-            serverURL = TestCredentials.SERVER_URL,
-            amaniVersion = AmaniVersion.V2,
-            sharedSecret = null
-        )
+After completing the installation phase, configure the SDK with the **`Amani.configure()`** method, so you can configure several optional parameters below to enhance security and control upload behavior.
+
+:::note
+Although the new usage is already active and the documentation is based on it, the older functions are still usable until **v4.0.0**.
+This means you can still use **`init`** instead of **`configure()`**, or **`initAmani`** instead of **`startSession()`**, with the same parameters if needed.
+
+At the moment, **both approaches have exactly the same effect** — the difference is only in the function names.
+⚠️ However, starting from **v2.0.0**, the situation will change: the old `init` functions will be fully deprecated, and using **`configure()`** and **`startSession()`** will become **mandatory**.
+
+We therefore **recommend adopting the new functions now** to ensure a smooth transition.
+:::
+
+### SharedSecret
+`sharedSecret` is a key used to ensure and validate the security of network requests. (Optional)
+- This key will be provided to you confidentially by the Amani team.
+- If you do not provide `SharedSecret`, the `Amani.configure()` method will still work without issues. However, requests made in the upload methods will be **unsigned**.
+- To avoid potential security risks, always use `SharedSecret` where possible.
+
+### UploadSource
+`uploadSource` is used to distinguish uploads from different sources. (Optional) This feature allows you to list and group uploaded data in Amani Studio based on source, or generate different statistics accordingly.
+
+- Available options in the current  are: **KYC, VIDEO, PASSWORD**.
+- If not specified, the default is **`UploadSource.KYC`**.
+- You can change the `UploadSource` even after initialization using:
+- If you need to change UploadSource after configure; You should be use the **_Amani.sharedInstance().setUploadSource()_** method before any upload method call.
+
+### SSL Pinning
+`SSL Pinning` provides secure networking by validating SSL certificates. (Optional)
+- This configuration is **optional**, but recommended for enhanced security.
+- It must be called **before** the `Amani.configure()` method.
+- If the provided certificate is invalid, an **`AmaniException`** will be thrown. Always wrap the call in a `try-catch` block.
+
+Example usage:
+```kotlin
+try {
+    //Before Amani.configure(...)
+    Amani.setSSLPinning(this, R.raw.pinning_cert)
+} catch (e: AmaniException) {
+    // Handle invalid certificate
+}
+```
+### Dynamic Feature
+`Dynamic Features` are modular components of the SDK that can be downloaded and initialized **on demand**, instead of being bundled in the base SDK package.
+- This approach keeps the SDK lightweight and reduces the initial APK size.
+- It provides flexibility to enable or disable specific functionalities based on your app’s requirements.
+- Dynamic features are downloaded and initialized the first time they are required. Once fetched, they are cached locally for faster startup in subsequent launches.
+- By default, the SDK initializes **all dynamic features** unless you explicitly configure a subset. Initializing all may slightly increase the SDK initialization time on the **first launch**, as modules and assets might need to be downloaded.
+- With the introduction of the dynamic feature architecture in SDK **v3.6.0+**, the overall SDK size has been reduced by approximately **30–50%** compared to earlier s.
+
+List of the SDK `Dynamic Features` are below;
+
+| Feature                   | Description                                           |
+|---------------------------|-------------------------------------------------------|
+| **ID_CAPTURE**            | Enables ID document scanning & capture                |
+| **ID_HOLOGRAM_DETECTION** | Detects holograms on the ID for authenticity check    |
+| **NFC_SCAN**              | Reads chip data from ePassports / eIDs via NFC        |
+| **SELFIE_AUTO**           | Captures selfie automatically for face verification   |
+| **SELFIE_POSE_ESTIMATION**| Validates liveness via pose/movement detection        |
+
+
+### Usecase
+
+Below are grouped examples of different `Amani.configure()` use cases, ranging from the most basic setup to the most secure configuration.
+
+---
+
+⚡ **Note on Dynamic Features:**
+Select only the **required dynamic features** according to your use case.
+If you do not specify, **all features will be enabled by default**, which may increase the **initial load time during login** since unnecessary modules could be downloaded.
+
+
+#### Usecase 1 (Basic)
+Initialize the SDK with only the **server** parameter.
+⚠️ Since `sharedSecret` is not provided, the validity/security of the requests will **not** be activated.
+
+```kotlin
+AmaniSDKUI.configure(
+    applicationContext = this,
+    serverURL = "https://server.example",
+    enabledFeatures = listOf(
+        DynamicFeature.ID_CAPTURE,               // ID document scanning & capture
+        DynamicFeature.ID_HOLOGRAM_DETECTION,    // Detect holograms for authenticity
+        DynamicFeature.NFC_SCAN,                 // Read chip data via NFC
+        DynamicFeature.SELFIE_AUTO,              // Automatic selfie capture
+        DynamicFeature.SELFIE_POSE_ESTIMATION    // Liveness detection via pose
+    )
+)
+```
+
+#### Usecase 2 (Usecase 1 + SharedSecret)
+
+Configure the SDK with server and sharedSecret.
+
+- The default UploadSource is KYC if not specified.
+
+- Using sharedSecret ensures that the requests are signed and secure.
+
+```kotlin
+AmaniSDKUI.configure(
+    applicationContext = this,
+    serverURL = "https://server.example",
+    sharedSecret = "optional shared secret",
+    enabledFeatures = listOf(
+        DynamicFeature.ID_CAPTURE,               // ID document scanning & capture
+        DynamicFeature.ID_HOLOGRAM_DETECTION,    // Detect holograms for authenticity
+        DynamicFeature.NFC_SCAN,                 // Read chip data via NFC
+        DynamicFeature.SELFIE_AUTO,              // Automatic selfie capture
+        DynamicFeature.SELFIE_POSE_ESTIMATION    // Liveness detection via pose
+    )
+)
+```
+
+#### Usecase 3 (Usercase2 + UploadSource)
+
+Configure the SDK with server, sharedSecret, and a specific UploadSource.
+
+- Available options: UploadSource.KYC, UploadSource.PASSWORD, UploadSource.VIDEO.
+
+```kotlin
+AmaniSDKUI.configure(
+    applicationContext = this,
+    serverURL = "https://server.example",
+    sharedSecret = "optional shared secret",
+    uploadSource = UploadSource.KYC,
+    enabledFeatures = listOf(
+        DynamicFeature.ID_CAPTURE,               // ID document scanning & capture
+        DynamicFeature.ID_HOLOGRAM_DETECTION,    // Detect holograms for authenticity
+        DynamicFeature.NFC_SCAN,                 // Read chip data via NFC
+        DynamicFeature.SELFIE_AUTO,              // Automatic selfie capture
+        DynamicFeature.SELFIE_POSE_ESTIMATION    // Liveness detection via pose
+    )
+)
+```
+
+#### Usecase 4 (Usecase 3 + SSL Pinning)
+
+This setup includes SSL Pinning, `sharedSecret`, and a customized list of Dynamic Features.
+
+SSL Pinning ensures secure networking with certificate validation.
+
+`sharedSecret` makes requests signed and validated.
+
+`enabledFeatures` allows you to control which dynamic modules are active.
+
+✅ This is the recommended and most secure way to initialize the SDK.
+
+```kotlin
+// SSL pinning certification settings
+try {
+    AmaniSDKUI.setSSLPinning(
+        context = this,
+        certificate = R.raw.ssl_cert
+    )
+} catch (e: Exception) {
+    // Invalid certificate
+}
+
+// Amani configure with advanced configuration
+AmaniSDKUI.configure(
+    applicationContext = this,
+    serverURL = "https://server.example",
+    sharedSecret = "optional shared secret",
+    amaniVersion = AmaniVersion.V2,
+    uploadSource = UploadSource.KYC,
+    enabledFeatures = listOf(
+        DynamicFeature.ID_CAPTURE,               // ID document scanning & capture
+        DynamicFeature.ID_HOLOGRAM_DETECTION,    // Detect holograms for authenticity
+        DynamicFeature.NFC_SCAN,                 // Read chip data via NFC
+        DynamicFeature.SELFIE_AUTO,              // Automatic selfie capture
+        DynamicFeature.SELFIE_POSE_ESTIMATION    // Liveness detection via pose
+    )
+)
 ```
 
 * Register for result of the KYC process.

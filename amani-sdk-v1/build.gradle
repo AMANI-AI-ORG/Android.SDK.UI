@@ -8,13 +8,13 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 36
 
     namespace 'ai.amani.amani_sdk'
 
     defaultConfig {
         minSdk 21
-        targetSdk 34
+        targetSdkVersion 36
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -71,7 +71,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.7"
 
     // AmaniSDK impl
-    def amani_sdk = "3.5.15"
+    def amani_sdk = "3.6.11"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph
@@ -95,7 +95,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.2.43'
+                version = '1.3.0'
             }
         }
     }
