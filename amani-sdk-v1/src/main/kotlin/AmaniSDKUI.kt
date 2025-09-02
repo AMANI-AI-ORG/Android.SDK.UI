@@ -1,5 +1,6 @@
 import ai.amani.base.utility.AmaniVersion
 import ai.amani.sdk.Amani
+import ai.amani.sdk.DynamicFeature
 import ai.amani.sdk.UploadSource
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
@@ -30,21 +31,66 @@ object AmaniSDKUI {
      *  @param amaniVersion: Version of the Amani Service. The default is AmaniVersion.V2.
      *
      *  @param sharedSecret: Extra security layer. Non mandatory.
+     *
+     *  @param enabledFeatures: Dynamic Features of SDK to enable
      */
     fun init(
         applicationContext: Context,
         serverURL: String,
         amaniVersion: AmaniVersion = AmaniVersion.V2,
-        sharedSecret: String? = null
+        sharedSecret: String? = null,
+        enabledFeatures: List<DynamicFeature> = DynamicFeature.allFeatures
     ){
         Amani.init(
             context = applicationContext,
             server = serverURL,
             sharedSecret = sharedSecret,
             version = amaniVersion,
-            uploadSource = UploadSource.KYC
+            uploadSource = UploadSource.KYC,
+            enabledFeatures = enabledFeatures
         )
+    }
 
+    /**
+     * ✅ Recommended Latest Configuration method
+     *
+     * Use this method to configure the SDK with all available options.
+     * It replaces the will be deprecated [init] method and should be preferred
+     * for all new integrations.
+     *
+     *  First init of the Amani SDK, best practice to call it in Application class while app is
+     *  running up.
+     *
+     *  @param activity: Current activity.
+     *
+     *  @param serverURL: Base URL of the server you have. (format example: https://www.server_url.com)
+     *
+     *  @param amaniVersion: Version of the Amani Service. The default is AmaniVersion.V2.
+     *
+     *  @param sharedSecret: Extra security layer. Non mandatory.
+     *
+     *  @param uploadSource: is used to distinguish uploads from different sources.
+     *  (Optional) This feature allows you to list and group uploaded data in Amani Studio based
+     *  on source, or generate different statistics accordingly. Default upload source is KYC.
+     *
+     *  @param enabledFeatures: Dynamic Features of SDK to enable
+     */
+    fun configure(
+        applicationContext: Context,
+        serverURL: String,
+        amaniVersion: AmaniVersion = AmaniVersion.V2,
+        uploadSource: UploadSource = UploadSource.KYC,
+        sharedSecret: String? = null,
+        enabledFeatures: List<DynamicFeature> = DynamicFeature.allFeatures
+    ){
+        Amani.configure(
+            context = applicationContext,
+            server = serverURL,
+            sharedSecret = sharedSecret,
+            version = amaniVersion,
+            uploadSource = uploadSource,
+            enabledFeatures = enabledFeatures
+        )
     }
 
     /**
