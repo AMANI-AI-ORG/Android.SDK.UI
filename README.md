@@ -3,7 +3,7 @@
 
 ![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI) 
 ![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
-![Compiler](https://img.shields.io/badge/compileSdk-34-brightgreen)
+![Compiler](https://img.shields.io/badge/compileSdk-36-brightgreen)
 ![Java](https://img.shields.io/badge/JavaVersion_17-blue)
 ![Trending](https://img.shields.io/github/languages/top/AMANI-AI-ORG/Android.SDK.UI)
 ![Last Commit](https://img.shields.io/github/last-commit/AMANI-AI-ORG/Android.SDK.UI)
@@ -70,10 +70,10 @@ After completing the installation phase, configure the SDK with the **`Amani.con
 
 :::note
 Although the new usage is already active and the documentation is based on it, the older functions are still usable until **v4.0.0**.
-This means you can still use **`init`** instead of **`configure()`**, or **`initAmani`** instead of **`startSession()`**, with the same parameters if needed.
+This means you can still use **`init`** instead of **`configure()`**, with the same parameters if needed.
 
 At the moment, **both approaches have exactly the same effect** — the difference is only in the function names.
-⚠️ However, starting from **v2.0.0**, the situation will change: the old `init` functions will be fully deprecated, and using **`configure()`** and **`startSession()`** will become **mandatory**.
+⚠️ However, starting from **v2.0.0**, the situation will change: the old `init` functions will be fully deprecated, and using **`configure()`** will become **mandatory**.
 
 We therefore **recommend adopting the new functions now** to ensure a smooth transition.
 :::
@@ -325,7 +325,7 @@ Disable R8 full mode, use AndroidX and enable Jetifier like below;
     
    * If you are using ProGuard in your application, you just need to add this line into your ProGuard Rules!
    
-   ```java
+   ```pro
 -keep class ai.** {*;}
 -dontwarn ai.**
 -keep class datamanager.** {*;}
