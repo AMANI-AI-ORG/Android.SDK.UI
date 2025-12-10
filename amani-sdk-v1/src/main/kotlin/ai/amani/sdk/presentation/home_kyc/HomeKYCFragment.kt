@@ -330,13 +330,17 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         binding.recyclerView.itemAnimator = DefaultItemAnimator()
         binding.recyclerView.isNestedScrollingEnabled = false
 
-        mAdapter = KYCAdapter(
-            docList,
-            viewModel.getAppConfig()!!,
-            this,
-            requireContext()
-        )
-        binding.recyclerView.adapter = mAdapter
+        val appConfig = viewModel.getAppConfig()
+
+        appConfig?.let {
+            mAdapter = KYCAdapter(
+                docList,
+                it,
+                this,
+                requireContext()
+            )
+            binding.recyclerView.adapter = mAdapter
+        }
     }
 
     override fun onOnItemSelected(version: ai.amani.sdk.model.customer.Rule, adapterPosition: Int) {

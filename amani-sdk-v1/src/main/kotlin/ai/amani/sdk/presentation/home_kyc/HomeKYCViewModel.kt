@@ -434,7 +434,7 @@ open class HomeKYCViewModel(
         if (rule.status != AppConstant.STATUS_PROCESSING
             && rule.status != STATUS_APPROVED
         ) {
-            if (CachingHomeKYC.versionsList!!.size == 1) {
+            if (CachingHomeKYC.versionsList!!.size == 1 || CachingHomeKYC.versionsList!!.filter { !it.isHidden }.size == 1) {
                 when (documentID) {
                     AmaniDocumentTypes.SELFIE -> {
                         route.invoke(ScreenRoutes.SelfieCaptureScreen)
