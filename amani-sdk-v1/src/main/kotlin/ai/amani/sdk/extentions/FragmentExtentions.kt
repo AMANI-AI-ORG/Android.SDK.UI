@@ -3,7 +3,9 @@ package ai.amani.sdk.extentions
 import ai.amani.BuildConfig
 import ai.amani.amani_sdk.R
 import ai.amani.sdk.model.UploadResultModel
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.text.SpannableStringBuilder
@@ -184,4 +186,15 @@ fun Fragment.popBackStackSafely() {
     } catch (e: Exception) {
         Timber.e( "Unexpected error while popping back stack", e)
     }
+}
+
+/**
+ * Safely returns the current Activity for the situations when fragment not attached to Activity
+ * Fragment not attached issues in general happens at background thread with async callbacks
+ */
+fun Fragment.safeContext(safeContext: (Context) -> Unit) {
+    if (!isAdded || activity == null) {
+        return
+    }
+    return safeContext.invoke(requireContext())
 }

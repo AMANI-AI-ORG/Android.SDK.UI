@@ -9,6 +9,7 @@ import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.logUploadResult
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.parcelable
+import ai.amani.sdk.extentions.safeContext
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.FeatureConfig
@@ -23,11 +24,9 @@ import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
-import ai.amani.sdk.utils.AmaniUIErrorConstants.CORRUPTED_DOC_LIST
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -47,12 +46,13 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import androidx.core.graphics.toColorInt
+import datamanager.model.config.ResGetConfig
 
 /**
  * @Author: zekiamani
  * @Date: 5.09.2022
  */
-
 class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
     private var _binding: FragmentHomeKycBinding? = null
@@ -80,16 +80,21 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
         observe()
 
-        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<HomeKYCResultModel>("type")
-            ?.observe(viewLifecycleOwner) {
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<HomeKYCResultModel>(
+            "type"
+        )?.observe(viewLifecycleOwner) {
 
-                findNavController().currentBackStackEntry?.savedStateHandle?.remove<HomeKYCResultModel>("type")
+                findNavController().currentBackStackEntry?.savedStateHandle?.remove<HomeKYCResultModel>(
+                    "type"
+                )
 
                 when (it.docID) {
-                    AmaniDocumentTypes.IDENTIFICATION, AmaniDocumentTypes.PASSPORT, AmaniDocumentTypes.DRIVING_LICENSE -> {
+                    AmaniDocumentTypes.IDENTIFICATION, AmaniDocumentTypes.PASSPORT,
+                    AmaniDocumentTypes.DRIVING_LICENSE -> {
 
                         //Uploading the ID as alone, single.
-                        //Do not forget to configure it back as true if you want to make upload request ID plus NFC together
+                        //Do not forget to configure it back as true if you want to make upload
+                        // request ID plus NFC together
                         Amani.sharedInstance().IDCapture().withNFC(false)
 
                         viewModel.uploadID(
@@ -121,7 +126,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                         if (it.nfcOnly) {
                             // This section is providing OnlyNFC section
-                            Timber.e(it.docType + ": uploading only NFC without ID")
+                            Timber.e("%s: uploading only NFC without ID", it.docType)
 
                             viewModel.uploadNFCOnly(
                                 requireActivity(),
@@ -135,9 +140,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                         } else {
                             // This section is providing NFC + ID together
-                            Timber.e(it.docType + ": uploading NFC && ID together")
+                            Timber.e("%s: uploading NFC && ID together", it.docType)
 
-                            // Enabling withNFC, will be handle to upload NFC and IDCapture data in one req
+                            // Enabling withNFC, will be handle to upload NFC and IDCapture data
+                            // in one req
                             Amani.sharedInstance().IDCapture().withNFC(true)
 
                             viewModel.uploadID(
@@ -154,7 +160,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                     AmaniDocumentTypes.SIGNATURE -> {
                         viewModel.uploadSignature { signatureUploadResult ->
-                            logUploadResult(signatureUploadResult, AmaniDocumentTypes.SIGNATURE)
+                            logUploadResult(
+                                signatureUploadResult,
+                                AmaniDocumentTypes.SIGNATURE
+                            )
                         }
                     }
 
@@ -164,7 +173,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                             docType = it.docType,
                             genericDocumentFlow = it.genericDocumentFlow,
                             onCompleted = { documentUploadResult ->
-                                logUploadResult(documentUploadResult, AmaniDocumentTypes.PHYSICAL_CONTRACT)
+                                logUploadResult(
+                                    documentUploadResult,
+                                    AmaniDocumentTypes.PHYSICAL_CONTRACT
+                                )
                             }
                         )
                     }
@@ -175,7 +187,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                             docType = it.docType,
                             genericDocumentFlow = it.genericDocumentFlow,
                             onCompleted = { documentUploadResult ->
-                                logUploadResult(documentUploadResult, AmaniDocumentTypes.PHYSICAL_CONTRACT)
+                                logUploadResult(
+                                    documentUploadResult,
+                                    AmaniDocumentTypes.PHYSICAL_CONTRACT
+                                )
                             }
                         )
                     }
@@ -223,6 +238,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     binding.progressLoaderCentered.hide()
                     setCustomUI(it.docList)
                 }
+
                 is HomeKYCState.Error -> {
                     binding.progressLoaderCentered.hide()
                 }
@@ -231,7 +247,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
         viewModel.logicEvent.observe(viewLifecycleOwner) {
             Timber.i("Logic event $it is triggered")
-            when(it) {
+            when (it) {
                 is HomeKYCLogicEvent.Refresh -> {
                     debugToast("Refresh triggered")
                     viewLifecycleOwner.lifecycleScope.launch {
@@ -257,10 +273,12 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 is HomeKYCLogicEvent.Finish.OnError -> {
                     Timber.d("Login is failed, httpErrorCode: ${it.errorCode}")
                     val returnIntent = Intent()
-                    returnIntent.putExtra(AppConstant.KYC_RESULT,
+                    returnIntent.putExtra(
+                        AppConstant.KYC_RESULT,
                         KYCResult(
                             errorCode = it.errorCode
-                        ))
+                        )
+                    )
                     requireActivity().setResult(Activity.RESULT_OK, returnIntent)
                     requireActivity().finish()
                     Timber.d("KYC activity is finished")
@@ -271,10 +289,12 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     Timber.d("Login is failed due to exception: ${it.exception}")
 
                     val returnIntent = Intent()
-                    returnIntent.putExtra(AppConstant.KYC_RESULT,
+                    returnIntent.putExtra(
+                        AppConstant.KYC_RESULT,
                         KYCResult(
                             generalException = it.exception
-                        ))
+                        )
+                    )
                     requireActivity().setResult(Activity.RESULT_OK, returnIntent)
                     requireActivity().finish()
                     Timber.d("KYC activity is finished")
@@ -285,7 +305,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         }
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            viewModel.navigateTo.collect{
+            viewModel.navigateTo.collect {
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     if (it is NavigationCommands.NavigateDirections) {
                         findNavController().navigateSafely(it.direction)
@@ -296,32 +316,39 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     }
 
     private fun setCustomUI(data: ArrayList<Rule>) {
-        
-        renderRecyclerView(data)
 
-        setFlag(data)
+        val appConfig = viewModel.getAppConfig()
 
-        customizeToolBar(
-            viewModel.getAppConfig()!!.generalConfigs?.topBarBackground,
-            viewModel.getAppConfig()!!.generalConfigs?.topBarFontColor,
-            viewModel.getAppConfig()!!.generalConfigs?.topBarFontColor,
-            viewModel.getAppConfig()!!.generalConfigs?.mainTitleText
-        )
+        appConfig?.let { appConfig ->
+            renderRecyclerView(docList = data, appConfig = appConfig)
 
-        binding.imageViewPoweredByAmani.setColorFilter(Color.parseColor("#909090"))
+            setFlag(data)
 
-        binding.uploadDocumentDescription.let {
-            it.text = viewModel.getAppConfig()?.generalConfigs?.mainDescriptionText
-            it.setTextColor(Color.parseColor(
-                viewModel.getAppConfig()!!.generalConfigs?.appFontColor
-            ))
+            customizeToolBar(
+                appConfig.generalConfigs?.topBarBackground,
+                appConfig.generalConfigs?.topBarFontColor,
+                appConfig.generalConfigs?.topBarFontColor,
+                appConfig.generalConfigs?.mainTitleText
+            )
+
+            binding.imageViewPoweredByAmani.setColorFilter("#909090".toColorInt())
+
+            binding.uploadDocumentDescription.let { uploadDocumentDesc ->
+                uploadDocumentDesc.text =
+                    viewModel.getAppConfig()?.generalConfigs?.mainDescriptionText
+                uploadDocumentDesc.setTextColor(
+                        viewModel.getAppConfig()!!.generalConfigs?.appFontColor!!.toColorInt()
+                    )
+            }
+
+            binding.parentLayout.setBackgroundColor(
+                viewModel.getAppConfig()!!.generalConfigs?.appBackground!!.toColorInt()
+            )
+            binding.parentLayout.show()
         }
-
-        binding.parentLayout.setBackgroundColor(Color.parseColor(viewModel.getAppConfig()!!.generalConfigs?.appBackground))
-        binding.parentLayout.show()
     }
 
-    private fun renderRecyclerView(docList: ArrayList<Rule>) {
+    private fun renderRecyclerView(docList: ArrayList<Rule>, appConfig: ResGetConfig) {
         binding.recyclerView.layoutManager = LinearLayoutManager(
             requireActivity(),
             RecyclerView.VERTICAL,
@@ -330,22 +357,22 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         binding.recyclerView.itemAnimator = DefaultItemAnimator()
         binding.recyclerView.isNestedScrollingEnabled = false
 
-        val appConfig = viewModel.getAppConfig()
 
-        appConfig?.let {
+        safeContext { context ->
             mAdapter = KYCAdapter(
-                docList,
-                it,
-                this,
-                requireContext()
+                dataList = docList,
+                appConfig = appConfig,
+                listener = this,
+                context = context
             )
-            binding.recyclerView.adapter = mAdapter
         }
+
+        binding.recyclerView.adapter = mAdapter
     }
 
-    override fun onOnItemSelected(version: ai.amani.sdk.model.customer.Rule, adapterPosition: Int) {
+    override fun onOnItemSelected(version: Rule, adapterPosition: Int) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            viewModel.navigateScreen(version!!, adapterPosition) {
+            viewModel.navigateScreen(version, adapterPosition) {
                 when (it) {
                     ScreenRoutes.SelfieCaptureScreen -> {
                         val action =
@@ -361,12 +388,13 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     }
 
                     ScreenRoutes.IDFrontSideScreen -> {
-                        val action = HomeKYCFragmentDirections.actionHomeKYCFragmentToIDCaptureFrontSideFrag(
-                            dataModel = ConfigModel(
-                                viewModel.getVersion(),
-                                viewModel.getAppConfig()!!.generalConfigs
+                        val action =
+                            HomeKYCFragmentDirections.actionHomeKYCFragmentToIDCaptureFrontSideFrag(
+                                dataModel = ConfigModel(
+                                    viewModel.getVersion(),
+                                    viewModel.getAppConfig()!!.generalConfigs
+                                )
                             )
-                        )
                         findNavController().navigateSafely(action)
                     }
 
@@ -374,9 +402,9 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         val action =
                             HomeKYCFragmentDirections.actionHomeKYCFragmentToSelectDocumentTypeFragment(
                                 SelectDocumentTypeModel(
-                                    versionList =  viewModel.getVersionList()!!,
+                                    versionList = viewModel.getVersionList()!!,
                                     generalConfigs = viewModel.getAppConfig(),
-                                    currentVersionID =  version.id!!,
+                                    currentVersionID = version.id!!,
                                     featureConfig = viewModel.featureConfigModel()
                                 )
                             )
@@ -403,12 +431,13 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                     ScreenRoutes.SignatureScreen -> {
 
-                        val action = HomeKYCFragmentDirections.actionHomeKYCFragmentToSignatureFragment(
-                            configModel = ConfigModel(
-                                version = viewModel.getVersion(),
-                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs
+                        val action =
+                            HomeKYCFragmentDirections.actionHomeKYCFragmentToSignatureFragment(
+                                configModel = ConfigModel(
+                                    version = viewModel.getVersion(),
+                                    generalConfigs = viewModel.getAppConfig()!!.generalConfigs
+                                )
                             )
-                        )
 
                         findNavController().navigateSafely(action)
 
@@ -426,43 +455,55 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     }
 
     //TODO Setting flag and all steps completed case will be handled by viewModel
-    private fun setFlag(docList: List<ai.amani.sdk.model.customer.Rule>) {
+    private fun setFlag(docList: List<Rule>) {
         var count = 0
         var flags = 0
 
         for (r in docList) {
-            if ((r.status == AppConstant.STATUS_APPROVED || r.status == AppConstant.STATUS_PENDING_REVIEW) && r.phase == 0) {
+            if ((r.status == AppConstant.STATUS_APPROVED || r.status
+                        == AppConstant.STATUS_PENDING_REVIEW) && r.phase == 0) {
                 flags++
             }
-            if (r.status == AppConstant.STATUS_APPROVED || r.status == AppConstant.STATUS_PENDING_REVIEW) {
+            if (r.status == AppConstant.STATUS_APPROVED || r.status
+                == AppConstant.STATUS_PENDING_REVIEW) {
                 count++
             }
-        }
-        if (count == docList.size) {
-
         }
         mAdapter?.setFlags(flags)
     }
 
     private var pdfPickerLauncher: ActivityResultLauncher<String>? = registerForActivityResult(
-        ActivityResultContracts.GetContent()) { uri: Uri? ->
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
         uri?.let {
             if (it.scheme == "content") {
-                requireContext().contentResolver.query(it, null, null, null, null)?.use { cursor ->
-                    val pdfData = requireActivity().contentResolver.openInputStream(uri)?.readBytes()
-                    if (pdfData == null) {
-                        Toast.makeText(requireContext(), "PDF could not take", Toast.LENGTH_LONG).show()
-                        return@let
-                    } else {
-                        val listOfUri = arrayListOf(uri)
+                safeContext { context ->
+                    context.contentResolver.query(
+                        it,
+                        null,
+                        null,
+                        null,
+                        null)?.use {
+                        val pdfData =
+                            requireActivity().contentResolver.openInputStream(uri)?.readBytes()
+                        if (pdfData == null) {
+                            Toast.makeText(context, "PDF could not take",
+                                Toast.LENGTH_LONG).show()
+                            return@safeContext
+                        } else {
+                            val listOfUri = arrayListOf(uri)
 
-                        viewModel.uploadDocument(
-                            activity = requireActivity(),
-                            genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri),
-                            onCompleted = { documentUploadResult ->
-                                logUploadResult(documentUploadResult, AmaniDocumentTypes.PHYSICAL_CONTRACT)
-                            }
-                        )
+                            viewModel.uploadDocument(
+                                activity = requireActivity(),
+                                genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri),
+                                onCompleted = { documentUploadResult ->
+                                    logUploadResult(
+                                        documentUploadResult,
+                                        AmaniDocumentTypes.PHYSICAL_CONTRACT
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }
