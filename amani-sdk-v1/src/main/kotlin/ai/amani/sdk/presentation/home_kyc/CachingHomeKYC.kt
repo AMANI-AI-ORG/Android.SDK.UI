@@ -19,6 +19,7 @@ internal object CachingHomeKYC {
     @Volatile private var _version: Version? = null
     @Volatile private var _versionsList: MutableList<Version>? = null
     @Volatile private var _onlyKYCRules: ArrayList<Rule>? = null
+    @Volatile private var _termsAcceptedOrDeclinedInSession: Boolean = false
 
     // Thread-safe public accessors
     var appConfig: ResGetConfig?
@@ -41,6 +42,10 @@ internal object CachingHomeKYC {
         get() = synchronized(lock) { _onlyKYCRules }
         set(value) = synchronized(lock) { _onlyKYCRules = value }
 
+    var termsAcceptedOrDeclinedInSession: Boolean
+        get() = synchronized(lock) { _termsAcceptedOrDeclinedInSession }
+        set(value) = synchronized(lock) { _termsAcceptedOrDeclinedInSession = value }
+
     // Clears all cache safely
     fun clearCache() = synchronized(lock) {
         _appConfig = null
@@ -48,5 +53,6 @@ internal object CachingHomeKYC {
         _version = null
         _versionsList = null
         _onlyKYCRules = null
+        _termsAcceptedOrDeclinedInSession = false
     }
 }

@@ -16,8 +16,10 @@ import ai.amani.sdk.extentions.getFirstErrorCode
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.AmaniEventCallBack
+import ai.amani.sdk.interfaces.TermsConditionsCallback
 import ai.amani.sdk.mapper.AmaniEventMapper.asAmaniError
 import ai.amani.sdk.model.*
+import ai.amani.sdk.model.TermsAndConditionsConfig
 import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.amani_events.error.AmaniErrorTypes
 import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
@@ -537,6 +539,51 @@ open class HomeKYCViewModel(
     fun getProfileInfoModel() :ProfileInfoModel = profileInfoModel
 
     fun featureConfigModel(): FeatureConfig = featureConfig
+
+    fun shouldShowTermsDialog(): Boolean {
+        return CachingHomeKYC.customerDetail?.termsAcceptedAt == null
+                && !CachingHomeKYC.termsAcceptedOrDeclinedInSession
+                && CachingHomeKYC.appConfig?.generalConfigs?.showTermsAndConditions == true
+    }
+
+    fun getTermsAndConditionsConfig(): TermsAndConditionsConfig {
+        val termsConditionsContent = getAppConfig()?.generalConfigs?.termsAndConditions
+        val generalConfigs = getAppConfig()?.generalConfigs
+        return TermsAndConditionsConfig(
+            acceptButtonText = termsConditionsContent?.acceptButtonText?: "",
+            declineButtonText = termsConditionsContent?.declineButtonText?: "",
+            titleText = generalConfigs?.termsAndConditions?.title?: "empty",
+            descriptionText = generalConfigs?.termsAndConditions?.description?: "empty",
+            backgroundColor = generalConfigs?.appBackground?: "",
+            primaryButtonBorderColor = generalConfigs?.primaryButtonBorderColor?: "#000000" ,
+            primaryButtonBackgroundColor = generalConfigs?.primaryButtonBackgroundColor ?: "#000000",
+            primaryButtonTextColor = generalConfigs?.primaryButtonTextColor ?: "#FFFFFF",
+            buttonRadius = generalConfigs?.buttonRadiusAndroid ?: 20,
+            secondaryButtonBackgroundColor = generalConfigs?.secondaryButtonBackgroundColor ?: "#FFFFFF",
+            secondaryButtonTextColor = generalConfigs?.secondaryButtonTextColor ?: "#000000",
+            secondaryButtonBorderColor = generalConfigs?.secondaryButtonBorderColor ?: "#000000",
+            titleTextColor = generalConfigs?.appFontColor?: "#FFFFFF",
+            descriptionTextColor = generalConfigs?.appFontColor?: "#FFFFFF"
+        )
+    }
+
+    fun onTermsDeclined() {
+        CachingHomeKYC.termsAcceptedOrDeclinedInSession = true
+    }
+
+    fun onTermsAccepted() {
+        CachingHomeKYC.termsAcceptedOrDeclinedInSession = true
+        Amani.sharedInstance().CustomerInfo()
+            .acceptTermsConditions(callback = object : TermsConditionsCallback{
+                override fun onError(exception: Exception) {
+                    Timber.e("Error happened while accepting terms and conditions: $exception")
+                }
+
+                override fun onSuccess() {
+                    Timber.i("Terms and conditions are accepted")
+                }
+            })
+    }
 
     fun setConfigModels(
         registerConfig: RegisterConfig?,
