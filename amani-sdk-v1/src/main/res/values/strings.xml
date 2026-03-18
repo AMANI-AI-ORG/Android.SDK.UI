@@ -12,6 +12,7 @@
 
     <!-- NFCScanScreen-->
     <string name="nfc_title">NFC</string>
+    <string name="nfc_cancel">Cancel</string>
     <string name="nfc_confirm">Confirm</string>
     <string name="nfc_hold_your_card">Please hold your card stable</string>
     <string name="nfc_keep_still">Please still keep your card</string>

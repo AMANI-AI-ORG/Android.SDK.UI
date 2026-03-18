@@ -10,6 +10,7 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import androidx.lifecycle.*
 import androidx.lifecycle.viewmodel.CreationExtras
+import datamanager.model.config.Version
 import timber.log.Timber
 
 /**
@@ -21,8 +22,9 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
     private val _intent = MutableLiveData<Intent?>(null)
     private val _nfcActivationState = MutableLiveData<NFCActivationState>(NFCActivationState.Empty)
     private val _nfcScanState = MutableLiveData<NFCScanState>(NFCScanState.ReadyToScan)
-    private val maxAttempt = 3
+    private var maxAttempt = 3
     private var currentAttempt = 0
+    private var isScanInProgress = false
 
     val get: LiveData<Intent?> = _intent
 
@@ -44,11 +46,31 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
         } else _nfcActivationState.value = NFCActivationState.Disable
     }
 
+    fun setMaxAttempt(version: Version?) {
+        version?.let {
+            it.maxAttempt?.let { max ->
+                maxAttempt = max
+            }
+        }
+    }
+
+    fun cancelScan() {
+        isScanInProgress = false
+        currentAttempt += 1
+        if (currentAttempt >= maxAttempt) {
+            currentAttempt = 0
+            _nfcScanState.value = NFCScanState.OutOfMaxAttempt
+        } else {
+            _nfcScanState.value = NFCScanState.Cancelled
+        }
+    }
+
     fun scanNFC(
         intent: Intent,
         context: Context
     ) {
         Timber.d("NFC Scan is triggered")
+        isScanInProgress = true
 
         val tag = intent.extras!!.parcelable<Tag>(NfcAdapter.EXTRA_TAG)
 
@@ -60,20 +82,23 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
             documentNumber = mrzData.docNumber,
             onComplete = {
                 Timber.d("NFC onComplete is triggered")
+                isScanInProgress = false
                 _nfcScanState.value = NFCScanState.Success
             },
-            
+
             onFailure = {
                 Timber.d("NFC onFailure is triggered")
+                // Guard: cancelScan() clears isScanInProgress, so a late-arriving
+                // callback from a scan that was already counted via cancel is ignored.
+                if (!isScanInProgress) return@scan
+                isScanInProgress = false
                 currentAttempt += 1
                 if (currentAttempt >= maxAttempt) {
                     currentAttempt = 0
                     _nfcScanState.value = NFCScanState.OutOfMaxAttempt
+                } else if (it != null) {
+                    _nfcScanState.value = NFCScanState.ShowMRZCheck
                 } else {
-                    it?.let { error ->
-                        _nfcScanState.value = NFCScanState.ShowMRZCheck
-                        return@let
-                    }
                     _nfcScanState.value = NFCScanState.Failure
                 }
             }
@@ -107,7 +132,7 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
         deviceNFCState(
             context,
             available = {
-               setNfcEnable(true)
+                
             },
             disable,
             notSupported
@@ -143,5 +168,6 @@ sealed interface NFCScanState {
     data object ShowMRZCheck: NFCScanState
     data object Success: NFCScanState
     data object Failure : NFCScanState
+    data object Cancelled : NFCScanState
     data object OutOfMaxAttempt: NFCScanState
 }
