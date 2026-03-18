@@ -36,6 +36,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -43,11 +44,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import datamanager.model.config.ResGetConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import androidx.core.graphics.toColorInt
-import datamanager.model.config.ResGetConfig
 
 /**
  * @Author: zekiamani
@@ -236,7 +236,11 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 is HomeKYCState.Loading -> binding.progressLoaderCentered.show()
                 is HomeKYCState.Loaded -> {
                     binding.progressLoaderCentered.hide()
-                    setCustomUI(it.docList)
+                    if (viewModel.shouldShowTermsDialog()) {
+                        showTermsAndConditionsDialog(it.docList)
+                    } else {
+                        setCustomUI(it.docList)
+                    }
                 }
 
                 is HomeKYCState.Error -> {
@@ -508,6 +512,16 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 }
             }
         }
+    }
+
+    private fun showTermsAndConditionsDialog(docList: ArrayList<Rule>) {
+        val config = viewModel.getTermsAndConditionsConfig()
+        val dialog = TermsAndConditionsDialog.newInstance(config)
+        dialog.setOnTermsAcceptedListener { accepted ->
+            if (accepted) viewModel.onTermsAccepted() else viewModel.onTermsDeclined()
+            setCustomUI(docList)
+        }
+        dialog.show(childFragmentManager, TermsAndConditionsDialog.TAG)
     }
 
     override fun onDestroyView() {

@@ -82,13 +82,9 @@ fun CustomButton.setPropertyTryAgainButton(
         if (generalConfigs.buttonRadiusAndroid != null) generalConfigs.buttonRadiusAndroid else 20
 
     this.setTextProperty(tryAgain, secondaryButtonText)
-    if (appBackgroundColor != null) {
-        if (buttonRadius != null) {
-            this.setBackgroundDrawable(
-                ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null), appBackgroundColor,
-                4, secondaryButtonBorder, 0f, null, true, buttonRadius)
-        }
-    }
+    this.setBackgroundDrawable(
+        ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null), appBackgroundColor,
+        4, secondaryButtonBorder, 0f, null, true, buttonRadius)
 }
 
 @BindingAdapter("buttonConfirm")
