@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Override android:name so the test APK uses the local NfcTestApp stub
+        instead of ai.amani.sample.App (which lives in :app and is absent here).
+        tools:replace tells the manifest merger to prefer this value over the
+        one declared in amani-sdk-v1/src/main/AndroidManifest.xml.
+    -->
+    <application
+        android:name="ai.amani.sdk.NfcTestApp"
+        tools:replace="android:name" />
+
+</manifest>
