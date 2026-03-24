@@ -48,6 +48,17 @@ android {
             it.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
+
+    testOptions {
+        packaging {
+            resources {
+                // MockK pulls in JUnit Jupiter transitively, causing duplicate licence files.
+                it.excludes += "META-INF/LICENSE.md"
+                it.excludes += "META-INF/LICENSE-notice.md"
+                it.excludes += "META-INF/NOTICE.md"
+            }
+        }
+    }
 }
 
 dependencies {
@@ -62,21 +73,41 @@ dependencies {
 
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'com.google.android.material:material:1.12.0'
+    // ── Unit tests ─────────────────────────────────────────────────────────────
     testImplementation 'junit:junit:4.13.2'
+    // LiveData test helper (InstantTaskExecutorRule)
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
+    // MockK for mocking concrete Kotlin classes (incl. NFCRepositoryImp, Tag, Intent)
+    testImplementation 'io.mockk:mockk:1.13.12'
+    // Coroutines test support (if Flow is introduced later)
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
+
+    // ── Instrumentation tests ───────────────────────────────────────────────────
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    // FragmentScenario — launch fragments in isolation
+    androidTestImplementation 'androidx.fragment:fragment-testing:1.8.5'
+    // Core test rules and runners
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    // LiveData test helper (InstantTaskExecutorRule in androidTest)
+    androidTestImplementation 'androidx.arch.core:core-testing:2.2.0'
+    // MockK for Android (mocks final classes on Dalvik/ART)
+    androidTestImplementation 'io.mockk:mockk-android:1.13.12'
 
     // ViewModel and lifecycle support for kotlin
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.7"
 
     // AmaniSDK impl
-    def amani_sdk = "3.9.1"
+    def amani_sdk = "3.9.3"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph
     implementation "androidx.navigation:navigation-fragment-ktx:2.8.8"
     implementation "androidx.navigation:navigation-ui-ktx:2.8.8"
+    androidTestImplementation "androidx.navigation:navigation-testing:2.8.8"
 
     api 'com.jakewharton.timber:timber:5.0.1'
     implementation 'com.hbb20:ccp:2.5.3' // CountryCodePicker library

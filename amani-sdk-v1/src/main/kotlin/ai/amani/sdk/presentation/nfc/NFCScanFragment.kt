@@ -50,6 +50,7 @@ class NFCScanFragment : Fragment() {
     private lateinit var expiryDatePicker: DatePickerHandler
     private lateinit var birthDatePicker: DatePickerHandler
     private var alertDialog: AlertDialog? = null
+    private var isModalShowing = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,6 +65,7 @@ class NFCScanFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.setMaxAttempt(args.dataModel.configModel.version)
         setCustomUI()
         observeLiveEvent()
 
@@ -139,7 +141,14 @@ class NFCScanFragment : Fragment() {
         nfcDialogMessages = NFCScanningBottomDialog.NFCDialogMessages(
             nfcFail = args.dataModel.configModel.version!!.nfcFailed,
             nfcScanningDescription = args.dataModel.configModel.version!!.nfcDialogDescription,
-            nfcScanningTitle = args.dataModel.configModel.version!!.nfcDialogTitle
+            nfcScanningTitle = args.dataModel.configModel.version!!.nfcDialogTitle,
+            nfcReadyTitle = nfcTitle,
+            nfcReadyDescription = nfcDescription1,
+            cancelButtonText = args.dataModel.configModel.version!!.cancelButtonText,
+            cancelButtonTextColor = args.dataModel.configModel.generalConfigs!!.primaryButtonTextColor,
+            cancelButtonBackgroundColor = args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
+            cancelButtonBorderColor = args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
+            cancelButtonRadius = args.dataModel.configModel.generalConfigs!!.buttonRadiusAndroid
         )
 
         setToolBarTitle(
@@ -211,6 +220,22 @@ class NFCScanFragment : Fragment() {
         binding.continueBtn.text = args.dataModel.configModel?.generalConfigs?.continueText?:
         getString(R.string.continue_text)
 
+        binding.infoContinueBtn.setBackgroundDrawable(
+            ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null),
+            args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
+            4, args.dataModel.configModel.generalConfigs!!.primaryButtonBackgroundColor,
+            0f, null,
+            true, args.dataModel.configModel.generalConfigs!!.buttonRadiusAndroid)
+
+        binding.infoContinueBtn.setTextProperty(
+            args.dataModel.configModel?.generalConfigs?.continueText ?: getString(R.string.continue_text),
+            args.dataModel.configModel.generalConfigs!!.primaryButtonTextColor
+        )
+
+        binding.infoContinueBtn.setOnClickListener {
+            showNFCScanningModal()
+        }
+
         expiryDatePicker = DatePickerHandler(
             context = requireContext(),
             listener = {
@@ -228,19 +253,32 @@ class NFCScanFragment : Fragment() {
         )
     }
 
+    private fun showNFCScanningModal() {
+        if (isModalShowing) return
+        isModalShowing = true
+        viewModel.setNfcEnable(true)
+        requireActivity().supportFragmentManager.let { fm ->
+            val bundle = Bundle()
+            bundle.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
+            nfcScanningModal.arguments = bundle
+            nfcScanningModal.setOnCancelListener {
+                viewModel.cancelScan()
+            }
+            nfcScanningModal.show(fm, NFCScanningBottomDialog.TAG)
+        }
+    }
+
+    private fun dismissNFCScanningModal() {
+        nfcScanningModal.dismissSafely()
+        isModalShowing = false
+        viewModel.setNfcEnable(false)
+    }
+
     private fun observeLiveEvent() {
         viewModel.get.observe(viewLifecycleOwner) {
             if (it != null) {
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                    requireActivity().supportFragmentManager.let {
-                        val args = Bundle()
-                        args.putParcelable(NFCScanningBottomDialog.ARG_KEY, nfcDialogMessages)
-                        nfcScanningModal.arguments = args
-                       if (!nfcScanningModal.isVisible) nfcScanningModal.show(it, NFCScanningBottomDialog.TAG)
-                    }
-                }
-
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    nfcScanningModal.startScanAnimation()
                     viewModel.scanNFC(
                         it,
                         requireContext()
@@ -269,7 +307,7 @@ class NFCScanFragment : Fragment() {
                                 // only as true/false
                             )
 
-                        nfcScanningModal.dismissSafely()
+                        dismissNFCScanningModal()
                         findNavController().clearBackStack(R.id.homeKYCFragment)
                         findNavController().popBackStack(R.id.homeKYCFragment, false)
                     }
@@ -282,7 +320,7 @@ class NFCScanFragment : Fragment() {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                         nfcScanningModal.showError()
                         delay(1000)
-                        nfcScanningModal.dismissSafely()
+                        dismissNFCScanningModal()
                         viewModel.setState(NFCScanState.ShowMRZCheck)
                     }
                 }
@@ -293,7 +331,7 @@ class NFCScanFragment : Fragment() {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main){
 
                         //Closing the NFC scanning dialog
-                        nfcScanningModal.dismissSafely()
+                        dismissNFCScanningModal()
 
                         viewModel.clearNFCState()
 
@@ -321,17 +359,24 @@ class NFCScanFragment : Fragment() {
 
                 is NFCScanState.ReadyToScan -> {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                        viewModel.setNfcEnable(true)
                         binding.infoLayout.show()
+                        binding.infoContinueBtn.show()
                         binding.mrzCheckLayout.hide()
+                    }
+                }
+
+                is NFCScanState.Cancelled -> {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                        dismissNFCScanningModal()
+                        viewModel.set(null)
                     }
                 }
 
                 is NFCScanState.ShowMRZCheck -> {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                        viewModel.setNfcEnable(false)
                         viewModel.set(null)
                         binding.infoLayout.hide()
+                        binding.infoContinueBtn.hide()
                         binding.mrzCheckLayout.show()
                     }
                 }
