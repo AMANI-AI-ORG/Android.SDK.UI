@@ -30,7 +30,7 @@ env:
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
 
-# ── 1. Unit tests ─────────────────────────────────────────────────────────────
+  # ── 1. Unit tests ─────────────────────────────────────────────────────────────
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -60,7 +60,7 @@ jobs:
           name: unit-test-results
           path: amani-sdk-v1/build/reports/tests/
 
-# ── 2. Android instrumented tests ─────────────────────────────────────────────
+  # ── 2. Android instrumented tests ─────────────────────────────────────────────
   android-tests:
     name: Android Instrumented Tests
     needs: unit-tests
@@ -112,7 +112,7 @@ jobs:
           name: android-test-results
           path: amani-sdk-v1/build/reports/androidTests/
 
-# ── 3. Tag, version-bump & publish release ────────────────────────────────────
+  # ── 3. Tag, version-bump & publish release ────────────────────────────────────
   release:
     name: Tag & Publish Release
     needs: android-tests
@@ -138,11 +138,12 @@ jobs:
         if: ${{ inputs.dry_run != true }}
         run: |
           sed -i \
-            "s/version = '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*'/version = '${{ github.event.inputs.version }}'/" \
+            "s/version = '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*[^']*'/version = '${{ github.event.inputs.version }}'/" \
             amani-sdk-v1/build.gradle
 
           # Verify the change was applied
-          grep "version = " amani-sdk-v1/build.gradle
+          grep -q "version = '${{ github.event.inputs.version }}'" amani-sdk-v1/build.gradle || \
+            { echo "::error::sed replacement failed — version '${{ github.event.inputs.version }}' not found in build.gradle"; exit 1; }
 
       # ── Commit & push the version bump ────────────────────────────────────
       - name: Commit version bump
