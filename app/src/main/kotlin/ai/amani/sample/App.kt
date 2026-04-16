@@ -22,6 +22,8 @@ class App :Application(){
             sharedSecret = null
         )
 
+        //Test build
+
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
