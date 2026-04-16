@@ -1,0 +1,137 @@
+name: Publish Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  publish:
+    name: Tag & Publish GitHub Release
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Extract version from branch name
+        id: version
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          VERSION="${BRANCH#release/}"
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "📦 Publishing release v${VERSION}"
+
+      - name: Checkout main (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find previous release tag
+        id: prev_tag
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          PREV=$(git tag --list 'v*' --sort=-v:creatordate \
+            | grep -v SNAPSHOT \
+            | grep -v "v${VERSION}" \
+            | head -1)
+          if [ -z "$PREV" ]; then
+            PREV=$(git rev-list --max-parents=0 HEAD | head -1)
+          fi
+          echo "tag=${PREV}" >> "$GITHUB_OUTPUT"
+          echo "📋 Previous release tag: ${PREV}"
+
+      - name: Detect pre-release version
+        id: prerelease
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          VERSION_LOWER=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
+          if [[ "$VERSION_LOWER" =~ (snapshot|test|beta|alpha|rc|dev|canary|nightly|preview) ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Pre-release version detected: ${VERSION}"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Stable release: ${VERSION}"
+          fi
+
+      - name: Create & push tag
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+
+      - name: Process release notes from PR body
+        id: notes
+        shell: python3 {0}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          import os, re
+
+          raw = os.environ.get("PR_BODY", "")
+
+          # Extract text after "### Release Notes" heading if present
+          match = re.search(r"###\s*Release\s*Notes\s*\n(.*)", raw, re.DOTALL | re.IGNORECASE)
+          if match:
+              raw = match.group(1).strip()
+
+          BADGES = [
+              (r"\bfix(?:es|ed)?\b",    "![Fix](https://img.shields.io/badge/Fix-🐛-e74c3c)"),
+              (r"\bfeature\b",          "![Feature](https://img.shields.io/badge/Feature-✨-8c730d)"),
+              (r"\bimprovement\b",      "![Improvement](https://img.shields.io/badge/Improvement-🛠️-8e44ad)"),
+              (r"\bupdate[sd]?\b",      "![Update](https://img.shields.io/badge/Update-🔄-2980b9)"),
+              (r"\bchange[sd]?\b",      "![Change](https://img.shields.io/badge/Change-♻️-136634)"),
+          ]
+
+          lines = raw.strip().splitlines()
+          decorated = []
+
+          for line in lines:
+              line = line.strip().lstrip("*-• ").strip()
+              if not line:
+                  continue
+              badge = ""
+              for pattern, b in BADGES:
+                  if re.search(pattern, line, re.IGNORECASE):
+                      badge = b + " "
+                      break
+              decorated.append(f"* {badge}{line}")
+
+          body = "\n".join(decorated)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write("body<<__DELIMITER__\n")
+              fh.write(body + "\n")
+              fh.write("__DELIMITER__\n")
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          body: |
+            ## What's Changed?
+
+            ${{ steps.notes.outputs.body }}
+
+            ---
+            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...v${{ steps.version.outputs.value }}
+          draft: false
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
+          make_latest: ${{ steps.prerelease.outputs.is_prerelease != 'true' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete release branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin --delete "release/${{ steps.version.outputs.value }}" || true

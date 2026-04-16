@@ -1,0 +1,195 @@
+name: Release CI
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+
+  # ── Gate: only run for release branches ──────────────────────────────────────
+  check-release:
+    name: Check Release Branch
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check.outputs.is_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Detect release branch
+        id: check
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [[ "$BRANCH" =~ ^release/(.+)$ ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "✅ Release branch detected: $BRANCH → version ${BASH_REMATCH[1]}"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ Not a release branch ($BRANCH) — skipping release CI."
+          fi
+
+  # ── 1. Unit tests ────────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    needs: check-release
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run unit tests
+        run: ./gradlew :amani-sdk-v1:test --continue
+
+      - name: Upload unit-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: amani-sdk-v1/build/reports/tests/
+
+  # ── 2. Android instrumented tests ───────────────────────────────────────────
+  android-tests:
+    name: Android Instrumented Tests
+    needs: [check-release, unit-tests]
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Enable KVM (hardware acceleration)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Cache AVD
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-29-x86_64-${{ runner.os }}
+
+      - name: Create AVD and generate snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: Nexus 6
+          avd-name: ci-avd
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+          disable-animations: true
+          script: echo "AVD snapshot generated"
+
+      - name: Run Android instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: Nexus 6
+          avd-name: ci-avd
+          force-avd-creation: false
+          emulator-options: >-
+            -no-snapshot-save
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+          disable-animations: true
+          script: ./gradlew :amani-sdk-v1:connectedAndroidTest --continue
+
+      - name: Upload instrumented-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-results
+          path: amani-sdk-v1/build/reports/androidTests/
+
+  # ── 3. Version bump (only after all tests pass) ─────────────────────────────
+  version-bump:
+    name: Bump Version
+    needs: [check-release, android-tests]
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if version already bumped
+        id: check_bump
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        run: |
+          if grep -q "version = '${VERSION}'" amani-sdk-v1/build.gradle; then
+            echo "already_bumped=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Version already set to ${VERSION} — skipping bump."
+          else
+            echo "already_bumped=false" >> "$GITHUB_OUTPUT"
+            echo "📝 Will bump version to ${VERSION}."
+          fi
+
+      - name: Bump library version to ${{ needs.check-release.outputs.version }}
+        if: steps.check_bump.outputs.already_bumped == 'false'
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        run: |
+          sed -i \
+            "s/version = '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*[^']*'/version = '${VERSION}'/" \
+            amani-sdk-v1/build.gradle
+
+          grep -q "version = '${VERSION}'" amani-sdk-v1/build.gradle || \
+            { echo "::error::sed replacement failed — version '${VERSION}' not found in build.gradle"; exit 1; }
+
+      - name: Commit & push version bump
+        if: steps.check_bump.outputs.already_bumped == 'false'
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add amani-sdk-v1/build.gradle
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push

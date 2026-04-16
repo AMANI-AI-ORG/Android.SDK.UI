@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. 1.3.6)'
+        description: 'Release version (e.g. 1.5.0)'
         required: true
         type: string
       release_notes:
         description: |
           Release notes — one item per line.
-          Prefix keywords (case-insensitive) auto-badge:
-            fix / fixed / fixes  →  Fix 🐛
-            feature              →  Feature ✨
-            improvement          →  Improvement 🛠️
-            update / updated     →  Update 🔄
-            change / changed     →  Change ♻️
+          Prefix keywords (case-insensitive) auto-badge on publish:
+            fix / fixed / fixes  →  Fix
+            feature              →  Feature
+            improvement          →  Improvement
+            update / updated     →  Update
+            change / changed     →  Change
         required: true
         type: string
       dry_run:
-        description: 'Dry run — run tests only, skip tag/version bump/release (safe for branch testing)'
+        description: 'Dry run — run tests only, skip version bump & PR creation'
         required: false
         default: false
         type: boolean
@@ -44,11 +44,10 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-read-only: false
 
       - name: Run unit tests
         run: ./gradlew :amani-sdk-v1:test --continue
@@ -75,6 +74,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
 
       - name: Enable KVM (hardware acceleration)
         run: |
@@ -85,8 +85,32 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
+
+      - name: Cache AVD
+        uses: actions/cache@v4
+        id: avd-cache
         with:
-          cache-read-only: true
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-29-x86_64-${{ runner.os }}
+
+      - name: Create AVD and generate snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: Nexus 6
+          avd-name: ci-avd
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+          disable-animations: true
+          script: echo "AVD snapshot generated"
 
       - name: Run Android instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
@@ -112,112 +136,91 @@ jobs:
           name: android-test-results
           path: amani-sdk-v1/build/reports/androidTests/
 
-  # ── 3. Tag, version-bump & publish release ────────────────────────────────────
-  release:
-    name: Tag & Publish Release
+  # ── 3. Create release PR (only after all tests pass) ──────────────────────────
+  create-release-pr:
+    name: Create Release PR
     needs: android-tests
+    if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
+      issues: write
 
     steps:
-      - name: Checkout (full history)
+      - name: Sanitize & validate version
+        id: sanitize
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        run: |
+          # Strip common prefixes: "release: v", "release:", "v"
+          VERSION=$(echo "$RAW_VERSION" | sed -E 's/^(release:\s*v?|v)//i' | xargs)
+
+          # Validate: must be semver-like (e.g. 1.5.0, 1.5.0-beta, 1.5.0-SNAPSHOT-20260416)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?$ ]]; then
+            echo "::error::Invalid version '${VERSION}'. Expected format: X.Y.Z or X.Y.Z-suffix (e.g. 1.5.0, 1.5.0-beta)"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "✅ Sanitized version: ${VERSION}"
+
+      - name: Checkout main (full history)
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Dry-run notice ─────────────────────────────────────────────────────
-      - name: Dry-run notice (skipping publish steps)
-        if: ${{ inputs.dry_run == true }}
+      - name: Create release branch & bump version
+        env:
+          VERSION: ${{ steps.sanitize.outputs.version }}
         run: |
-          echo "::notice title=Dry Run::Tests passed ✅  Tag, version bump and GitHub Release were skipped."
+          git checkout -b "release/${VERSION}"
 
-      # ── Bump version in amani-sdk-v1/build.gradle ──────────────────────────
-      - name: Bump library version to ${{ github.event.inputs.version }}
-        if: ${{ inputs.dry_run != true }}
-        run: |
           sed -i \
-            "s/version = '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*[^']*'/version = '${{ github.event.inputs.version }}'/" \
+            "s/version = '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*[^']*'/version = '${VERSION}'/" \
             amani-sdk-v1/build.gradle
 
-          # Verify the change was applied
-          grep -q "version = '${{ github.event.inputs.version }}'" amani-sdk-v1/build.gradle || \
-            { echo "::error::sed replacement failed — version '${{ github.event.inputs.version }}' not found in build.gradle"; exit 1; }
+          grep -q "version = '${VERSION}'" amani-sdk-v1/build.gradle || \
+            { echo "::error::sed replacement failed — version '${VERSION}' not found in build.gradle"; exit 1; }
 
-      # ── Commit & push the version bump ────────────────────────────────────
-      - name: Commit version bump
-        if: ${{ inputs.dry_run != true }}
-        run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add amani-sdk-v1/build.gradle
-          git commit -m "chore(release): bump version to ${{ github.event.inputs.version }}"
-          git push
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push origin "release/${VERSION}"
 
-      # ── Create & push the tag ──────────────────────────────────────────────
-      - name: Create tag v${{ github.event.inputs.version }}
-        if: ${{ inputs.dry_run != true }}
-        run: |
-          git tag "v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
-
-      # ── Decorate each release-note line with the matching badge ───────────
-      - name: Process release notes → badges
-        if: ${{ inputs.dry_run != true }}
-        id: notes
-        shell: python3 {0}
+      - name: Create Pull Request
         env:
-          RAW_NOTES: ${{ github.event.inputs.release_notes }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
         run: |
-          import os, re
+          cat > /tmp/pr-body.md <<EOF
+          ## Release v${VERSION}
 
-          raw = os.environ.get("RAW_NOTES", "")
+          ### Release Notes
+          ${RELEASE_NOTES}
+          EOF
 
-          # Order matters: more specific patterns first
-          BADGES = [
-              (r"\bfix(?:es|ed)?\b",    "![Fix](https://img.shields.io/badge/Fix-🐛-e74c3c)"),
-              (r"\bfeature\b",          "![Feature](https://img.shields.io/badge/Feature-✨-8c730d)"),
-              (r"\bimprovement\b",      "![Improvement](https://img.shields.io/badge/Improvement-🛠️-8e44ad)"),
-              (r"\bupdate[sd]?\b",      "![Update](https://img.shields.io/badge/Update-🔄-2980b9)"),
-              (r"\bchange[sd]?\b",      "![Change](https://img.shields.io/badge/Change-♻️-136634)"),
-          ]
+          # Create 'release' label if it doesn't exist
+          gh label create "release" --color "0E8A16" --description "Release PR" 2>/dev/null || true
 
-          lines = raw.strip().splitlines()
-          decorated = []
+          gh pr create \
+            --base main \
+            --head "release/${VERSION}" \
+            --title "release: v${VERSION}" \
+            --body-file /tmp/pr-body.md \
+            --label "release"
 
-          for line in lines:
-              line = line.strip().lstrip("*-• ").strip()
-              if not line:
-                  continue
-              badge = ""
-              for pattern, b in BADGES:
-                  if re.search(pattern, line, re.IGNORECASE):
-                      badge = b + " "
-                      break
-              decorated.append(f"* {badge}{line}")
-
-          body = "\n".join(decorated)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-              fh.write("body<<__DELIMITER__\n")
-              fh.write(body + "\n")
-              fh.write("__DELIMITER__\n")
-
-      # ── Publish GitHub Release ─────────────────────────────────────────────
-      - name: Create GitHub Release
-        if: ${{ inputs.dry_run != true }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: v${{ github.event.inputs.version }}
-          body: |
-            ## What's Changed?
-
-            ${{ steps.notes.outputs.body }}
-
-            ---
-            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/v${{ github.event.inputs.version }}...HEAD
-          draft: false
-          prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+  # ── Dry-run notice ────────────────────────────────────────────────────────────
+  dry-run-notice:
+    name: Dry Run Complete
+    needs: android-tests
+    if: ${{ inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "::notice title=Dry Run::Tests passed ✅  Version bump and PR creation were skipped."
