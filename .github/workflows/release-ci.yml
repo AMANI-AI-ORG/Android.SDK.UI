@@ -1,4 +1,4 @@
-name: Release CI
+name: Release Branch CI — Validate Tests & Bump Version
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ jobs:
 
   # ── Gate: only run for release branches ──────────────────────────────────────
   check-release:
-    name: Check Release Branch
+    name: Detect Release Branch & Extract Version
     runs-on: ubuntu-latest
     outputs:
       is_release: ${{ steps.check.outputs.is_release }}
@@ -34,7 +34,7 @@ jobs:
 
   # ── 1. Unit tests ────────────────────────────────────────────────────────────
   unit-tests:
-    name: Unit Tests
+    name: Run Unit Tests
     needs: check-release
     if: needs.check-release.outputs.is_release == 'true'
     runs-on: ubuntu-latest
@@ -65,7 +65,7 @@ jobs:
 
   # ── 2. Android instrumented tests ───────────────────────────────────────────
   android-tests:
-    name: Android Instrumented Tests
+    name: Run Android Instrumented Tests
     needs: [check-release, unit-tests]
     if: needs.check-release.outputs.is_release == 'true'
     runs-on: ubuntu-latest
@@ -143,7 +143,7 @@ jobs:
 
   # ── 3. Version bump (only after all tests pass) ─────────────────────────────
   version-bump:
-    name: Bump Version
+    name: Bump Version in build.gradle & Push Commit
     needs: [check-release, android-tests]
     if: needs.check-release.outputs.is_release == 'true'
     runs-on: ubuntu-latest

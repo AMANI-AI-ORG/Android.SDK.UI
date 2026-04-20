@@ -1,4 +1,4 @@
-name: Publish Release
+name: Publish Release — Tag Commit & Create GitHub Release
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish:
-    name: Tag & Publish GitHub Release
+    name: Create Version Tag, Publish Release & Clean Up Branch
     if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-latest
     permissions:
