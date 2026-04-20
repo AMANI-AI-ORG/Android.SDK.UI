@@ -1,4 +1,4 @@
-name: Release Pipeline
+name: Start Release — Run Tests & Open Release PR
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ jobs:
 
   # ── 1. Unit tests ─────────────────────────────────────────────────────────────
   unit-tests:
-    name: Unit Tests
+    name: Run Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -61,7 +61,7 @@ jobs:
 
   # ── 2. Android instrumented tests ─────────────────────────────────────────────
   android-tests:
-    name: Android Instrumented Tests
+    name: Run Android Instrumented Tests
     needs: unit-tests
     runs-on: ubuntu-latest
 
@@ -138,7 +138,7 @@ jobs:
 
   # ── 3. Create release PR (only after all tests pass) ──────────────────────────
   create-release-pr:
-    name: Create Release PR
+    name: Create Release Branch, Bump Version & Open PR
     needs: android-tests
     if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
@@ -198,7 +198,7 @@ jobs:
           RELEASE_NOTES: ${{ inputs.release_notes }}
         run: |
           cat > /tmp/pr-body.md <<EOF
-          ## Release v${VERSION}
+          ## Release ${VERSION}
 
           ### Release Notes
           ${RELEASE_NOTES}
@@ -210,13 +210,13 @@ jobs:
           gh pr create \
             --base main \
             --head "release/${VERSION}" \
-            --title "release: v${VERSION}" \
+            --title "release: ${VERSION}" \
             --body-file /tmp/pr-body.md \
             --label "release"
 
   # ── Dry-run notice ────────────────────────────────────────────────────────────
   dry-run-notice:
-    name: Dry Run Complete
+    name: Dry Run — Skip Version Bump & PR
     needs: android-tests
     if: ${{ inputs.dry_run == true }}
     runs-on: ubuntu-latest

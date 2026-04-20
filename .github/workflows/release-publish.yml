@@ -1,4 +1,4 @@
-name: Publish Release
+name: Publish Release — Tag Commit & Create GitHub Release
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish:
-    name: Tag & Publish GitHub Release
+    name: Create Version Tag, Publish Release & Clean Up Branch
     if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-latest
     permissions:
@@ -22,7 +22,7 @@ jobs:
         run: |
           VERSION="${BRANCH#release/}"
           echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "📦 Publishing release v${VERSION}"
+          echo "📦 Publishing release ${VERSION}"
 
       - name: Checkout main (full history)
         uses: actions/checkout@v4
@@ -36,9 +36,10 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
-          PREV=$(git tag --list 'v*' --sort=-v:creatordate \
+          PREV=$(git tag --list --sort=-v:creatordate \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' \
             | grep -v SNAPSHOT \
-            | grep -v "v${VERSION}" \
+            | grep -Ev "^v?${VERSION}$" \
             | head -1)
           if [ -z "$PREV" ]; then
             PREV=$(git rev-list --max-parents=0 HEAD | head -1)
@@ -66,8 +67,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${VERSION}"
-          git push origin "v${VERSION}"
+          git tag "${VERSION}"
+          git push origin "${VERSION}"
 
       - name: Process release notes from PR body
         id: notes
@@ -116,15 +117,15 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.value }}
-          name: v${{ steps.version.outputs.value }}
+          tag_name: ${{ steps.version.outputs.value }}
+          name: ${{ steps.version.outputs.value }}
           body: |
             ## What's Changed?
 
             ${{ steps.notes.outputs.body }}
 
             ---
-            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...v${{ steps.version.outputs.value }}
+            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...${{ steps.version.outputs.value }}
           draft: false
           prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
           make_latest: ${{ steps.prerelease.outputs.is_prerelease != 'true' }}
