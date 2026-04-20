@@ -198,7 +198,7 @@ jobs:
           RELEASE_NOTES: ${{ inputs.release_notes }}
         run: |
           cat > /tmp/pr-body.md <<EOF
-          ## Release v${VERSION}
+          ## Release ${VERSION}
 
           ### Release Notes
           ${RELEASE_NOTES}
@@ -210,7 +210,7 @@ jobs:
           gh pr create \
             --base main \
             --head "release/${VERSION}" \
-            --title "release: v${VERSION}" \
+            --title "release: ${VERSION}" \
             --body-file /tmp/pr-body.md \
             --label "release"
 
