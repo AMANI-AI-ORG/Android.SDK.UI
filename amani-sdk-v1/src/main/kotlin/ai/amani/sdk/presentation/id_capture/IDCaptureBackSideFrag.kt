@@ -9,6 +9,7 @@ import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.removeChildFragment
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
+import ai.amani.sdk.extentions.runOnUiThread
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
@@ -144,32 +145,35 @@ class IDCaptureBackSideFrag : Fragment() {
         )
         { bitmap: Bitmap?, isManualButtonActivated: Boolean?, file: File? ->
 
-            if (bitmap != null) {
+            runOnUiThread {
+                if (bitmap != null) {
 
-                //We are removing the child fragment from the paren fragment for two main reason.
-                //First for blocking possible memory leaks when child is still on back stack
-                //Second for ui, when back pressed from preview view child fragment is opening before
-                //the animation is end that we do not prefer
-                removeChildFragment(idCaptureFragmentBackSide)
+                    //We are removing the child fragment from the paren fragment for two main reason.
+                    //First for blocking possible memory leaks when child is still on back stack
+                    //Second for ui, when back pressed from preview view child fragment is opening before
+                    //the animation is end that we do not prefer
+                    removeChildFragment(idCaptureFragmentBackSide)
 
-                try {
-                    val file: File? =
-                        BitmapUtils.saveBitmapAsFile(bitmap, "backSide", requireContext())
-                    val action =
-                        IDCaptureBackSideFragDirections.actionIDCaptureBackSideFragToPreviewScreenFragment(
-                            PreviewScreenModel(
-                                file!!.absolutePath,
-                                args.dataModel,
-                                false
+                    try {
+                        val file: File? =
+                            BitmapUtils.saveBitmapAsFile(bitmap, "backSide", requireContext())
+                        val action =
+                            IDCaptureBackSideFragDirections.actionIDCaptureBackSideFragToPreviewScreenFragment(
+                                PreviewScreenModel(
+                                    file!!.absolutePath,
+                                    args.dataModel,
+                                    false
+                                )
                             )
-                        )
 
-                    findNavController().navigateSafely(action)
+                        findNavController().navigateSafely(action)
 
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
+
         }
 
         idCaptureFragmentBackSide?.let {
