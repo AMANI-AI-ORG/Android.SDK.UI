@@ -20,5 +20,8 @@ sealed class SelfieType : Parcelable {
      * facial pose order finalized correctly by user to verify user is real/fake*/
     data class PoseEstimation(var requestedOrderNumber: Int) : SelfieType()
 
+    /** Selfie type is PoseEstimation V2 — continuous 360° head-rotation liveness flow. */
+    object PoseEstimationV2 : SelfieType()
+
     object Unknown : SelfieType()
 }

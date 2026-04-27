@@ -152,6 +152,57 @@ class SelfieCaptureFragment: Fragment() {
         }
     }
 
+    /** Navigates the Selfie Pose Estimation V2 (360° head-rotation) Fragment*/
+    @OptIn(ai.amani.base.annotiations.AmaniExperimental::class)
+    private fun initSelfiePoseEstimationV2(
+        videoRecord: Boolean?
+    ) {
+        val prep = args.dataModel.version?.poseEstimationV2Preparation
+        val prepVideo = args.dataModel.featureConfig.selfiePoseEstimationV2PreparationVideo
+
+        val builder = Amani.sharedInstance().SelfiePoseEstimation()
+            .BuilderV2()
+            .userInterfaceColors(
+                overlayBackgroundColor = ai.amani.R.color.white,
+                appFontColor = ai.amani.R.color.color_black
+            )
+            .userInterfaceTexts(
+                faceStraight = args.dataModel.version?.keepStraightText,
+                turnLeft = args.dataModel.version?.turnLeftText,
+                turnRight = args.dataModel.version?.turnRightText,
+                faceNotInside = args.dataModel.version?.faceNotInsideText,
+                faceTooFar = args.dataModel.version?.faceIsTooFarText,
+                holdPhoneVertically = args.dataModel.version?.holdStableText,
+                alertTitle = args.dataModel.version?.selfieAlertTitle,
+                alertDescription = args.dataModel.version?.selfieAlertDescription,
+                alertTryAgain = args.dataModel.version?.selfieAlertTryAgain
+            )
+            .videoRecord(videoRecord = videoRecord)
+            .ovalViewAnimationDurationMilSec(500)
+            .observe(observable)
+
+        if (prep != null && prepVideo != null) {
+            builder.showPreparationScreen(
+                context = requireContext(),
+                video = prepVideo,
+                message = prep.message,
+                buttonText = prep.buttonText,
+                buttonTextColor = prep.buttonTextColor,
+                buttonBackgroundColor = prep.buttonBackgroundColor,
+                buttonRadiusDp = 28f,
+                overlayColor = prep.overlayColor
+            )
+        }
+
+        val selfieFragment = builder.build(requireContext())
+        selfieFragment?.let {
+            replaceChildFragmentWithoutBackStack(R.id.child_of_selfie, it)
+        } ?: run {
+            showSnackbar("Configuration error, Pose Estimation V2 could not launch")
+            findNavController().popBackStack()
+        }
+    }
+
     /** Navigates the Selfie Pose Estimation Fragment*/
     private fun initSelfiePoseEstimation(
         requestedOrderNumber: Int,
@@ -281,6 +332,21 @@ class SelfieCaptureFragment: Fragment() {
                                             videoRecord  = videoRecord
                                         )
                                     }
+                                }
+
+                                is SelfieType.PoseEstimationV2 -> {
+                                    if (!isAdded) return@collect
+                                    binding.confirmButton.gone()
+                                    binding.selfieAnimationFirst.gone()
+                                    binding.selfieAnimationSecond.gone()
+                                    binding.textDescription.gone()
+
+                                    val videoRecord = args.dataModel.featureConfig.selfieCaptureVideoRecord?:
+                                    args.dataModel.version?.videoRecord?: false
+
+                                    initSelfiePoseEstimationV2(
+                                        videoRecord = videoRecord
+                                    )
                                 }
 
                                 else -> {}

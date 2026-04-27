@@ -38,6 +38,11 @@ class SelfieCaptureViewModel: ViewModel() {
                 _uiState.value = SelfieCaptureUIState.Navigate(SelfieType.Manual)
             }
 
+            SelfieType.PoseEstimationV2 -> {
+                // Pose Estimation V2 — animations are skipped; navigation handled in initialViewState.
+                _uiState.value = SelfieCaptureUIState.Navigate(SelfieType.PoseEstimationV2)
+            }
+
             else -> {
                 // Pose Estimation state
                 when(_uiState.value) {
@@ -63,21 +68,26 @@ class SelfieCaptureViewModel: ViewModel() {
     ) {
         this.version = version
 
-        _uiState.value = SelfieCaptureUIState.FirstAnimation
-
         when(version.selfieType) {
 
             0 -> {
                 setCurrentSelfieType(SelfieType.Auto)
+                _uiState.value = SelfieCaptureUIState.FirstAnimation
             }
 
             -1 -> {
                 setCurrentSelfieType(SelfieType.Manual)
+                _uiState.value = SelfieCaptureUIState.FirstAnimation
+            }
 
+            -2 -> {
+                setCurrentSelfieType(SelfieType.PoseEstimationV2)
+                _uiState.value = SelfieCaptureUIState.Navigate(SelfieType.PoseEstimationV2)
             }
 
             else -> {
                 setCurrentSelfieType(SelfieType.PoseEstimation(version.selfieType!!))
+                _uiState.value = SelfieCaptureUIState.FirstAnimation
             }
         }
     }
