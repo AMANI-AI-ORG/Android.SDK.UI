@@ -1,8 +1,6 @@
 package ai.amani.sample
 
 import AmaniSDKUI
-import ai.amani.BuildConfig
-import ai.amani.base.utility.AmaniVersion
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
@@ -13,8 +11,6 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import org.junit.Test
-import java.util.Properties
 
 /**
  *  Basic Sample Activity to launch amani-sdk module
@@ -54,9 +50,14 @@ class MainRegisterActivity : AppCompatActivity() {
 
         registerButton.setOnClickListener {
 
-            AmaniSDKUI.setHologramDetection(false)
-            AmaniSDKUI.setIdCaptureVideoRecord(false)
-            AmaniSDKUI.setSelfieCaptureVideoRecord(false)
+            /* Accordingly business, enable/disable the flags
+            AmaniSDKUI.setHologramDetection(true)
+            AmaniSDKUI.setIdCaptureVideoRecord(true)
+            AmaniSDKUI.setIdCaptureVideoRecord(true)
+            AmaniSDKUI.setSelfieCaptureVideoRecord(true)
+            */
+
+            AmaniSDKUI.setSelfiePoseEstimationV2PreparationVideo(R.raw.pose_video)
 
             hideKeyboard()
 

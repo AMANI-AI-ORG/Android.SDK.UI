@@ -101,7 +101,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.7"
 
     // AmaniSDK impl
-    def amani_sdk = "3.10.1"
+    def amani_sdk = "3.11.0"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph

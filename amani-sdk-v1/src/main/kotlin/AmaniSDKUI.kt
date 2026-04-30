@@ -195,6 +195,14 @@ object AmaniSDKUI {
         }
     }
 
+    /**
+     * Sets the raw video resource used in the Pose Estimation v2 preparation screen.
+     * @param videoRes: Raw resource id of an MP4 video shown in the preparation screen.
+     */
+    fun setSelfiePoseEstimationV2PreparationVideo(@RawRes videoRes: Int) {
+        featureConfig.selfiePoseEstimationV2PreparationVideo = videoRes
+    }
+
     /** Set for Manual Capture Time Out.
      * @param timeOut: Wait seconds to activate Manual Auto Capture in case Auto Capture failure.
      */
