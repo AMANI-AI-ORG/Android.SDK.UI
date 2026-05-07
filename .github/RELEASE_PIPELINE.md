@@ -6,36 +6,62 @@ This project uses a **3-workflow release pipeline** to test, version-bump, and p
 
 ## Workflow Overview
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| [`release.yml`](workflows/release.yml) | `workflow_dispatch` (manual) | Run tests on `main`, then create `release/{version}` branch and PR |
-| [`release-ci.yml`](workflows/release-ci.yml) | `pull_request` opened / synchronize | Run tests on PR branch, push version bump commit if tests pass |
-| [`release-publish.yml`](workflows/release-publish.yml) | `pull_request` closed (merged) | Tag, create GitHub Release, delete release branch |
+The pipeline has three workflows, each owning a distinct phase of the release lifecycle:
+
+| Workflow | File | Trigger | Phase | Purpose |
+|----------|------|---------|-------|---------|
+| **① Release · Prepare** | [`release.yml`](workflows/release.yml) | `workflow_dispatch` (manual) | Pre-PR gate | Runs tests on `main`, then creates the `release/{version}` branch and opens the release PR |
+| **② Release · Verify** | [`release-ci.yml`](workflows/release-ci.yml) | `pull_request` opened / synchronize | PR validation | Runs tests on the PR branch, then pushes the `chore(release): bump version` commit if tests pass |
+| **③ Release · Ship** | [`release-publish.yml`](workflows/release-publish.yml) | `pull_request` closed (merged) | Post-merge publish | Creates the git tag and GitHub Release, then deletes the release branch |
+
+### How they differ
+
+- **Prepare** is the *entry point* — invoked by a human, runs only on `main`, and produces a PR. It never bumps the version or publishes anything; it's a gate that proves `main` is releasable before opening the PR.
+- **Verify** is the *gatekeeper* — runs on every push to a `release/*` PR. It re-runs the same tests against the merge candidate and is the **only** workflow that mutates `build.gradle` (the version bump commit).
+- **Ship** is the *publisher* — runs once, after the PR merges. It performs no testing; it only tags the merge commit, creates the GitHub Release with badged notes, and cleans up the branch.
+
+In short: **Prepare opens the door, Verify checks the work, Ship takes it live.**
 
 ```
-┌─────────────────┐          ┌───────────────────┐          ┌────────────────────┐
-│   release.yml   │  PR ──►  │  release-ci.yml   │  Merge ► │ release-publish.yml│
-│                 │          │                   │          │                    │
-│ 1. Unit Tests   │          │ 1. Unit Tests     │          │ 1. Extract version │
-│ 2. Android Tests│          │ 2. Android Tests  │          │ 2. Find prev tag   │
-│ 3. Create PR    │          │ 3. Version Bump   │          │ 3. Git tag         │
-│    (no bump)    │          │    (chore commit) │          │ 4. GitHub Release  │
-└─────────────────┘          └───────────────────┘          │ 5. Cleanup branch  │
-                                                            └────────────────────┘
+┌──────────────────────┐         ┌──────────────────────┐         ┌──────────────────────┐
+│ ① Release · Prepare  │  PR ──► │ ② Release · Verify   │ Merge ► │ ③ Release · Ship     │
+│  (release.yml)       │         │  (release-ci.yml)    │         │  (release-publish)   │
+│                      │         │                      │         │                      │
+│  1. Unit tests       │         │  1. Unit tests       │         │  1. Extract version  │
+│  2. Android tests    │         │  2. Android tests    │         │  2. Find prev tag    │
+│  3. Create PR        │         │  3. Version bump     │         │  3. Git tag          │
+│     (no bump)        │         │     (chore commit)   │         │  4. GitHub Release   │
+└──────────────────────┘         └──────────────────────┘         │  5. Cleanup branch   │
+                                                                   └──────────────────────┘
 ```
 
 ---
 
 ## Full Release Flow
 
-There are two ways to start a release:
+There are two ways to start a release. They both end at the same place (a merged release PR that ships) — they only differ in **who creates the PR** and **whether tests run on `main` before the PR exists**.
+
+### TL;DR — which option to pick?
+
+| | **Option A — Assisted (via Prepare)** | **Option B — Manual PR** |
+|---|---|---|
+| Entry point | Run **Release · Prepare** in Actions UI | Create the branch & PR yourself |
+| Tests on `main` before PR? | ✅ Yes — early gate | ❌ No |
+| Branch & PR creation | Automated by Prepare | Done by you with `git`/GitHub UI |
+| First workflow that runs | `Release · Prepare` → then `Release · Verify` | `Release · Verify` (Prepare is skipped) |
+| Version bump commit | Pushed by Verify after tests pass | Pushed by Verify after tests pass |
+| Publish step | `Release · Ship` on merge | `Release · Ship` on merge |
+| Best for | Standard releases — recommended default | Hotfixes, scripted releases, retries when Prepare's PR creation step itself failed |
+
+> **Rule of thumb:** Use **Option A** unless you have a reason not to. Option A runs *one extra round of tests* (on `main`, before the PR exists), so if `main` is broken you find out **before** a PR clutters the repo.
 
 ### Option A: Manual Trigger (Recommended)
 
 > Tests run on `main` first as an early gate. PR is only created if tests pass.
+> **Workflows that run:** Prepare → Verify → Ship.
 
 ```
- Developer triggers release.yml
+ Developer triggers ① Release · Prepare
  (version: "1.5.0", release_notes: "...")
                      │
                      ▼
@@ -59,6 +85,7 @@ There are two ways to start a release:
 ### Option B: Direct Release PR
 
 > Create a `release/*` branch and PR yourself. CI handles the rest.
+> **Workflows that run:** Verify → Ship. (Prepare is **never invoked** in this path — you replace it with manual git steps.)
 
 **Example:**
 ```bash
@@ -79,7 +106,7 @@ git push origin release/1.5.0
     & opens PR to main
                      │
                      ▼
-    release-ci.yml triggers automatically
+    ② Release · Verify triggers automatically
                      │
                      ▼
  ┌───────────────────────────────────┐
@@ -105,7 +132,7 @@ git push origin release/1.5.0
  6. Reviewer approves & merges PR
        │
        ▼
-    release-publish.yml triggers
+    ③ Release · Ship triggers
        │
        ▼
  ┌───────────────────────────────────┐
@@ -119,7 +146,11 @@ git push origin release/1.5.0
     (available on JitPack via tag)
 ```
 
-> **Option A** flows into **Option B** at step 2. The difference is Option A validates tests on `main` before creating the PR. Any PR from a branch that does **not** match `release/*` is ignored by CI — all jobs skip silently.
+> **Option A flows into Option B at step 2.** Once a `release/*` PR exists, the rest of the pipeline (Verify → Ship) is identical regardless of how the PR was created. The only real difference is the **pre-PR test run on `main`** that Option A adds. Any PR from a branch that does **not** match `release/*` is ignored by CI — all jobs skip silently.
+>
+> **Choosing between them:**
+> - Pick **A** when you want the safety net and don't mind clicking a button.
+> - Pick **B** when Prepare is unavailable (e.g., its PR-creation step crashed mid-run and you need to recover), or when scripting releases from outside the GitHub UI.
 
 ---
 
@@ -127,7 +158,7 @@ git push origin release/1.5.0
 
 ### 1. Start a Release
 
-Go to **Actions** → **Release Pipeline** → **Run workflow**
+Go to **Actions** → **① Release · Prepare** → **Run workflow**
 
 | Input | Example | Description |
 |-------|---------|-------------|

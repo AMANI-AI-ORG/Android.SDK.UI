@@ -1,7 +1,10 @@
 # Amani SDK UI #
 ![AmaniSDKHeader](https://user-images.githubusercontent.com/75306240/187692619-726115b8-3a92-4c7d-b85d-44a75d6556c1.png)
 
-![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI) 
+![Latest Release](https://img.shields.io/github/v/release/AMANI-AI-ORG/Android.SDK.UI)
+[![① Release · Prepare](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release.yml/badge.svg)](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release.yml)
+[![② Release · Verify](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-ci.yml/badge.svg)](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-ci.yml)
+[![③ Release · Ship](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-publish.yml/badge.svg)](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-publish.yml)
 ![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
 ![Compiler](https://img.shields.io/badge/compileSdk-36-brightgreen)
 ![Java](https://img.shields.io/badge/JavaVersion_17-blue)

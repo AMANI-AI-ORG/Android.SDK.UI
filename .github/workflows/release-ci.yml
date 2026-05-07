@@ -1,4 +1,4 @@
-name: Release Branch CI — Validate Tests & Bump Version
+name: ② Release · Verify
 
 on:
   pull_request:

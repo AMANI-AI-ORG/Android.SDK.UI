@@ -1,4 +1,4 @@
-name: Start Release — Run Tests & Open Release PR
+name: ① Release · Prepare
 
 on:
   workflow_dispatch:

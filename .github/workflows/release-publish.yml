@@ -1,4 +1,4 @@
-name: Publish Release — Tag Commit & Create GitHub Release
+name: ③ Release · Ship
 
 on:
   pull_request:
