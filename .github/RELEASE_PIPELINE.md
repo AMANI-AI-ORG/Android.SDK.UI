@@ -1,6 +1,6 @@
 # Release Pipeline
 
-This project uses a **3-workflow release pipeline** to test, version-bump, and publish releases through GitHub Actions.
+This project uses a **4-workflow release pipeline** to test, version-bump, publish, and measure size of releases through GitHub Actions.
 
 ---
 
@@ -12,27 +12,46 @@ The pipeline has three workflows, each owning a distinct phase of the release li
 |----------|------|---------|-------|---------|
 | **① Release · Prepare** | [`release.yml`](workflows/release.yml) | `workflow_dispatch` (manual) | Pre-PR gate | Runs tests on `main`, then creates the `release/{version}` branch and opens the release PR |
 | **② Release · Verify** | [`release-ci.yml`](workflows/release-ci.yml) | `pull_request` opened / synchronize | PR validation | Runs tests on the PR branch, then pushes the `chore(release): bump version` commit if tests pass |
-| **③ Release · Ship** | [`release-publish.yml`](workflows/release-publish.yml) | `pull_request` closed (merged) | Post-merge publish | Creates the git tag and GitHub Release, then deletes the release branch |
+| **③ Release · Ship** | [`release-publish.yml`](workflows/release-publish.yml) | `pull_request` closed (merged) | Post-merge publish | Creates the git tag, builds the release AAR, attaches it to the GitHub Release, deletes the release branch, and **conditionally** invokes ④ Release · Measure (see below) |
+| **④ Release · Measure** | [`release-measure.yml`](workflows/release-measure.yml) | `workflow_dispatch` (manual) **or** called by ③ when opted in | Size telemetry | Builds AAR, `:app` APK splits, and an inline SDK-only probe APK; opens a `chore(metrics): size report for <version>` PR from `metrics/size-<version>` against `main` with the updated [`SIZE_HISTORY.md`](metrics/SIZE_HISTORY.md) and AAR badge — merge it to land the record |
+
+### When does ④ Release · Measure run?
+
+Measure is **opt-in** to keep typical releases fast. It runs in three scenarios:
+
+1. **Manual trigger** — Actions → ④ Release · Measure → Run workflow. Always works regardless of release state. Use this for backfill, branch experiments, or ad-hoc audits.
+2. **Tick the box in ① Release · Prepare** — when starting a release, set *"Run ④ Release · Measure after publish"* to true. Prepare adds the `measure-size` label to the PR; Ship sees the label after merge and invokes Measure automatically.
+3. **Add the `measure-size` label by hand** to a release PR before merging it — same effect as #2 without re-running Prepare.
+
+If neither the label nor a manual trigger is present, Ship publishes the release without running Measure.
+
+> **How the metrics land in `main`:** Measure opens a `chore(metrics): size report for <version>` PR from `metrics/size-<version>` (re-using the same branch on re-runs via force-with-lease). It does **not** push directly to `main` — review and merge the PR to commit the size record. This avoids needing a branch-protection bypass for the bot.
 
 ### How they differ
 
 - **Prepare** is the *entry point* — invoked by a human, runs only on `main`, and produces a PR. It never bumps the version or publishes anything; it's a gate that proves `main` is releasable before opening the PR.
 - **Verify** is the *gatekeeper* — runs on every push to a `release/*` PR. It re-runs the same tests against the merge candidate and is the **only** workflow that mutates `build.gradle` (the version bump commit).
-- **Ship** is the *publisher* — runs once, after the PR merges. It performs no testing; it only tags the merge commit, creates the GitHub Release with badged notes, and cleans up the branch.
+- **Ship** is the *publisher* — runs once, after the PR merges. It performs no testing; it only tags the merge commit, creates the GitHub Release with the AAR attached, cleans up the branch, and hands off to Measure.
+- **Measure** is the *telemetry* — opt-in via the `measure-size` PR label or a manual trigger. It builds an inline SDK-only probe app to isolate the UI SDK's per-ABI APK footprint, then opens a separate `chore(metrics): ...` PR with the updated [`SIZE_HISTORY.md`](metrics/SIZE_HISTORY.md) for review. Skipped by default to keep ship time fast.
 
-In short: **Prepare opens the door, Verify checks the work, Ship takes it live.**
+In short: **Prepare opens the door, Verify checks the work, Ship takes it live, Measure tracks its weight.**
 
 ```
-┌──────────────────────┐         ┌──────────────────────┐         ┌──────────────────────┐
-│ ① Release · Prepare  │  PR ──► │ ② Release · Verify   │ Merge ► │ ③ Release · Ship     │
-│  (release.yml)       │         │  (release-ci.yml)    │         │  (release-publish)   │
-│                      │         │                      │         │                      │
-│  1. Unit tests       │         │  1. Unit tests       │         │  1. Extract version  │
-│  2. Android tests    │         │  2. Android tests    │         │  2. Find prev tag    │
-│  3. Create PR        │         │  3. Version bump     │         │  3. Git tag          │
-│     (no bump)        │         │     (chore commit)   │         │  4. GitHub Release   │
-└──────────────────────┘         └──────────────────────┘         │  5. Cleanup branch   │
-                                                                   └──────────────────────┘
+┌────────────────────┐       ┌────────────────────┐       ┌────────────────────┐       ┌────────────────────┐
+│ ① Release·Prepare  │ PR ─► │ ② Release·Verify   │ Mrg ► │ ③ Release·Ship     │ ────► │ ④ Release·Measure  │
+│  (release.yml)     │       │  (release-ci.yml)  │       │  (release-publish) │       │  (release-measure) │
+│                    │       │                    │       │                    │       │                    │
+│ 1. Unit tests      │       │ 1. Unit tests      │       │ 1. Extract version │       │ 1. Build AAR       │
+│ 2. Android tests   │       │ 2. Android tests   │       │ 2. Build AAR       │       │ 2. Build :app APKs │
+│ 3. Create PR       │       │ 3. Version bump    │       │ 3. Tag             │       │ 3. Build probe APK │
+│    (no bump)       │       │    (chore commit)  │       │ 4. GitHub Release  │       │ 4. Generate report │
+└────────────────────┘       └────────────────────┘       │    + AAR asset     │       │ 5. Update history  │
+                                                          │ 5. Cleanup branch  │       │ 6. Refresh badge   │
+                                                          └────────────────────┘       └────────────────────┘
+                                                                  │                            ▲
+                                                                  └── if PR has ────────────── ┘
+                                                                     `measure-size` label
+                                                          (or run ④ manually any time)
 ```
 
 ---
