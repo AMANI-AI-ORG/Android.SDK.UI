@@ -220,7 +220,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
     private fun backPressListener() {
         requireActivity().onBackPressedDispatcher
-            .addCallback(object : OnBackPressedCallback(true) {
+            .addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     val intent = Intent()
                     intent.putExtra(AppConstant.KYC_RESULT, KYCResult())
