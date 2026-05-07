@@ -301,6 +301,17 @@ open class HomeKYCViewModel(
 
             }
 
+            is SelfieType.PoseEstimationV2 -> {
+                selfieCaptureRepoImp.uploadSelfiePoseEstimation(
+                    activity,
+                    docType,
+                    onStart = {
+                        setLoaderStatus()
+                    },
+                    onCompleted
+                )
+            }
+
             is SelfieType.Auto -> {
                 selfieCaptureRepoImp.uploadAutoSelfie(
                     activity,

@@ -101,13 +101,13 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.7"
 
     // AmaniSDK impl
-    def amani_sdk = "3.11.0"
+    def amani_sdk = "3.11.3"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph
-    implementation "androidx.navigation:navigation-fragment-ktx:2.8.8"
-    implementation "androidx.navigation:navigation-ui-ktx:2.8.8"
-    androidTestImplementation "androidx.navigation:navigation-testing:2.8.8"
+    implementation "androidx.navigation:navigation-fragment-ktx:2.9.8"
+    implementation "androidx.navigation:navigation-ui-ktx:2.9.8"
+    androidTestImplementation "androidx.navigation:navigation-testing:2.9.8"
 
     api 'com.jakewharton.timber:timber:5.0.1'
     implementation 'com.hbb20:ccp:2.5.3' // CountryCodePicker library
@@ -115,7 +115,7 @@ dependencies {
 
     implementation 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.0.2'
 
-    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    implementation 'com.github.bumptech.glide:glide:5.0.7'
 }
 
 afterEvaluate {
@@ -126,7 +126,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.41.0'
+                version = '1.41.1'
             }
         }
     }
