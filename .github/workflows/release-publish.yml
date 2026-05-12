@@ -13,6 +13,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      is_prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
 
     steps:
       - name: Extract version from branch name
@@ -114,6 +117,32 @@ jobs:
               fh.write(body + "\n")
               fh.write("__DELIMITER__\n")
 
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release AAR
+        run: ./gradlew :amani-sdk-v1:assembleRelease --no-daemon
+
+      - name: Locate AAR
+        id: aar
+        run: |
+          AAR=$(find amani-sdk-v1/build/outputs/aar -name "*-release.aar" | head -1)
+          if [ -z "$AAR" ] || [ ! -f "$AAR" ]; then
+            echo "::error::Release AAR not found under amani-sdk-v1/build/outputs/aar"
+            exit 1
+          fi
+          BYTES=$(stat -c%s "$AAR")
+          HUMAN=$(awk "BEGIN { printf \"%.2f MB\", $BYTES/1048576 }")
+          echo "path=$AAR"     >> "$GITHUB_OUTPUT"
+          echo "bytes=$BYTES"  >> "$GITHUB_OUTPUT"
+          echo "human=$HUMAN"  >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -125,7 +154,9 @@ jobs:
             ${{ steps.notes.outputs.body }}
 
             ---
+            **AAR size**: ${{ steps.aar.outputs.human }} — full per-ABI breakdown in [SIZE_HISTORY.md](../blob/main/.github/metrics/SIZE_HISTORY.md).
             **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...${{ steps.version.outputs.value }}
+          files: ${{ steps.aar.outputs.path }}
           draft: false
           prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
           make_latest: ${{ steps.prerelease.outputs.is_prerelease != 'true' }}
@@ -136,3 +167,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git push origin --delete "release/${{ steps.version.outputs.value }}" || true
+
+  # Only runs when the merged PR carried the `measure-size` label
+  # (set automatically by ① Release · Prepare when "Run ④ Release · Measure" was
+  # ticked, or added by hand to the PR before merge). For ad-hoc measurement
+  # outside the release flow, run ④ Release · Measure manually.
+  measure:
+    name: Measure & record per-ABI sizes
+    needs: publish
+    if: >-
+      needs.publish.result == 'success'
+      && needs.publish.outputs.is_prerelease != 'true'
+      && contains(github.event.pull_request.labels.*.name, 'measure-size')
+    uses: ./.github/workflows/release-measure.yml
+    with:
+      version_label: ${{ needs.publish.outputs.version }}
+      update_history: true
+    secrets: inherit

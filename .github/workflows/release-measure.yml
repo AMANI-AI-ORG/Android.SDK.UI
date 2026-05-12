@@ -1,0 +1,160 @@
+name: ④ Release · Measure
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_label:
+        description: "Label for this measurement (e.g. 1.41.1, main, branch name)"
+        required: true
+        default: "main"
+      update_history:
+        description: "Prepend the result to SIZE_HISTORY.md and push to main?"
+        type: boolean
+        default: false
+
+  workflow_call:
+    inputs:
+      version_label:
+        type: string
+        required: true
+      update_history:
+        type: boolean
+        default: true
+    outputs:
+      report_path:
+        description: "Path to the generated markdown report"
+        value: ${{ jobs.measure.outputs.report_path }}
+
+jobs:
+  measure:
+    name: Build, measure & report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      report_path: ${{ steps.measure.outputs.report }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release AAR
+        run: ./gradlew :amani-sdk-v1:assembleRelease --no-daemon
+
+      - name: Build :app release APK splits
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Set up inline probe (SDK-only minimal app)
+        run: .github/scripts/probe.sh setup
+
+      - name: Build probe APK splits
+        run: ./gradlew :probe:assembleRelease --no-daemon
+
+      - name: Measure & generate report
+        id: measure
+        env:
+          VERSION: ${{ inputs.version_label }}
+          OUTPUT: /tmp/size-section.md
+          JSON_OUTPUT: /tmp/size-measurement.json
+        run: |
+          python3 .github/scripts/measure_apk.py
+          echo "report=/tmp/size-section.md" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 📦 Size report — \`${{ inputs.version_label }}\`"
+            echo ""
+            cat /tmp/size-section.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down probe
+        if: always()
+        run: .github/scripts/probe.sh teardown
+
+      - name: Refresh AAR size badge
+        if: ${{ inputs.update_history == true }}
+        run: |
+          AAR=$(find amani-sdk-v1/build/outputs/aar -name "*-release.aar" | head -1)
+          BYTES=$(stat -c%s "$AAR")
+          HUMAN=$(awk "BEGIN { printf \"%.2f MB\", $BYTES/1048576 }")
+          if   [ "$BYTES" -lt 2097152 ];  then COLOR=brightgreen
+          elif [ "$BYTES" -lt 5242880 ];  then COLOR=blue
+          elif [ "$BYTES" -lt 10485760 ]; then COLOR=orange
+          else                                 COLOR=red
+          fi
+          mkdir -p .github/metrics
+          cat > .github/metrics/aar-size.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "AAR size",
+            "message": "${HUMAN}",
+            "color": "${COLOR}",
+            "bytes": ${BYTES}
+          }
+          EOF
+
+      - name: Update SIZE_HISTORY.md (trend table + per-release section)
+        if: ${{ inputs.update_history == true }}
+        run: |
+          python3 .github/scripts/update_history.py \
+            --version "${{ inputs.version_label }}" \
+            --section /tmp/size-section.md \
+            --measurement-json /tmp/size-measurement.json
+
+      - name: Open metrics PR
+        if: ${{ inputs.update_history == true }}
+        env:
+          VERSION: ${{ inputs.version_label }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Sanitize version label into a branch-safe slug
+          SLUG=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+          BRANCH="metrics/size-${SLUG}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .github/metrics/
+          if git diff --cached --quiet; then
+            echo "No metrics change to commit — skipping PR."
+            exit 0
+          fi
+
+          # Reset (or create) the metrics branch from current HEAD with a fresh commit
+          git checkout -B "$BRANCH"
+          git commit -m "chore(metrics): record size for ${VERSION}"
+          git push --force-with-lease origin "$BRANCH"
+
+          gh label create "metrics" --color "C5DEF5" --description "Auto-generated size metrics update" 2>/dev/null || true
+
+          # Reuse existing PR if one is already open for this branch
+          PR_URL=$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url // empty')
+
+          if [ -n "$PR_URL" ]; then
+            echo "Refreshed existing PR: $PR_URL"
+            gh pr comment "$PR_URL" --body "Refreshed metrics for \`${VERSION}\` from run ${{ github.run_id }}."
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(metrics): size report for ${VERSION}" \
+              --label "metrics" \
+              --body "Auto-generated by **④ Release · Measure** (run \`${{ github.run_id }}\`).
+
+          Updates the AAR size badge ([\`aar-size.json\`](.github/metrics/aar-size.json)), prepends the per-release section + trend row to [\`SIZE_HISTORY.md\`](.github/metrics/SIZE_HISTORY.md), and refreshes the machine-readable [\`size-latest.json\`](.github/metrics/size-latest.json) / [\`size-history.json\`](.github/metrics/size-history.json) for version \`${VERSION}\`.
+
+          Merge to publish the new size record. No code changes."
+          fi

@@ -23,6 +23,11 @@ on:
         required: false
         default: false
         type: boolean
+      measure_size:
+        description: 'Run ④ Release · Measure after publish (per-ABI APK size report)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   JAVA_VERSION: '17'
@@ -204,15 +209,21 @@ jobs:
           ${RELEASE_NOTES}
           EOF
 
-          # Create 'release' label if it doesn't exist
-          gh label create "release" --color "0E8A16" --description "Release PR" 2>/dev/null || true
+          # Create labels if they don't exist
+          gh label create "release"      --color "0E8A16" --description "Release PR" 2>/dev/null || true
+          gh label create "measure-size" --color "5319E7" --description "Run ④ Release · Measure after this release ships" 2>/dev/null || true
+
+          LABELS="release"
+          if [ "${{ inputs.measure_size }}" = "true" ]; then
+            LABELS="release,measure-size"
+          fi
 
           gh pr create \
             --base main \
             --head "release/${VERSION}" \
             --title "release: ${VERSION}" \
             --body-file /tmp/pr-body.md \
-            --label "release"
+            --label "$LABELS"
 
   # ── Dry-run notice ────────────────────────────────────────────────────────────
   dry-run-notice:
