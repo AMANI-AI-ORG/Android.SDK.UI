@@ -55,13 +55,10 @@ jobs:
       - name: Build release AAR
         run: ./gradlew :amani-sdk-v1:assembleRelease --no-daemon
 
-      - name: Build :app release APK splits
-        run: ./gradlew :app:assembleRelease --no-daemon
-
-      - name: Set up inline probe (SDK-only minimal app)
+      - name: Set up inline probe (bare + withsdk flavors)
         run: .github/scripts/probe.sh setup
 
-      - name: Build probe APK splits
+      - name: Build probe APK splits (both flavors)
         run: ./gradlew :probe:assembleRelease --no-daemon
 
       - name: Measure & generate report

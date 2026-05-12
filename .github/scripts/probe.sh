@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 #
 # Manage an inline "probe" Gradle module used to measure the UI SDK's
-# standalone APK footprint per ABI. The probe app's only dependency is
-# `:amani-sdk-v1`, so its release APK shows what users would carry if
-# they integrated the SDK into an empty app.
+# net APK footprint per ABI. The probe app declares two product flavors:
+#
+#   bare    — empty Android shell with the SAME AndroidX/Material baseline
+#             as the :app sample, but NO SDK dependency
+#   withsdk — same baseline + `:amani-sdk-v1`
+#
+# By mirroring :app's dependency baseline in both flavors, transitive AndroidX
+# versions deduplicate identically in both APKs — so (withsdk − bare) reflects
+# the SDK's net contribution and not packaging noise from dep-version drift.
 #
 # Usage:
 #   probe.sh setup     # create .ci-probe/ and append include line to settings.gradle
@@ -23,6 +29,7 @@ setup() {
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'kotlin-parcelize'
 }
 android {
     compileSdk 34
@@ -36,6 +43,11 @@ android {
     }
     buildTypes {
         release { minifyEnabled false }
+    }
+    flavorDimensions += "sdk"
+    productFlavors {
+        bare    { dimension "sdk" }
+        withsdk { dimension "sdk" }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -70,7 +82,15 @@ android {
     }
 }
 dependencies {
-    implementation project(':amani-sdk-v1')
+    // Shared baseline mirroring :app — both flavors pull the same AndroidX/Material
+    // versions, so SDK's transitive AndroidX deps deduplicate identically in both
+    // bare and withsdk APKs. Without this, delta is polluted by dep-version drift.
+    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    withsdkImplementation project(':amani-sdk-v1')
 }
 EOF
 

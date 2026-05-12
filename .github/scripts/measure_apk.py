@@ -1,33 +1,35 @@
 #!/usr/bin/env python3
 """
-Build a versioned size report comparing:
+Build a versioned size report comparing the UI SDK's net per-ABI APK cost.
 
-  1) The release AAR for `:amani-sdk-v1` (ABI-agnostic).
-  2) Per-ABI APK size of an inline "probe" app whose only dependency is
-     `:amani-sdk-v1` — i.e. the UI SDK's standalone APK footprint.
-  3) Per-ABI APK size of the `:app` sample (UI SDK + sample app code).
+Two release APK variants of the inline probe app are measured side-by-side:
 
-The probe APK shell has a small constant overhead (~ a few hundred KB:
-empty Activity, Kotlin stdlib already required by the SDK, AndroidX core).
-The interesting columns are the per-ABI numbers and the app overhead delta.
+  bare     — empty Android shell, NO SDK dependency      (baseline)
+  withsdk  — same shell + `:amani-sdk-v1`                (with SDK)
+
+Per-ABI SDK contribution is (withsdk − bare). This isolates the SDK's
+real impact on an integrator's APK from the unavoidable Android/Kotlin
+shell overhead.
+
+The release AAR is also captured as an ABI-agnostic baseline for the
+trend table in SIZE_HISTORY.md.
 
 Inputs (env):
-  AAR_PATH      path to release AAR
-                (default: amani-sdk-v1/build/outputs/aar/amani-sdk-v1-release.aar)
-  APP_APK_DIR   directory with `:app` per-ABI APKs
-                (default: app/build/outputs/apk/release)
-  PROBE_APK_DIR directory with probe per-ABI APKs
-                (default: .ci-probe/build/outputs/apk/release)
-  VERSION       label written into the report (default: "current")
-  OUTPUT        optional markdown file to write the section to (also printed to stdout)
-  JSON_OUTPUT   optional path to also emit a structured per-run measurement JSON
-                (consumed by update_history.py to build size-latest.json /
-                size-history.json for docs/API consumers)
+  AAR_PATH            path to release AAR
+                      (default: amani-sdk-v1/build/outputs/aar/amani-sdk-v1-release.aar)
+  PROBE_BARE_APK_DIR  directory with bare-flavor probe APKs
+                      (default: .ci-probe/build/outputs/apk/bare/release)
+  PROBE_SDK_APK_DIR   directory with withsdk-flavor probe APKs
+                      (default: .ci-probe/build/outputs/apk/withsdk/release)
+  VERSION             label written into the report (default: "current")
+  OUTPUT              optional markdown file to write the section to (also printed to stdout)
+  JSON_OUTPUT         optional path to also emit a structured per-run measurement JSON
+                      (consumed by update_history.py to build size-latest.json /
+                      size-history.json for docs/API consumers)
 """
 import json
 import os
 import sys
-import zipfile
 from datetime import datetime, timezone
 
 ABI_ORDER = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64", "universal"]
@@ -59,20 +61,24 @@ def main() -> int:
     aar_path = os.environ.get(
         "AAR_PATH", "amani-sdk-v1/build/outputs/aar/amani-sdk-v1-release.aar"
     )
-    app_dir = os.environ.get("APP_APK_DIR", "app/build/outputs/apk/release")
-    probe_dir = os.environ.get("PROBE_APK_DIR", ".ci-probe/build/outputs/apk/release")
+    bare_dir = os.environ.get(
+        "PROBE_BARE_APK_DIR", ".ci-probe/build/outputs/apk/bare/release"
+    )
+    sdk_dir = os.environ.get(
+        "PROBE_SDK_APK_DIR", ".ci-probe/build/outputs/apk/withsdk/release"
+    )
     version = os.environ.get("VERSION", "current")
     output = os.environ.get("OUTPUT")
     json_output = os.environ.get("JSON_OUTPUT")
 
-    app_apks = discover_apks(app_dir, "app")
-    probe_apks = discover_apks(probe_dir, "probe")
+    bare_apks = discover_apks(bare_dir, "probe-bare")
+    sdk_apks = discover_apks(sdk_dir, "probe-withsdk")
 
-    if not app_apks:
-        print(f"::error::no :app APKs found in {app_dir}", file=sys.stderr)
+    if not bare_apks:
+        print(f"::error::no bare-flavor probe APKs found in {bare_dir}", file=sys.stderr)
         return 1
-    if not probe_apks:
-        print(f"::error::no probe APKs found in {probe_dir}", file=sys.stderr)
+    if not sdk_apks:
+        print(f"::error::no withsdk-flavor probe APKs found in {sdk_dir}", file=sys.stderr)
         return 1
 
     aar_size = os.path.getsize(aar_path) if os.path.isfile(aar_path) else 0
@@ -88,31 +94,43 @@ def main() -> int:
         )
         lines.append("")
     lines.append(
-        "**Per-ABI APK breakdown** — *UI SDK in APK* is measured by an inline "
-        "probe app whose only dependency is `:amani-sdk-v1`; *Full APK* is the "
-        "`:app` sample which adds ~600 KB of sample-app code + AndroidX UI deps."
+        "**Per-ABI SDK contribution** — *Bare APK* is a minimal Android app with "
+        "the same AndroidX/Material baseline as the `:app` sample but **no SDK**; "
+        "*With SDK APK* is the same baseline plus `:amani-sdk-v1`. Identical "
+        "baseline in both flavors makes transitive AndroidX deps deduplicate the "
+        "same way, so the delta reflects the SDK's net cost — not packaging noise."
     )
     lines.append("")
-    lines.append("| ABI | UI SDK in APK | Full APK (UI SDK + app) | App overhead |")
-    lines.append("|-----|--------------:|------------------------:|-------------:|")
+    lines.append(
+        "> ⚠️ **Values are approximate.** APK builds are not perfectly "
+        "reproducible — signing-block entropy, baseline-profile embedding, and "
+        "ZIP entry ordering introduce ~0.1–0.5 MB variance between runs. Use "
+        "these as **trend signals**, not exact byte budgets. The AAR row in the "
+        "trend table above is more stable since it has none of these sources of "
+        "variance."
+    )
+    lines.append("")
+    lines.append("| ABI | Bare APK | With SDK APK | SDK contribution |")
+    lines.append("|-----|---------:|-------------:|-----------------:|")
 
-    abis = [a for a in ABI_ORDER if a in app_apks and a in probe_apks]
-    for a in app_apks:
-        if a not in abis and a in probe_apks:
+    abis = [a for a in ABI_ORDER if a in bare_apks and a in sdk_apks]
+    for a in sdk_apks:
+        if a not in abis and a in bare_apks:
             abis.append(a)
 
     per_abi: dict[str, dict[str, int]] = {}
     for abi in abis:
-        full = os.path.getsize(app_apks[abi])
-        sdk = os.path.getsize(probe_apks[abi])
-        overhead = full - sdk
+        bare = os.path.getsize(bare_apks[abi])
+        withsdk = os.path.getsize(sdk_apks[abi])
+        contribution = withsdk - bare
         lines.append(
-            f"| {abi} | {fmt_mb(sdk)} | {fmt_mb(full)} | {fmt_signed_mb(overhead)} |"
+            f"| {abi} | {fmt_mb(bare)} | {fmt_mb(withsdk)} | "
+            f"{fmt_signed_mb(contribution)} |"
         )
         per_abi[abi] = {
-            "uiSdkBytes": sdk,
-            "fullApkBytes": full,
-            "appOverheadBytes": overhead,
+            "bareBytes": bare,
+            "withSdkBytes": withsdk,
+            "sdkContributionBytes": contribution,
         }
 
     lines.append("")
