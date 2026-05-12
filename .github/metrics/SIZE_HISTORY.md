@@ -12,8 +12,23 @@ At-a-glance view of `:amani-sdk-v1` AAR size across releases — useful for sepa
 
 | Version | AAR | Δ vs prev | Date (UTC) |
 |---------|----:|----------:|------------|
+| main <!-- bytes=1412473 --> | 1.35 MB | — | 2026-05-12 |
 
 ---
 
 ## Per-release breakdown
+
+### main — 2026-05-12
+
+**AAR (`amani-sdk-v1-release.aar`):** 1.35 MB (`1,412,473` bytes)
+
+**Per-ABI APK breakdown** — *UI SDK in APK* is measured by an inline probe app whose only dependency is `:amani-sdk-v1`; *Full APK* is the `:app` sample which adds ~600 KB of sample-app code + AndroidX UI deps.
+
+| ABI | UI SDK in APK | Full APK (UI SDK + app) | App overhead |
+|-----|--------------:|------------------------:|-------------:|
+| arm64-v8a | 24.71 MB | 25.34 MB | +0.62 MB |
+| armeabi-v7a | 23.63 MB | 24.26 MB | +0.62 MB |
+| x86 | 25.64 MB | 26.27 MB | +0.62 MB |
+| x86_64 | 25.37 MB | 26.00 MB | +0.62 MB |
+| universal | 42.89 MB | 43.51 MB | +0.62 MB |
 

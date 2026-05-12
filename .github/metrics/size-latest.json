@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "version": "main",
+  "date": "2026-05-12",
+  "aar": {
+    "bytes": 1412473
+  },
+  "perAbi": {
+    "arm64-v8a": {
+      "uiSdkBytes": 25911615,
+      "fullApkBytes": 26566133,
+      "appOverheadBytes": 654518
+    },
+    "armeabi-v7a": {
+      "uiSdkBytes": 24781817,
+      "fullApkBytes": 25436335,
+      "appOverheadBytes": 654518
+    },
+    "x86": {
+      "uiSdkBytes": 26886729,
+      "fullApkBytes": 27541243,
+      "appOverheadBytes": 654514
+    },
+    "x86_64": {
+      "uiSdkBytes": 26606312,
+      "fullApkBytes": 27260830,
+      "appOverheadBytes": 654518
+    },
+    "universal": {
+      "uiSdkBytes": 44969231,
+      "fullApkBytes": 45623745,
+      "appOverheadBytes": 654514
+    }
+  },
+  "deltaVsPrev": {
+    "aarBytes": null
+  }
+}
