@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "version": "main",
+  "date": "2026-05-12",
+  "aar": {
+    "bytes": 1412473
+  },
+  "perAbi": {
+    "arm64-v8a": {
+      "bareBytes": 4603309,
+      "withSdkBytes": 25911623,
+      "sdkContributionBytes": 21308314
+    },
+    "armeabi-v7a": {
+      "bareBytes": 4603309,
+      "withSdkBytes": 24781825,
+      "sdkContributionBytes": 20178516
+    },
+    "x86": {
+      "bareBytes": 4603309,
+      "withSdkBytes": 26886733,
+      "sdkContributionBytes": 22283424
+    },
+    "x86_64": {
+      "bareBytes": 4603309,
+      "withSdkBytes": 26606320,
+      "sdkContributionBytes": 22003011
+    },
+    "universal": {
+      "bareBytes": 4603309,
+      "withSdkBytes": 44969239,
+      "sdkContributionBytes": 40365930
+    }
+  },
+  "deltaVsPrev": {
+    "aarBytes": null
+  }
+}

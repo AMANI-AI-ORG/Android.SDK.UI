@@ -12,8 +12,25 @@ At-a-glance view of `:amani-sdk-v1` AAR size across releases — useful for sepa
 
 | Version | AAR | Δ vs prev | Date (UTC) |
 |---------|----:|----------:|------------|
+| main <!-- bytes=1412473 --> | 1.35 MB | — | 2026-05-12 |
 
 ---
 
 ## Per-release breakdown
+
+### main — 2026-05-12
+
+**AAR (`amani-sdk-v1-release.aar`):** 1.35 MB (`1,412,473` bytes)
+
+**Per-ABI SDK contribution** — *Bare APK* is a minimal Android app with the same AndroidX/Material baseline as the `:app` sample but **no SDK**; *With SDK APK* is the same baseline plus `:amani-sdk-v1`. Identical baseline in both flavors makes transitive AndroidX deps deduplicate the same way, so the delta reflects the SDK's net cost — not packaging noise.
+
+> ⚠️ **Values are approximate.** APK builds are not perfectly reproducible — signing-block entropy, baseline-profile embedding, and ZIP entry ordering introduce ~0.1–0.5 MB variance between runs. Use these as **trend signals**, not exact byte budgets. The AAR row in the trend table above is more stable since it has none of these sources of variance.
+
+| ABI | Bare APK | With SDK APK | SDK contribution |
+|-----|---------:|-------------:|-----------------:|
+| arm64-v8a | 4.39 MB | 24.71 MB | +20.32 MB |
+| armeabi-v7a | 4.39 MB | 23.63 MB | +19.24 MB |
+| x86 | 4.39 MB | 25.64 MB | +21.25 MB |
+| x86_64 | 4.39 MB | 25.37 MB | +20.98 MB |
+| universal | 4.39 MB | 42.89 MB | +38.50 MB |
 
