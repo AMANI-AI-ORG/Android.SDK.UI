@@ -17,7 +17,9 @@ older rows keep whatever delta they had recorded at write time.
 from __future__ import annotations
 
 import argparse
+import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 HEADER = """# AAR / APK Size History
@@ -130,11 +132,54 @@ def update_sections(text: str, version: str, section: str) -> str:
     return text.rstrip() + "\n\n" + section
 
 
+def update_json_outputs(
+    measurement: dict,
+    latest_path: Path,
+    history_path: Path,
+) -> None:
+    version = measurement["version"]
+
+    releases: list[dict] = []
+    if history_path.exists():
+        try:
+            existing = json.loads(history_path.read_text())
+            releases = [r for r in existing.get("releases", []) if r.get("version") != version]
+        except (json.JSONDecodeError, KeyError):
+            releases = []
+
+    prev_aar = releases[0]["aar"]["bytes"] if releases else None
+    cur_aar = measurement["aar"]["bytes"]
+    delta_vs_prev = None if prev_aar is None else cur_aar - prev_aar
+
+    latest = dict(measurement)
+    latest["deltaVsPrev"] = {"aarBytes": delta_vs_prev}
+
+    releases.insert(0, dict(measurement))
+
+    history = {
+        "schemaVersion": 1,
+        "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "releases": releases,
+    }
+
+    latest_path.parent.mkdir(parents=True, exist_ok=True)
+    latest_path.write_text(json.dumps(latest, indent=2) + "\n")
+    history_path.write_text(json.dumps(history, indent=2) + "\n")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True)
     ap.add_argument("--section", required=True, type=Path, help="path to section markdown")
     ap.add_argument("--history", default=".github/metrics/SIZE_HISTORY.md", type=Path)
+    ap.add_argument(
+        "--measurement-json",
+        type=Path,
+        help="per-run measurement JSON produced by measure_apk.py; "
+        "when provided, size-latest.json and size-history.json are written",
+    )
+    ap.add_argument("--latest-json", default=".github/metrics/size-latest.json", type=Path)
+    ap.add_argument("--history-json", default=".github/metrics/size-history.json", type=Path)
     args = ap.parse_args()
 
     section_text = args.section.read_text()
@@ -149,6 +194,12 @@ def main() -> int:
     text = update_sections(text, args.version, section_text)
     args.history.write_text(text)
     print(f"Updated {args.history}: trend row + per-release section for {args.version}")
+
+    if args.measurement_json and args.measurement_json.exists():
+        measurement = json.loads(args.measurement_json.read_text())
+        update_json_outputs(measurement, args.latest_json, args.history_json)
+        print(f"Updated {args.latest_json} and {args.history_json}")
+
     return 0
 
 

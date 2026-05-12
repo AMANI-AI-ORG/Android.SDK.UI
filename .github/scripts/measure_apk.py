@@ -20,7 +20,11 @@ Inputs (env):
                 (default: .ci-probe/build/outputs/apk/release)
   VERSION       label written into the report (default: "current")
   OUTPUT        optional markdown file to write the section to (also printed to stdout)
+  JSON_OUTPUT   optional path to also emit a structured per-run measurement JSON
+                (consumed by update_history.py to build size-latest.json /
+                size-history.json for docs/API consumers)
 """
+import json
 import os
 import sys
 import zipfile
@@ -59,6 +63,7 @@ def main() -> int:
     probe_dir = os.environ.get("PROBE_APK_DIR", ".ci-probe/build/outputs/apk/release")
     version = os.environ.get("VERSION", "current")
     output = os.environ.get("OUTPUT")
+    json_output = os.environ.get("JSON_OUTPUT")
 
     app_apks = discover_apks(app_dir, "app")
     probe_apks = discover_apks(probe_dir, "probe")
@@ -96,6 +101,7 @@ def main() -> int:
         if a not in abis and a in probe_apks:
             abis.append(a)
 
+    per_abi: dict[str, dict[str, int]] = {}
     for abi in abis:
         full = os.path.getsize(app_apks[abi])
         sdk = os.path.getsize(probe_apks[abi])
@@ -103,6 +109,11 @@ def main() -> int:
         lines.append(
             f"| {abi} | {fmt_mb(sdk)} | {fmt_mb(full)} | {fmt_signed_mb(overhead)} |"
         )
+        per_abi[abi] = {
+            "uiSdkBytes": sdk,
+            "fullApkBytes": full,
+            "appOverheadBytes": overhead,
+        }
 
     lines.append("")
     report = "\n".join(lines) + "\n"
@@ -111,6 +122,20 @@ def main() -> int:
         with open(output, "w") as f:
             f.write(report)
         print(f"Report written to {output}", file=sys.stderr)
+
+    if json_output:
+        payload = {
+            "schemaVersion": 1,
+            "version": version,
+            "date": date,
+            "aar": {"bytes": aar_size},
+            "perAbi": per_abi,
+        }
+        with open(json_output, "w") as f:
+            json.dump(payload, f, indent=2)
+            f.write("\n")
+        print(f"Measurement JSON written to {json_output}", file=sys.stderr)
+
     print(report, end="")
     return 0
 
