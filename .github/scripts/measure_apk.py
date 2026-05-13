@@ -118,22 +118,16 @@ def main() -> int:
     lines.append(f"## {version} — {date}")
     lines.append("")
     if aar_size:
+        lines.append("### UI SDK AAR size")
+        lines.append("")
+        lines.append("| Version | AAR | Δ vs prev | Date (UTC) |")
+        lines.append("|---------|----:|----------:|------------|")
         lines.append(
-            f"**AAR size:** {fmt_mb(aar_size)} (`{aar_size:,}` bytes) — "
-            "raw `:amani-sdk-v1-release.aar`."
+            f"| {version} <!-- bytes={aar_size} --> | {fmt_mb(aar_size)} "
+            f"| — | {date} |"
         )
         lines.append("")
-    lines.append(
-        "**SDK size impact on release APK** — measured by building a probe app "
-        "with the same AndroidX/Material baseline as `:app`, with and without "
-        "each SDK. The *UI SDK* column includes Core SDK (UI transitively "
-        "depends on Core)."
-    )
-    lines.append("")
-    lines.append(
-        "> ⚠️ APK figures are approximate (~0.1–0.5 MB run-to-run variance). "
-        "The AAR row above is stable."
-    )
+    lines.append("### Impact on release sample APK")
     lines.append("")
     core_version = read_core_sdk_version()
     core_label = f"Core SDK {core_version}" if core_version else "Core SDK"

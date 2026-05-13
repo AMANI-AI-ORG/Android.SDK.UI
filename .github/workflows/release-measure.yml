@@ -103,13 +103,14 @@ jobs:
           }
           EOF
 
-      - name: Update SIZE_HISTORY.md (trend table + per-release section)
+      - name: Update SIZE_HISTORY.md + README size-badge URL
         if: ${{ inputs.update_history == true }}
         run: |
           python3 .github/scripts/update_history.py \
             --version "${{ inputs.version_label }}" \
             --section /tmp/size-section.md \
-            --measurement-json /tmp/size-measurement.json
+            --measurement-json /tmp/size-measurement.json \
+            --readme README.md
 
       - name: Open metrics PR
         if: ${{ inputs.update_history == true }}
@@ -124,7 +125,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add .github/metrics/
+          git add .github/metrics/ README.md
           if git diff --cached --quiet; then
             echo "No metrics change to commit — skipping PR."
             exit 0
