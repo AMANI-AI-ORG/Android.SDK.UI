@@ -12,8 +12,6 @@ and a `--version` label, this script:
      newest release is always first.
 
 The history file is created with the canonical header if it doesn't exist.
-Optionally also bumps the version segment in the README size badge URL so it
-pins to the version that this action just published.
 """
 from __future__ import annotations
 
@@ -107,23 +105,12 @@ def update_sections(text: str, version: str, section: str) -> str:
     return text.rstrip() + "\n\n" + section
 
 
-def update_readme_badge_version(readme_path: Path, version: str) -> bool:
-    """Bump the version segment in the README size badge URL.
-
-    Matches the AAR size badge endpoint pointing at
-    `raw.githubusercontent.com/<org>/<repo>/<ref>/.github/metrics/aar-size.json`
-    and replaces `<ref>` (currently `main` or a previous version) with `version`.
-    Returns True if README was modified.
-    """
-    if not readme_path.exists():
-        return False
-    text = readme_path.read_text()
-    pattern = r"(raw\.githubusercontent\.com/[^/]+/[^/]+/)([^/]+)(/\.github/metrics/aar-size\.json)"
-    new_text, n = re.subn(pattern, r"\g<1>" + version + r"\g<3>", text, count=1)
-    if n and new_text != text:
-        readme_path.write_text(new_text)
-        return True
-    return False
+# NOTE: We intentionally do NOT rewrite the README badge URL to a release tag.
+# release-publish tags the publish commit, then release-measure opens a
+# follow-up PR that lands aar-size.json on `main`. The version tag therefore
+# does not contain the metrics file, so pinning the badge URL to the tag 404s.
+# Keep the badge URL pointing at `main` — main always reflects the latest
+# merged metrics, which is what the badge should display.
 
 
 def update_json_outputs(
@@ -174,13 +161,6 @@ def main() -> int:
     )
     ap.add_argument("--latest-json", default=".github/metrics/size-latest.json", type=Path)
     ap.add_argument("--history-json", default=".github/metrics/size-history.json", type=Path)
-    ap.add_argument(
-        "--readme",
-        type=Path,
-        default=None,
-        help="path to README.md; when provided, the size-badge URL's branch/tag "
-        "segment is rewritten to the new version so the badge pins to this release",
-    )
     args = ap.parse_args()
 
     section_text = args.section.read_text()
@@ -199,10 +179,6 @@ def main() -> int:
         measurement = json.loads(args.measurement_json.read_text())
         update_json_outputs(measurement, args.latest_json, args.history_json)
         print(f"Updated {args.latest_json} and {args.history_json}")
-
-    if args.readme:
-        if update_readme_badge_version(args.readme, args.version):
-            print(f"Updated {args.readme} size-badge URL → {args.version}")
 
     return 0
 
