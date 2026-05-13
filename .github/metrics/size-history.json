@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-05-13T13:46:29Z",
+  "releases": [
+    {
+      "schemaVersion": 1,
+      "version": "1.41.2",
+      "date": "2026-05-13",
+      "aar": {
+        "bytes": 1412473
+      },
+      "perAbi": {
+        "arm64-v8a": {
+          "bareBytes": 4603309,
+          "withCoreBytes": 23494819,
+          "withSdkBytes": 25911623,
+          "coreSdkContributionBytes": 18891510,
+          "uiSdkContributionBytes": 21308314
+        },
+        "armeabi-v7a": {
+          "bareBytes": 4603309,
+          "withCoreBytes": 22365021,
+          "withSdkBytes": 24781825,
+          "coreSdkContributionBytes": 17761712,
+          "uiSdkContributionBytes": 20178516
+        },
+        "x86": {
+          "bareBytes": 4603309,
+          "withCoreBytes": 24469929,
+          "withSdkBytes": 26886733,
+          "coreSdkContributionBytes": 19866620,
+          "uiSdkContributionBytes": 22283424
+        },
+        "x86_64": {
+          "bareBytes": 4603309,
+          "withCoreBytes": 24189516,
+          "withSdkBytes": 26606320,
+          "coreSdkContributionBytes": 19586207,
+          "uiSdkContributionBytes": 22003011
+        },
+        "universal": {
+          "bareBytes": 4603309,
+          "withCoreBytes": 42552435,
+          "withSdkBytes": 44969239,
+          "coreSdkContributionBytes": 37949126,
+          "uiSdkContributionBytes": 40365930
+        }
+      }
+    }
+  ]
+}
