@@ -129,10 +129,17 @@ class IDCaptureFrontSideFrag : Fragment() {
         val videoRecord = args.dataModel.featureConfig.idCaptureVideoRecord?:
         args.dataModel.version?.videoRecord?: false
 
+        val hologramDetection = args.dataModel.featureConfig.idCaptureHologramDetection?:
+        args.dataModel.version?.hologramDetection?: false
+
         // Setting IDCapture timeOut as default 30 sec
         Amani.sharedInstance().IDCapture().setManualCropTimeOut(AppConstant.ID_CAPTURE_TIME_OUT)
 
         Amani.sharedInstance().IDCapture().videoRecord(videoRecord = videoRecord)
+
+        Amani.sharedInstance().IDCapture().hologramDetection(
+            hologramDetection
+        )
 
         Timber.d("VideoRecord state in ID Capture: $videoRecord")
 
