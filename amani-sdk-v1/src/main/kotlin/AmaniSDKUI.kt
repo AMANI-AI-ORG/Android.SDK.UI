@@ -4,8 +4,10 @@ import ai.amani.sdk.DynamicFeature
 import ai.amani.sdk.UploadSource
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
+import ai.amani.sdk.model.UIStyle
 import ai.amani.sdk.model.exception.AmaniException
 import ai.amani.sdk.presentation.AmaniMainActivity
+import ai.amani.sdk.presentation_v2.AmaniComposeActivity
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Context
@@ -154,7 +156,11 @@ object AmaniSDKUI {
             documentNumber = documentNumber,
         )
 
-        val intent = Intent(activity, AmaniMainActivity::class.java)
+        val targetActivity = when (featureConfig.uiStyle) {
+            UIStyle.V2 -> AmaniComposeActivity::class.java
+            UIStyle.V1 -> AmaniMainActivity::class.java
+        }
+        val intent = Intent(activity, targetActivity)
 
         val bundle = Bundle().apply {
             putParcelable(AppConstant.REGISTER_CONFIG, config)
@@ -163,6 +169,19 @@ object AmaniSDKUI {
         bundle.classLoader = RegisterConfig::class.java.classLoader
         intent.putExtras(bundle)
         resultLauncher.launch(intent)
+    }
+
+    /**
+     * Selects the UI style used to run the KYC flow.
+     *
+     * Defaults to [UIStyle.V1] (the existing XML/Fragment UI) for backward
+     * compatibility. Pass [UIStyle.V2] to opt into the Jetpack Compose redesign.
+     * Must be called before [goToKycActivity].
+     *
+     * @param style: The UI style to use for the next KYC session.
+     */
+    fun setUIStyle(style: UIStyle) {
+        featureConfig.uiStyle = style
     }
 
     /**

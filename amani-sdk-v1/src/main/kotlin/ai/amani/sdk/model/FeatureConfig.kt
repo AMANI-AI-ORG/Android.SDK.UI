@@ -12,5 +12,6 @@ data class FeatureConfig(
     var selfieCaptureVideoRecord: Boolean? = null,
     var idCaptureVideoRecord: Boolean? = null,
     var idCaptureHologramDetection: Boolean? = null,
-    var selfiePoseEstimationV2PreparationVideo: Int? = null
+    var selfiePoseEstimationV2PreparationVideo: Int? = null,
+    var uiStyle: UIStyle = UIStyle.V1
 ): Parcelable

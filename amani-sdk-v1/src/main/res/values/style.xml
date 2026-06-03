@@ -28,6 +28,16 @@
         <item name="colorAccent">@color/purple_amani_color</item>
     </style>
 
+    <!-- Translucent theme for the V2 Compose activity: keeps the launching screen
+         visible behind the centered loader until config-driven content is ready. -->
+    <style name="Theme.AmaniV2.Transparent" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="BottomSheetTheme" parent="Theme.Design.Light.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/bottomSheetStyle</item>
     </style>
