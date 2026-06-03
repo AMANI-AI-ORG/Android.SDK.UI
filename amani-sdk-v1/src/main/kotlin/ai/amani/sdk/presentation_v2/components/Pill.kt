@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation_v2.components
 
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,9 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-/**
- * Small rounded status badge with an optional leading icon (HTML pill/badge pattern).
- */
+/** Small rounded status badge with an optional leading icon. */
 @Composable
 fun Pill(
     text: String,
@@ -45,7 +44,7 @@ fun Pill(
         if (leadingIcon != null) {
             Icon(leadingIcon, contentDescription = null, tint = contentColor, modifier = Modifier.size(12.dp))
         }
-        Text(text, style = AmaniV2Type.label, color = contentColor)
+        Text(text, style = AmaniV2Type.label.scaled(), color = contentColor)
     }
 }
 
@@ -70,6 +69,6 @@ fun StatusPill(
                 .size(6.dp)
                 .background(dotColor, RoundedCornerShape(999.dp))
         )
-        Text(text, style = AmaniV2Type.caption, color = contentColor)
+        Text(text, style = AmaniV2Type.caption.scaled(), color = contentColor)
     }
 }

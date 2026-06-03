@@ -1,21 +1,31 @@
 package ai.amani.sdk.presentation_v2.home_kyc
 
+import ai.amani.sdk.Amani
 import ai.amani.sdk.data.repository.config.ConfigRepositoryImp
 import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
+import ai.amani.sdk.data.repository.id_capture.IDCaptureRepoImp
 import ai.amani.sdk.data.repository.login.LoginRepoImp
+import ai.amani.sdk.extentions.deviceHasNFC
 import ai.amani.sdk.extentions.sort
+import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
+import ai.amani.sdk.model.amani_events.error.AmaniError
+import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
+import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.utils.AmaniUIErrorConstants
+import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
 import android.app.Activity
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import datamanager.model.config.Version
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +53,8 @@ import timber.log.Timber
 class HomeKYCViewModel(
     private val loginRepository: LoginRepoImp,
     private val configRepository: ConfigRepositoryImp,
-    private val customerDetailRepository: CustomerDetailRepoImp
+    private val customerDetailRepository: CustomerDetailRepoImp,
+    private val idCaptureRepository: IDCaptureRepoImp
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HomeKYCState>(HomeKYCState.Loading)
@@ -55,6 +66,35 @@ class HomeKYCViewModel(
     private var registerConfig: RegisterConfig? = null
     private var featureConfig: FeatureConfig = FeatureConfig()
     private var started = false
+
+    // ── Live overlays on the immutable cached rules ─────────────────────────────────
+    // The cached [Rule] objects have no status setter, so updates from the upload flow
+    // (the AmaniEvent socket, a failed upload) are layered on as overlays and applied by
+    // [HomeKYCMapper.toUiState] instead of mutating the rules in place.
+    private val statusOverrides = mutableMapOf<String, String>()
+    private val errorOverrides = mutableMapOf<String, String>()
+    /** Rule id currently uploading / awaiting the verdict — renders the row spinner. */
+    private var processingRuleId: String? = null
+
+    private val REJECTED_STATUSES = setOf(
+        AppConstant.STATUS_REJECTED,
+        AppConstant.STATUS_AUTOMATICALLY_REJECTED
+    )
+
+    /**
+     * Statuses whose server message is surfaced inline under the step — rejections plus
+     * PENDING_REVIEW (manual-review note), matching v1's KYCAdapter and
+     * [HomeKYCMapper.ERROR_BEARING_STATUSES].
+     */
+    private val ERROR_BEARING_STATUSES = setOf(
+        AppConstant.STATUS_REJECTED,
+        AppConstant.STATUS_AUTOMATICALLY_REJECTED,
+        AppConstant.STATUS_PENDING_REVIEW
+    )
+
+    init {
+        listenAmaniEvents()
+    }
 
     /**
      * Kicks off the load: login → app config → customer detail → map to [HomeKYCState.Ready].
@@ -86,6 +126,67 @@ class HomeKYCViewModel(
     /** A step row / primary button was tapped — defer the concrete routing to wiring. */
     fun onStepSelected(rule: Rule) {
         sendEffect(HomeKYCEffect.StartStep(rule))
+    }
+
+    /**
+     * Finishes the capture leg for [version] after the user confirmed the last side.
+     * Mirrors v1's `PreviewScreenViewModel.navigateScreen` → `HomeKYCViewModel.uploadID`
+     * hand-off: when NFC is *not* active the captured document is uploaded straight away
+     * and the matching home step shows a loading spinner; the verdict then arrives over
+     * the AmaniEvent socket (see [listenAmaniEvents]) — APPROVED unlocks the next step,
+     * a rejection shows the server error inline and keeps the next step locked.
+     *
+     * The host calls this and then pops back to Home, so the user watches the step
+     * upload from the overview screen.
+     *
+     * @param activity the host activity (the core upload + NFC check both need it)
+     * @param version  the just-confirmed document version
+     */
+    fun uploadStep(activity: FragmentActivity, version: Version) {
+        val docType = version.type ?: run {
+            Timber.e("V2 upload: version.type is null, cannot upload")
+            return
+        }
+
+        val nfcActive = (version.nfcAndroid ?: version.nfc) && deviceHasNFC(activity)
+        if (nfcActive) {
+            // TODO(NFC): NFC-active leg — fetch MRZ, open the NFC scan screen, then upload
+            //  the ID + NFC together (v1 PreviewScreenViewModel → NFCScanFragment path).
+            //  Deferred for now; the step is left untouched.
+            Timber.w("V2 upload: NFC-active flow not implemented yet (TODO), docType=$docType")
+            return
+        }
+
+        val ruleId = ruleIdFor(version)
+        // Clear any stale rejection on this step and show the spinner before uploading.
+        ruleId?.let { errorOverrides.remove(it) }
+        processingRuleId = ruleId
+        refreshReady()
+
+        idCaptureRepository.upload(
+            activity = activity,
+            docType = docType,
+            onStart = { /* spinner already shown above */ },
+            onComplete = { result ->
+                if (result.isSuccess) {
+                    // Upload accepted — keep the spinner until the AmaniEvent socket
+                    // delivers the verdict for this step.
+                    Timber.i("V2 upload accepted for docType=$docType, awaiting steps result")
+                } else {
+                    Timber.e(
+                        "V2 upload failed docType=$docType code=${result.onError} err=${result.throwable}"
+                    )
+                    // Surface the failure as a rejection on this step so the next step
+                    // stays locked, and stop the spinner.
+                    processingRuleId = null
+                    ruleId?.let { id ->
+                        statusOverrides[id] = AppConstant.STATUS_REJECTED
+                        errorOverrides[id] = uploadErrorMessage(result)
+                    }
+                    refreshReady()
+                }
+            }
+        )
     }
 
     private fun login(activity: Activity, config: RegisterConfig) {
@@ -156,11 +257,102 @@ class HomeKYCViewModel(
             return
         }
 
+        refreshReady()
+    }
+
+    /**
+     * Re-emits [HomeKYCState.Ready] from the cached doc list with the current overlays
+     * applied. Called on the initial load and on every live update (upload start /
+     * failure, AmaniEvent socket result).
+     */
+    private fun refreshReady() {
+        val docList = CachingHomeKYC.onlyKYCRules ?: return
         _state.value = HomeKYCState.Ready(
             palette = HomeKYCMapper.resolvePalette(CachingHomeKYC.appConfig),
-            content = HomeKYCMapper.toUiState(docList, CachingHomeKYC.appConfig)
+            content = HomeKYCMapper.toUiState(
+                rules = docList,
+                config = CachingHomeKYC.appConfig,
+                statusOverrides = statusOverrides,
+                errorOverrides = errorOverrides,
+                processingRuleId = processingRuleId
+            )
         )
     }
+
+    /**
+     * Registers the AmaniEvent listener that drives the home overview after an upload.
+     * Mirrors v1 `HomeKYCViewModel.listenAmaniEvents`/`stepsResult`: each socket result
+     * for a KYC step updates that step's status overlay (and rejection message), stops
+     * its spinner, and refreshes the UI. APPROVED moves the row to Done and unlocks the
+     * next step (the mapper recomputes the active step); a rejection shows the inline
+     * error and leaves later steps locked. When every KYC step is approved the flow
+     * completes via [HomeKYCEffect.ProfileApproved].
+     */
+    private fun listenAmaniEvents() {
+        Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
+            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
+                Timber.e("V2 AmaniEvent error type=$type")
+            }
+
+            override fun profileStatus(profileStatus: ProfileStatus) {
+                Timber.d("V2 AmaniEvent profile status received")
+            }
+
+            override fun stepsResult(stepsResult: StepsResult?) {
+                val results = stepsResult?.result ?: return
+
+                // Store the freshest status + rejection message per step as overlays — even
+                // if this socket push arrives before the doc list is built on first open.
+                // The old HomeKYCViewModel likewise keeps the latest socket result; if we
+                // bailed out when the list wasn't ready yet (the previous behaviour) the very
+                // first push — which carries the current approved/rejected/not-uploaded state
+                // on a fresh open — was dropped and the step states/errors never showed.
+                var changed = false
+                results.forEach { res ->
+                    val id = res.id ?: return@forEach
+                    res.status?.let { status ->
+                        statusOverrides[id] = status
+                        changed = true
+                        when (status) {
+                            // Rejections AND pending-review verdicts carry a server message
+                            // to surface inline — same statuses v1's KYCAdapter shows it for.
+                            in ERROR_BEARING_STATUSES -> {
+                                res.errors?.firstOrNull()?.errorMessage?.toString()
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.let { errorOverrides[id] = it }
+                            }
+                            STATUS_APPROVED -> errorOverrides.remove(id)
+                        }
+                    }
+                    // A verdict for the uploading step stops its spinner.
+                    if (id == processingRuleId) processingRuleId = null
+                }
+                if (!changed) return
+
+                // Re-render only once the overview's doc list exists; until then the stored
+                // overrides simply wait for the initial reduce() → refreshReady() to apply them.
+                val docList = CachingHomeKYC.onlyKYCRules ?: return
+                refreshReady()
+
+                val allApproved = docList.all {
+                    (statusOverrides[it.id] ?: it.status) == STATUS_APPROVED
+                }
+                if (allApproved) sendEffect(HomeKYCEffect.ProfileApproved)
+            }
+        })
+    }
+
+    /** Resolves the KYC rule id matching [version] (same step sort order). */
+    private fun ruleIdFor(version: Version): String? {
+        val docList = CachingHomeKYC.onlyKYCRules
+        return docList?.firstOrNull { it.sortOrder == version.stepId }?.id
+            ?: docList?.firstOrNull { (statusOverrides[it.id] ?: it.status) != STATUS_APPROVED }?.id
+    }
+
+    private fun uploadErrorMessage(result: ai.amani.sdk.model.UploadResultModel): String =
+        result.throwable?.localizedMessage?.takeIf { it.isNotBlank() }
+            ?: result.onError?.let { "Upload failed (code $it)" }
+            ?: "Upload failed. Please try again."
 
     /**
      * Filters the customer rules down to the KYC-flow rules, caching the result in the
@@ -212,7 +404,8 @@ class HomeKYCViewModel(
                 HomeKYCViewModel(
                     LoginRepoImp(),
                     ConfigRepositoryImp(),
-                    CustomerDetailRepoImp()
+                    CustomerDetailRepoImp(),
+                    IDCaptureRepoImp()
                 ) as T
         }
     }

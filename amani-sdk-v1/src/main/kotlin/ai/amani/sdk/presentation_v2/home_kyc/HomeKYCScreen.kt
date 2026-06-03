@@ -12,6 +12,8 @@ import ai.amani.sdk.presentation_v2.components.VerificationStep
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.theme.amaniV2ContentMaxWidth
+import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,24 +22,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
  * State backing [HomeKYCScreen]. The same screen renders the start, mid-flow and
- * rejected states of the KYC overview (HTML stepsStart/stepsMid/stepsRejected) —
- * only the data changes. V2 counterpart of the v1 HomeKYCFragment.
+ * rejected states of the KYC overview — only the data changes.
  */
 data class HomeKYCUiState(
     val headerTitle: String,
     val dots: List<DotStep>,
-    // Nullable: the mapper sets this only when the server config provides it. A blank/null
-    // value means "no large heading" and the screen skips rendering it entirely.
+    // Blank/null means "no large heading" and the screen skips rendering it entirely.
     val title: String?,
     val subtitle: String,
     val steps: List<VerificationStep>,
@@ -45,13 +47,8 @@ data class HomeKYCUiState(
 )
 
 /**
- * Rendering state for [HomeKYCScreen].
- *
- * The flow opens in [Loading] while the SDK fetches GeneralConfigs (the colors and
- * strings that drive this and every later screen). Once that resolves, the host swaps
- * in [Ready] with the config-driven [HomeKYCUiState] and an [AmaniV2Palette] applied
- * upstream via the theme. The static sample states below are the defaults used by
- * previews and as fallbacks until config arrives.
+ * Rendering state for [HomeKYCScreen]. Opens in [Loading] while the SDK fetches
+ * GeneralConfigs, then swaps in [Ready] with the config-driven [HomeKYCUiState].
  */
 sealed interface HomeKYCScreenState {
     data object Loading : HomeKYCScreenState
@@ -60,11 +57,8 @@ sealed interface HomeKYCScreenState {
 
 /**
  * KYC overview / stepper screen. Stateless: receives a [HomeKYCScreenState] and emits
- * intents via callbacks. V2 (Compose) counterpart of the v1 HomeKYCFragment.
- *
- * While [HomeKYCScreenState.Loading] it shows only a centered loader on a transparent
- * background (the activity window is translucent, so the launching screen stays
- * visible behind it). When [HomeKYCScreenState.Ready] it renders the full content.
+ * intents via callbacks. [HomeKYCScreenState.Loading] shows a centered loader on a
+ * transparent background; [HomeKYCScreenState.Ready] renders the full content.
  */
 @Composable
 fun HomeKYCScreen(
@@ -93,10 +87,12 @@ private fun HomeKYCContent(
     onPrimary: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
+    val contentMaxWidth = amaniV2ContentMaxWidth()
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(palette.background)
+            .background(palette.background),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         ScreenHeader(
             title = state.headerTitle,
@@ -107,16 +103,17 @@ private fun HomeKYCContent(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .widthIn(max = contentMaxWidth)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
         ) {
             state.title?.takeIf { it.isNotBlank() }?.let { title ->
-                Text(title, style = AmaniV2Type.title, color = palette.ink)
+                Text(title, style = AmaniV2Type.title.scaled(), color = palette.ink)
                 Spacer(Modifier.height(8.dp))
             }
             Text(
                 state.subtitle,
-                style = AmaniV2Type.body,
+                style = AmaniV2Type.body.scaled(),
                 color = palette.inkMuted
             )
             Spacer(Modifier.height(24.dp))
@@ -127,6 +124,7 @@ private fun HomeKYCContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = contentMaxWidth)
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
                 .padding(bottom = 20.dp)
         ) {

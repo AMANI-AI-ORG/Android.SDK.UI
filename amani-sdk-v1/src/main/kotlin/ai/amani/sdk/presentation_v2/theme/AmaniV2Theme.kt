@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * Runtime palette for the V2 UI. Screens read colors from [LocalAmaniV2Palette]
  * instead of referencing [AmaniV2Colors] directly, so the live flow can override
- * brand colors coming from the server config while previews keep the HTML defaults.
+ * brand colors coming from the server config.
  */
 @Immutable
 data class AmaniV2Palette(
@@ -33,13 +33,9 @@ data class AmaniV2Palette(
 )
 
 /**
- * Builds an [AmaniV2Palette] from server-config hex strings, falling back to the
- * static HTML defaults for any value that is null/blank/malformed. This is the single
- * place config colors enter the V2 UI — screens then read everything from the palette,
- * so wiring GeneralConfigs in the live flow is a one-call change here.
- *
- * Each parameter is an optional hex string (`#RRGGBB` / `#AARRGGBB`); see
- * [toAmaniColorOrNull].
+ * Builds an [AmaniV2Palette] from server-config hex strings, falling back to the static
+ * defaults for any value that is null/blank/malformed. Each parameter is an optional hex
+ * string (`#RRGGBB` / `#AARRGGBB`); see [toAmaniColorOrNull].
  */
 fun amaniV2PaletteFromHex(
     accent: String? = null,

@@ -6,8 +6,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Text styles ported from the HTML prototype. System font family, weights 400/500/600.
- * Colors are applied at call sites from [AmaniV2Palette].
+ * Text styles for the V2 UI. System font family, weights 400/500/600. Colors are
+ * applied at call sites from [AmaniV2Palette].
  */
 object AmaniV2Type {
     private val family = FontFamily.Default

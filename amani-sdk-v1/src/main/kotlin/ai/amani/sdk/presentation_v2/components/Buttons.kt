@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation_v2.components
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -21,9 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-/**
- * Full-width pink primary button (HTML PRI_BTN).
- */
+/** Full-width pink primary button. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -38,8 +37,8 @@ fun PrimaryButton(
         enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(AmaniV2Dimens.buttonHeight),
-        shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius),
+            .height(AmaniV2Dimens.buttonHeight.scaled()),
+        shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
         colors = ButtonDefaults.buttonColors(
             containerColor = palette.accent,
             contentColor = palette.surface
@@ -47,19 +46,17 @@ fun PrimaryButton(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp.scaled())
         ) {
             if (leadingIcon != null) {
-                Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(18.dp.scaled()))
             }
-            Text(text, style = AmaniV2Type.button)
+            Text(text, style = AmaniV2Type.button.copy(fontSize = AmaniV2Type.button.fontSize.scaled()))
         }
     }
 }
 
-/**
- * Full-width white secondary button with a hairline border (HTML SEC_BTN).
- */
+/** Full-width white secondary button with a hairline border. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -74,8 +71,8 @@ fun SecondaryButton(
         enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(AmaniV2Dimens.buttonHeight),
-        shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius),
+            .height(AmaniV2Dimens.buttonHeight.scaled()),
+        shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
         border = BorderStroke(1.dp, palette.border),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = palette.surface,
@@ -84,12 +81,12 @@ fun SecondaryButton(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp.scaled())
         ) {
             if (leadingIcon != null) {
-                Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(16.dp.scaled()))
             }
-            Text(text, style = AmaniV2Type.button)
+            Text(text, style = AmaniV2Type.button.copy(fontSize = AmaniV2Type.button.fontSize.scaled()))
         }
     }
 }

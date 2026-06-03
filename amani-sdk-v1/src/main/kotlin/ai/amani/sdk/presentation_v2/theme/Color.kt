@@ -3,9 +3,8 @@ package ai.amani.sdk.presentation_v2.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * V2 UI design tokens, ported from the HTML prototype (amani-kyc-prototype-v2.6).
- * These are the DEFAULT palette: previews use them directly, and the live theme
- * falls back to them when the server [GeneralConfigs] do not provide an override.
+ * V2 UI design tokens. These are the DEFAULT palette: previews use them directly, and
+ * the live theme falls back to them when the server [GeneralConfigs] do not provide an override.
  */
 object AmaniV2Colors {
     val Pink = Color(0xFFDC2655)

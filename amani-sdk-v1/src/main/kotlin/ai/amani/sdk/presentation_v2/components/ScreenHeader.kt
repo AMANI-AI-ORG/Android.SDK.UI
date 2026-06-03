@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation_v2.components
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,8 +29,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Top header with back button and centered title, with optional dot progress
- * beneath it (HTML headerWithProgress). A fixed-size spacer balances the back
- * button on the trailing side so the title stays optically centered.
+ * beneath it. A fixed-size spacer balances the back button on the trailing side
+ * so the title stays optically centered.
  */
 @Composable
 fun ScreenHeader(
@@ -49,8 +50,8 @@ fun ScreenHeader(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             HeaderIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, onClick = onBack)
-            Text(title, style = AmaniV2Type.header, color = AmaniV2Theme.palette.ink)
-            Spacer(Modifier.size(AmaniV2Dimens.iconButtonSize))
+            Text(title, style = AmaniV2Type.header.scaled(), color = AmaniV2Theme.palette.ink)
+            Spacer(Modifier.size(AmaniV2Dimens.iconButtonSize.scaled()))
         }
         if (steps != null) {
             Spacer(Modifier.height(24.dp))
@@ -60,7 +61,7 @@ fun ScreenHeader(
     }
 }
 
-/** Soft rounded icon button used in headers (HTML ICON_BTN). */
+/** Soft rounded icon button used in headers. */
 @Composable
 fun HeaderIconButton(
     icon: ImageVector,
@@ -71,11 +72,11 @@ fun HeaderIconButton(
 ) {
     Box(
         modifier = modifier
-            .size(AmaniV2Dimens.iconButtonSize)
-            .background(containerColor, RoundedCornerShape(AmaniV2Dimens.iconButtonRadius))
+            .size(AmaniV2Dimens.iconButtonSize.scaled())
+            .background(containerColor, RoundedCornerShape(AmaniV2Dimens.iconButtonRadius.scaled()))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp.scaled()))
     }
 }

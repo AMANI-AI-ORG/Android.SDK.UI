@@ -86,7 +86,13 @@ class AmaniComposeActivity : FragmentActivity() {
                         AmaniV2NavHost(
                             navigator = navigator,
                             homeContent = current.content,
-                            onExit = { finish() }
+                            onExit = { finish() },
+                            // Capture leg finished (final side confirmed): upload through the
+                            // shared SDK layer. The view model marks the matching home step as
+                            // processing and listens to AmaniEvents for the verdict.
+                            onCaptureLegFinished = { version ->
+                                viewModel.uploadStep(this@AmaniComposeActivity, version)
+                            }
                         )
                     }
 

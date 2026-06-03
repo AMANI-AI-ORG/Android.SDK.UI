@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation_v2.components
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Colors
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,6 +26,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+/**
+ * Height of the dot row at the top of each step column. The connectors share this height so
+ * their center line lands exactly on the dots, independent of the (scaled) label beneath.
+ */
+private val DotRowHeight = 14.dp
+
 enum class StepStatus { Completed, Current, Rejected, Pending }
 
 data class DotStep(
@@ -34,8 +40,8 @@ data class DotStep(
 )
 
 /**
- * Horizontal dot progress indicator with connectors (HTML dotProgress).
- * Works on light surfaces by default; pass [onDark] for the camera/selfie screens.
+ * Horizontal dot progress indicator with connectors. Works on light surfaces by
+ * default; pass [onDark] for the camera/selfie screens.
  */
 @Composable
 fun DotProgressBar(
@@ -59,14 +65,22 @@ fun DotProgressBar(
                     onDark -> Color.White.copy(alpha = 0.2f)
                     else -> AmaniV2Colors.ConnectorIdle
                 }
+                // The connector occupies the same height as the dot row and centers the line
+                // within it, so it sits between the dots — never over the labels below.
                 Box(
                     modifier = Modifier
-                        .width(28.dp)
-                        .offset(y = (-16).dp)
-                        .height(1.5.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(lineColor)
-                )
+                        .width(28.dp.scaled())
+                        .height(DotRowHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.5.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(lineColor)
+                    )
+                }
             }
         }
     }
@@ -85,7 +99,7 @@ private fun DotItem(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
-            modifier = Modifier.height(14.dp),
+            modifier = Modifier.height(DotRowHeight),
             contentAlignment = Alignment.Center
         ) {
             when (step.status) {
@@ -116,7 +130,7 @@ private fun DotItem(
             StepStatus.Pending -> if (onDark) Color.White.copy(alpha = 0.5f) else palette.inkLight
         }
         val weight = if (step.status == StepStatus.Pending) FontWeight.Normal else FontWeight.Medium
-        Text(step.label, style = AmaniV2Type.label.copy(fontWeight = weight), color = labelColor)
+        Text(step.label, style = AmaniV2Type.label.copy(fontWeight = weight).scaled(), color = labelColor)
     }
 }
 
