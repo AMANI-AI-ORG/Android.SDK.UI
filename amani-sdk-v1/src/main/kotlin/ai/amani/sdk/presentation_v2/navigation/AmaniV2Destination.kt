@@ -50,6 +50,30 @@ sealed interface AmaniV2Destination : Parcelable {
         val side: CaptureSide,
         val imagePath: String
     ) : AmaniV2Destination
+
+    /**
+     * Selfie capture — V2 counterpart of SelfieCaptureFragment. The live AmaniAi selfie
+     * camera mounts beneath the header; the concrete variant (auto / manual / pose
+     * estimation) is resolved from the [datamanager.model.config.Version] via
+     * [ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver]. [versionType] keys
+     * the chosen version.
+     */
+    @Parcelize
+    data class SelfieCapture(
+        val versionType: String
+    ) : AmaniV2Destination
+
+    /**
+     * Captured-selfie confirmation — the selfie counterpart of [CaptureConfirm] (selfies
+     * are single-sided, so there is no `side`). Confirming finishes the leg: the host
+     * uploads through the selfie SDK path and pops to Home, where the step shows its
+     * processing spinner.
+     */
+    @Parcelize
+    data class SelfieConfirm(
+        val versionType: String,
+        val imagePath: String
+    ) : AmaniV2Destination
 }
 
 /** Which face of a document is being captured. */

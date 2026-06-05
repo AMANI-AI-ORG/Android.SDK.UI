@@ -61,6 +61,14 @@ internal object HomeKYCMapper {
     private const val STATIC_ERROR_FALLBACK_ENABLED = true
 
     /**
+     * TODO(config): there is no per-step duration estimate in the server StepConfig / Rule
+     * yet, so each step's secondary line shows this static, informative placeholder (like the
+     * HTML prototype's "~30 sec" / "~1 min"). Wire it to a config/server field once one exists
+     * (and ideally vary it per step instead of this single constant).
+     */
+    private const val STATIC_STEP_DURATION = "~30 sec"
+
+    /**
      * Generic rejection message shown when [STATIC_ERROR_FALLBACK_ENABLED] is on and the
      * server provided no per-step message. Pending-review steps are *not* given this
      * fallback (they carry no rejection text); only true rejections fall back to it.
@@ -106,41 +114,46 @@ internal object HomeKYCMapper {
         processingRuleId: String? = null
     ): HomeKYCUiState {
         val g = config?.generalConfigs
-        fun effectiveStatus(rule: Rule): String? = statusOverrides[rule.id] ?: rule.status
+        fun eff(rule: Rule): String? = effectiveStatus(rule, statusOverrides)
         // The active step is the first one still needing the user (skipping the one that
-        // is currently uploading, which shows its own processing spinner instead).
-        val activeIndex = rules.indexOfFirst { !isDone(effectiveStatus(it)) && it.id != processingRuleId }
+        // is currently uploading, which shows its own processing spinner instead, and any
+        // step still locked behind an unmet mandatory dependency). This is the single
+        // source of truth shared with the view model so the home primary button targets
+        // (and enables on) exactly this step.
+        val activeIndex = activeRuleIndex(rules, config, statusOverrides, processingRuleId)
 
         val dots = rules.mapIndexed { index, rule ->
             DotStep(
                 // Per-step label is server content (the KYC rule title), not a
                 // GeneralConfigs field — kept as-is, blank when the rule has none.
                 label = rule.title ?: "",
-                status = dotStatus(effectiveStatus(rule), index == activeIndex)
+                status = dotStatus(eff(rule), index == activeIndex)
             )
         }
 
         val steps = rules.mapIndexed { index, rule ->
             val isProcessing = rule.id != null && rule.id == processingRuleId
-            val status = effectiveStatus(rule)
+            val status = eff(rule)
             // Per-step server styling (v1 KYCAdapter: appConfig.getStepConfig(sortOrder)),
             // selected by the rule's status with a "processing" override while uploading.
             val stepConfig = config?.stepConfigForSortOrder(rule.sortOrder)
             val style = stepStyle(stepConfig, status, isProcessing)
             VerificationStep(
                 index = index + 1,
-                // Server content (rule title) — kept.
-                title = rule.title ?: "",
-                // Config-driven status label: StepConfig.buttonText for this status
-                // (v1's textOfButton). Blank/null → the row renders no subtitle.
-                subtitle = style.label,
+                // Top line: the config-driven status label (StepConfig.buttonText for this
+                // status, v1's textOfButton) — moved up from the old subtitle slot. Falls back
+                // to the server rule title when config has no label so the row is never blank.
+                title = style.label ?: rule.title ?: "",
+                // Bottom line: static, informative duration hint (see STATIC_STEP_DURATION).
+                // The status label used to live here; it now sits on the top line.
+                subtitle = STATIC_STEP_DURATION,
                 status = if (isProcessing) StepRowStatus.Processing
                 else rowStatus(status, index == activeIndex),
-                // Config-driven per-status colors (StepConfig.buttonColor / buttonTextColor).
-                // buttonColor is the saturated accent (border, badge fill, status-label text);
-                // buttonTextColor is the on-fill color, used only for the badge foreground.
+                // Config-driven per-status colors (StepConfig). buttonColor is the saturated
+                // accent (border, inner wash, number-badge fill, trailing icon); buttonTextColor
+                // drives the step's text. The number-badge glyph stays white (set in StepRow).
                 accentColor = style.accentColor,
-                badgeTextColor = style.badgeTextColor,
+                textColor = style.textColor,
                 error = if (isProcessing) null else errorFor(
                     status = status,
                     // Fresh socket / upload message wins; otherwise fall back to the
@@ -162,9 +175,80 @@ internal object HomeKYCMapper {
             subtitle = g?.mainDescriptionText.orFallback("Complete the steps below to finish verification."),
             steps = steps,
             // Config-driven: GeneralConfigs.continueText, fallback when blank/null.
-            primaryButtonText = g?.continueText.orFallback("Continue")
+            primaryButtonText = g?.continueText.orFallback("Continue"),
+            // The primary button only advances when there's a step ready for the user. It
+            // is disabled while the active step is uploading / awaiting its verdict (and the
+            // next step is still locked behind it), and re-enables once that step is approved
+            // and the next becomes active.
+            primaryButtonEnabled = activeIndex >= 0
         )
     }
+
+    private fun effectiveStatus(rule: Rule, statusOverrides: Map<String, String>): String? =
+        statusOverrides[rule.id] ?: rule.status
+
+    /**
+     * v1's mandatory-step gate (KYCAdapter): a step whose [StepConfig] declares
+     * `mandatoryStepIDs` cannot become active until every referenced step is APPROVED or
+     * PENDING_REVIEW. No mandatory ids → always unlocked (steps aren't gated). This is what
+     * keeps a dependent step Locked while the step it depends on is still processing /
+     * uploading, and unlocks it once that prerequisite is approved.
+     */
+    private fun isUnlocked(
+        rule: Rule,
+        rules: List<Rule>,
+        config: ResGetConfig?,
+        statusOverrides: Map<String, String>
+    ): Boolean {
+        val mandatoryIds = config?.stepConfigForSortOrder(rule.sortOrder)?.mandatoryStepIDs
+        if (mandatoryIds.isNullOrEmpty()) return true
+        return mandatoryIds.all { mId ->
+            val depStatus = rules.firstOrNull { it.id == mId }?.let { effectiveStatus(it, statusOverrides) }
+            depStatus == AppConstant.STATUS_APPROVED || depStatus == AppConstant.STATUS_PENDING_REVIEW
+        }
+    }
+
+    /**
+     * Index of the active step: the first one still needing the user — not done and not
+     * locked behind an unmet mandatory dependency. `-1` when nothing is actionable right
+     * now.
+     *
+     * Crucially, **while any step is uploading / awaiting its verdict ([processingRuleId]
+     * is set) the whole flow is gated**: this returns `-1` so no other step becomes Active
+     * and the home primary button stays disabled. Otherwise a step with no mandatory
+     * dependency (e.g. Selfie sitting below an ID that is still processing) would be picked
+     * as the next active step and re-enable the button before the in-flight step's verdict
+     * arrives. Only once the AmaniEvent verdict clears [processingRuleId] does the scan
+     * resume — and an APPROVED prerequisite then unlocks its dependent step.
+     */
+    private fun activeRuleIndex(
+        rules: List<Rule>,
+        config: ResGetConfig?,
+        statusOverrides: Map<String, String>,
+        processingRuleId: String?
+    ): Int {
+        // A step is in flight: gate everything until its verdict resolves the processing lock.
+        if (processingRuleId != null) return -1
+        return rules.indexOfFirst {
+            !isDone(effectiveStatus(it, statusOverrides)) &&
+                isUnlocked(it, rules, config, statusOverrides)
+        }
+    }
+
+    /**
+     * The step the home primary button should start, applying the exact same overlay-,
+     * processing-, and mandatory-lock-aware logic used to mark the Active row. Returns
+     * `null` when no step is actionable (button disabled / no-op), so the button can never
+     * re-open a just-approved step or jump a step that is still locked while another
+     * processes. Shared with [toUiState] to keep navigation and the rendered state in sync.
+     */
+    fun resolveActiveRule(
+        rules: List<Rule>,
+        config: ResGetConfig?,
+        statusOverrides: Map<String, String> = emptyMap(),
+        processingRuleId: String? = null
+    ): Rule? =
+        activeRuleIndex(rules, config, statusOverrides, processingRuleId).takeIf { it >= 0 }?.let { rules[it] }
 
     private fun isDone(status: String?): Boolean = status in DONE_STATUSES
 
@@ -186,14 +270,14 @@ internal object HomeKYCMapper {
      * Config-driven, per-status styling for one step.
      *  - [label]: StepConfig.buttonText for the status (the status subtitle).
      *  - [accentColor]: StepConfig.buttonColor — the saturated fill; drives the border,
-     *    badge fill, trailing icon, and the status-label *text* (legible on the light card).
-     *  - [badgeTextColor]: StepConfig.buttonTextColor — the on-fill color; used only for the
-     *    badge foreground (number/check/close), which sits on the accent fill.
+     *    inner wash, badge fill, and trailing icon.
+     *  - [textColor]: StepConfig.buttonTextColor — drives the step's title/subtitle text.
+     *    (The number-badge glyph itself stays white, set in StepRow.)
      */
     private data class StepStyle(
         val label: String?,
         val accentColor: Color?,
-        val badgeTextColor: Color?
+        val textColor: Color?
     )
 
     /**
@@ -220,7 +304,7 @@ internal object HomeKYCMapper {
         val bt = stepConfig.buttonText
         val btc = stepConfig.buttonTextColor
         val key = if (isProcessing) AppConstant.STATUS_PROCESSING else status
-        val (labelRaw, accentHex, badgeTextHex) = when (key) {
+        val (labelRaw, accentHex, textHex) = when (key) {
             AppConstant.STATUS_APPROVED -> Triple(bt?.approved, bc?.approved, btc?.approved)
             AppConstant.STATUS_REJECTED -> Triple(bt?.rejected, bc?.rejected, btc?.rejected)
             AppConstant.STATUS_AUTOMATICALLY_REJECTED ->
@@ -234,7 +318,7 @@ internal object HomeKYCMapper {
         return StepStyle(
             label = labelRaw?.takeIf { it.isNotBlank() },
             accentColor = accentHex.toAmaniColorOrNull(),
-            badgeTextColor = badgeTextHex.toAmaniColorOrNull()
+            textColor = textHex.toAmaniColorOrNull()
         )
     }
 

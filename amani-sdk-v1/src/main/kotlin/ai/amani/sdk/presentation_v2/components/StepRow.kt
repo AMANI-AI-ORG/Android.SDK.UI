@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation_v2.components
 
-import ai.amani.sdk.presentation_v2.theme.AmaniV2Colors
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
@@ -49,15 +48,15 @@ data class VerificationStep(
     val subtitle: String?,
     val status: StepRowStatus,
     val error: StepError? = null,
-    // Config-driven per-status styling (server StepConfig). Null falls back to the built-in
-    // palette styling for [status].
-    //
-    // [accentColor] is StepConfig.buttonColor — a saturated fill driving the border, badge
-    // fill, trailing icon tint, and status-label text. [badgeTextColor] is
-    // StepConfig.buttonTextColor — used only for the badge foreground (number/check/close),
-    // which sits on the accent fill.
+    // Config-driven per-status styling (server StepConfig.buttonColor), resolved for the
+    // step's *current* status in HomeKYCMapper. Null falls back to the built-in palette.
+    // [accentColor] is the status color used for the border (full), the inner fill (a light
+    // translucent wash), the number-badge fill and the trailing icon.
+    // The number-badge glyph itself is always white (per the HTML design).
     val accentColor: Color? = null,
-    val badgeTextColor: Color? = null
+    // StepConfig.buttonTextColor — drives the step's title/subtitle text color (kept distinct
+    // from the badge glyph, which stays white). Null falls back to [accentColor].
+    val textColor: Color? = null
 )
 
 /**
@@ -70,26 +69,25 @@ fun StepRow(
     modifier: Modifier = Modifier
 ) {
     val palette = AmaniV2Theme.palette
-    val rejected = step.status == StepRowStatus.Rejected
-    val active = step.status == StepRowStatus.Active
-    val processing = step.status == StepRowStatus.Processing
 
-    // Config-driven accent (server StepConfig.buttonColor): the row gets a light transparent
-    // tint of the button color as background plus a solid button-color border, with the
-    // status label / badge / icon in the saturated color. Without config, the built-in palette.
-    val accent = step.accentColor
-    val containerColor = when (step.status) {
-        StepRowStatus.Active, StepRowStatus.Processing -> accent?.copy(alpha = 0.10f) ?: palette.accentSofter
-        StepRowStatus.Rejected -> accent?.copy(alpha = 0.10f) ?: Color(0xFFFEF2F2)
-        else -> palette.surface
+    // HTML "second screen" step buttons: a light, slightly transparent wash of the status
+    // color *inside*, a full-strength border, and a full-color number badge with white text.
+    // The color is the step's *current* status color (StepConfig.buttonColor, resolved
+    // per-status in HomeKYCMapper.stepStyle — incl. the `processing` variant while uploading /
+    // awaiting the verdict). Without config (previews) it falls back to the built-in palette.
+    val accent = step.accentColor ?: when (step.status) {
+        StepRowStatus.Rejected -> palette.danger
+        StepRowStatus.Locked -> palette.inkLight
+        else -> palette.accent
     }
-    val borderColor = when (step.status) {
-        StepRowStatus.Active, StepRowStatus.Processing -> accent ?: palette.accent
-        StepRowStatus.Rejected -> accent ?: palette.danger
-        else -> palette.border
-    }
-    val borderWidth = if (active || rejected || processing) 1.5.dp else 0.5.dp
-    val rowAlpha = if (step.status == StepRowStatus.Locked) 0.6f else 1f
+    val containerColor = accent.copy(alpha = 0.10f)   // inner fill: light, slightly transparent
+    val borderColor = accent                          // border: full color
+    // StepConfig.buttonTextColor drives the title/subtitle text (distinct from the accent
+    // fill and the always-white badge glyph). Falls back to the accent when config is absent.
+    val textColor = step.textColor ?: accent
+
+    // v1 dims a not-yet-activatable (locked) button to 0.5 alpha; the rest are full strength.
+    val rowAlpha = if (step.status == StepRowStatus.Locked) 0.5f else 1f
     val rowShape = RoundedCornerShape(14.dp.scaled())
 
     Column(
@@ -97,7 +95,7 @@ fun StepRow(
             .fillMaxWidth()
             .alpha(rowAlpha)
             .background(containerColor, rowShape)
-            .border(borderWidth, borderColor, rowShape)
+            .border(1.5.dp, borderColor, rowShape)
             .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())
     ) {
         Row(
@@ -105,7 +103,7 @@ fun StepRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp.scaled())
         ) {
-            StepBadge(step.status, step.index, accent, step.badgeTextColor)
+            StepBadge(step.status, step.index, accent)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     step.title,
@@ -113,16 +111,10 @@ fun StepRow(
                         fontWeight = FontWeight.Medium,
                         fontSize = AmaniV2Type.body.fontSize.scaled()
                     ),
-                    color = palette.ink
+                    // Step text uses the config buttonTextColor (falls back to accent).
+                    color = textColor
                 )
                 step.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                    // The status label uses the saturated accent color to stay legible on the
-                    // soft tint, falling back to the built-in per-status color.
-                    val subtitleColor = accent ?: when (step.status) {
-                        StepRowStatus.Done, StepRowStatus.Active, StepRowStatus.Processing -> palette.accent
-                        StepRowStatus.Rejected -> palette.danger
-                        StepRowStatus.Locked -> palette.inkLight
-                    }
                     val subtitleWeight = if (step.status == StepRowStatus.Locked) FontWeight.Normal else FontWeight.Medium
                     Text(
                         subtitle,
@@ -130,41 +122,37 @@ fun StepRow(
                             fontWeight = subtitleWeight,
                             fontSize = AmaniV2Type.label.fontSize.scaled()
                         ),
-                        color = subtitleColor,
+                        // Same buttonTextColor as the title, slightly dimmed for hierarchy.
+                        color = textColor.copy(alpha = 0.85f),
                         modifier = Modifier.padding(top = 2.dp.scaled())
                     )
                 }
             }
             when (step.status) {
-                StepRowStatus.Active -> Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = accent ?: palette.accent, modifier = Modifier.size(16.dp.scaled()))
+                StepRowStatus.Active -> Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = accent, modifier = Modifier.size(16.dp.scaled()))
                 StepRowStatus.Processing -> CircularProgressIndicator(
                     modifier = Modifier.size(16.dp.scaled()),
-                    color = accent ?: palette.accent,
+                    color = accent,
                     strokeWidth = 2.dp
                 )
-                StepRowStatus.Locked -> Icon(Icons.Filled.Lock, null, tint = palette.inkLight, modifier = Modifier.size(14.dp.scaled()))
-                StepRowStatus.Rejected -> Icon(Icons.Filled.Warning, null, tint = accent ?: palette.danger, modifier = Modifier.size(18.dp.scaled()))
+                StepRowStatus.Locked -> Icon(Icons.Filled.Lock, null, tint = accent, modifier = Modifier.size(14.dp.scaled()))
+                StepRowStatus.Rejected -> Icon(Icons.Filled.Warning, null, tint = accent, modifier = Modifier.size(18.dp.scaled()))
                 StepRowStatus.Done -> {}
             }
         }
 
         if (step.error != null) {
-            InlineError(step.error)
+            InlineError(step.error, accent)
         }
     }
 }
 
 @Composable
-private fun StepBadge(status: StepRowStatus, index: Int, accent: Color? = null, badgeTextColor: Color? = null) {
-    val palette = AmaniV2Theme.palette
-    val onAccent = badgeTextColor ?: palette.surface
-    // The badge is the saturated accent fill carrying the on-fill foreground
-    // (number/check/close). The Locked badge keeps neutral grey for not-yet-reached steps.
-    val (bg, fg) = when (status) {
-        StepRowStatus.Done, StepRowStatus.Active, StepRowStatus.Processing -> (accent ?: palette.accent) to onAccent
-        StepRowStatus.Rejected -> (accent ?: palette.danger) to onAccent
-        StepRowStatus.Locked -> AmaniV2Colors.BgWarm to palette.inkMuted
-    }
+private fun StepBadge(status: StepRowStatus, index: Int, accent: Color) {
+    // Number box: full status color fill ([accent] = buttonColor) with a white glyph/number,
+    // per the HTML second-screen design.
+    val bg = accent
+    val fg = Color.White
     Box(
         modifier = Modifier
             .size(32.dp.scaled())
@@ -180,18 +168,20 @@ private fun StepBadge(status: StepRowStatus, index: Int, accent: Color? = null, 
 }
 
 @Composable
-private fun InlineError(error: StepError) {
+private fun InlineError(error: StepError, accent: Color) {
     val palette = AmaniV2Theme.palette
+    // A white inset note on the light-wash card: full status-color border + icon ([accent]),
+    // dark readable text.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 12.dp.scaled())
             .background(palette.surface, RoundedCornerShape(10.dp.scaled()))
-            .border(0.5.dp, Color(0xFFFECACA), RoundedCornerShape(10.dp.scaled()))
+            .border(0.5.dp, accent, RoundedCornerShape(10.dp.scaled()))
             .padding(horizontal = 12.dp.scaled(), vertical = 10.dp.scaled()),
         horizontalArrangement = Arrangement.spacedBy(10.dp.scaled())
     ) {
-        Icon(Icons.Outlined.ErrorOutline, null, tint = palette.danger, modifier = Modifier.size(16.dp.scaled()))
+        Icon(Icons.Outlined.ErrorOutline, null, tint = accent, modifier = Modifier.size(16.dp.scaled()))
         Column(modifier = Modifier.weight(1f)) {
             val hasTitle = !error.title.isNullOrBlank()
             if (hasTitle) {

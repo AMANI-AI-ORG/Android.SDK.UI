@@ -10,6 +10,8 @@ import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureFrontScreen
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScreen
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeMapper
+import ai.amani.sdk.presentation_v2.selfie_capture.SelfieCaptureScreen
+import ai.amani.sdk.presentation_v2.selfie_capture.SelfieMapper
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -53,6 +55,10 @@ fun AmaniV2NavHost(
     // to upload now or run the NFC leg; this composable just pops back to Home afterwards
     // so the user watches the step upload from the overview.
     onCaptureLegFinished: (datamanager.model.config.Version) -> Unit,
+    // Resolves the step the home primary button should start, applying the view model's
+    // live overlays (processing / verdict / mandatory lock). Returns null when nothing is
+    // actionable right now, so the button is a no-op while a step processes.
+    resolveActiveRule: () -> ai.amani.sdk.model.customer.Rule?,
     modifier: Modifier = Modifier
 ) {
     BackHandler {
@@ -87,13 +93,13 @@ fun AmaniV2NavHost(
                 // state is shown by the activity during the initial GeneralConfigs fetch.
                 state = HomeKYCScreenState.Ready(homeContent),
                 onBack = { if (!navigator.popBackStack()) onExit() },
-                onPrimary = { startCaptureFlow(navigator) }
+                onPrimary = { startCaptureFlow(navigator, resolveActiveRule) }
             )
 
             AmaniV2Destination.DocumentType -> DocumentTypeRoute(
                 onBack = { if (!navigator.popBackStack()) onExit() },
                 onContinue = { version ->
-                    CaptureFlow.initialCaptureFor(version)?.let(navigator::navigateTo)
+                    CaptureFlow.directDestinationFor(version)?.let(navigator::navigateTo)
                 }
             )
 
@@ -173,27 +179,77 @@ fun AmaniV2NavHost(
                     )
                 }
             }
+
+            is AmaniV2Destination.SelfieCapture -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    SelfieCaptureScreen(
+                        state = SelfieMapper.toSelfieCaptureState(version),
+                        version = version,
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // The embedded AmaniAi selfie camera persists the captured frame and
+                        // hands back its path; carry it into the confirm step.
+                        onCaptured = { path ->
+                            navigator.navigateTo(
+                                AmaniV2Destination.SelfieConfirm(
+                                    versionType = destination.versionType,
+                                    imagePath = path
+                                )
+                            )
+                        }
+                    )
+                }
+            }
+
+            is AmaniV2Destination.SelfieConfirm -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    PreviewScreen(
+                        state = SelfieMapper.toPreviewScreenState(
+                            version = version,
+                            general = CachingHomeKYC.appConfig?.generalConfigs,
+                            imagePath = destination.imagePath
+                        ),
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // Selfies are single-sided: confirming always finishes the leg —
+                        // hand the version to the host (which uploads through the selfie SDK
+                        // path) and pop to Home so the step shows its processing spinner.
+                        onConfirm = {
+                            onCaptureLegFinished(version)
+                            navigator.popToRoot()
+                        },
+                        onRetake = { navigator.popBackStack() }
+                    )
+                }
+            }
         }
     }
 }
 
 /**
- * Entry into the capture leg from Home, mirroring v1's single-vs-multi version branch
- * (`HomeKYCViewModel.navigateScreen`): prepare the first actionable step's versions and,
- * when only one is selectable, skip the document picker and route straight into capture;
- * otherwise open the [AmaniV2Destination.DocumentType] chooser.
+ * Entry into the capture leg from Home: resolve the step that's actionable *right now*
+ * (via [resolveActiveRule], which applies the view model's live processing / verdict /
+ * mandatory-lock overlays), prepare its versions and let [CaptureFlow.startDestination]
+ * decide where to go. That decision is the V2 port of v1's `HomeKYCViewModel.navigateScreen`
+ * `when (documentID)` — a single selectable document routes straight into its capture
+ * screen (Selfie → selfie, ID family → ID capture, …), while several photo-ID documents
+ * open the [AmaniV2Destination.DocumentType] chooser.
+ *
+ * When no step is actionable (the active step is uploading / awaiting its verdict and the
+ * next is still locked), [resolveActiveRule] returns null and this is a no-op — the button
+ * can't re-open a just-approved step or jump ahead of a processing one.
  */
-private fun startCaptureFlow(navigator: AmaniV2Navigator) {
-    val rule = CaptureFlow.firstActionableRule() ?: return
+private fun startCaptureFlow(
+    navigator: AmaniV2Navigator,
+    resolveActiveRule: () -> ai.amani.sdk.model.customer.Rule?
+) {
+    val rule = resolveActiveRule() ?: return
     CaptureFlow.prepareVersions(rule)
-    val visible = CaptureFlow.visibleVersions()
-    val single = visible.singleOrNull()
-    val directCapture = single?.let(CaptureFlow::initialCaptureFor)
-    if (directCapture != null) {
-        navigator.navigateTo(directCapture)
-    } else {
-        navigator.navigateTo(AmaniV2Destination.DocumentType)
-    }
+    CaptureFlow.startDestination()?.let(navigator::navigateTo)
 }
 
 /**

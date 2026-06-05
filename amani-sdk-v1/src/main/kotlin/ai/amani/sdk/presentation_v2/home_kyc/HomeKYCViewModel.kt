@@ -5,6 +5,10 @@ import ai.amani.sdk.data.repository.config.ConfigRepositoryImp
 import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
 import ai.amani.sdk.data.repository.id_capture.IDCaptureRepoImp
 import ai.amani.sdk.data.repository.login.LoginRepoImp
+import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
+import ai.amani.sdk.presentation.selfie.SelfieType
+import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
+import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.extentions.deviceHasNFC
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.AmaniEventCallBack
@@ -54,7 +58,8 @@ class HomeKYCViewModel(
     private val loginRepository: LoginRepoImp,
     private val configRepository: ConfigRepositoryImp,
     private val customerDetailRepository: CustomerDetailRepoImp,
-    private val idCaptureRepository: IDCaptureRepoImp
+    private val idCaptureRepository: IDCaptureRepoImp,
+    private val selfieCaptureRepository: SelfieCaptureRepoImp
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HomeKYCState>(HomeKYCState.Loading)
@@ -129,6 +134,24 @@ class HomeKYCViewModel(
     }
 
     /**
+     * The step the home primary button should start right now, or `null` when nothing is
+     * actionable (the active step is uploading / awaiting its verdict and the next is still
+     * locked behind it). Resolved with the live overlays so navigation matches exactly the
+     * Active row the user sees: it never re-opens a just-approved step and never jumps a
+     * step still locked while another processes. The capture entry (see the nav host) uses
+     * this instead of the cache's stale `rule.status`.
+     */
+    fun resolveActiveRule(): Rule? {
+        val rules = CachingHomeKYC.onlyKYCRules ?: return null
+        return HomeKYCMapper.resolveActiveRule(
+            rules = rules,
+            config = CachingHomeKYC.appConfig,
+            statusOverrides = statusOverrides,
+            processingRuleId = processingRuleId
+        )
+    }
+
+    /**
      * Finishes the capture leg for [version] after the user confirmed the last side.
      * Mirrors v1's `PreviewScreenViewModel.navigateScreen` → `HomeKYCViewModel.uploadID`
      * hand-off: when NFC is *not* active the captured document is uploaded straight away
@@ -148,13 +171,18 @@ class HomeKYCViewModel(
             return
         }
 
-        val nfcActive = (version.nfcAndroid ?: version.nfc) && deviceHasNFC(activity)
-        if (nfcActive) {
-            // TODO(NFC): NFC-active leg — fetch MRZ, open the NFC scan screen, then upload
-            //  the ID + NFC together (v1 PreviewScreenViewModel → NFCScanFragment path).
-            //  Deferred for now; the step is left untouched.
-            Timber.w("V2 upload: NFC-active flow not implemented yet (TODO), docType=$docType")
-            return
+        val isSelfie = version.documentId == AmaniDocumentTypes.SELFIE
+
+        // NFC only branches off the ID leg; selfie has no NFC variant.
+        if (!isSelfie) {
+            val nfcActive = (version.nfcAndroid ?: version.nfc) && deviceHasNFC(activity)
+            if (nfcActive) {
+                // TODO(NFC): NFC-active leg — fetch MRZ, open the NFC scan screen, then upload
+                //  the ID + NFC together (v1 PreviewScreenViewModel → NFCScanFragment path).
+                //  Deferred for now; the step is left untouched.
+                Timber.w("V2 upload: NFC-active flow not implemented yet (TODO), docType=$docType")
+                return
+            }
         }
 
         val ruleId = ruleIdFor(version)
@@ -163,30 +191,47 @@ class HomeKYCViewModel(
         processingRuleId = ruleId
         refreshReady()
 
-        idCaptureRepository.upload(
-            activity = activity,
-            docType = docType,
-            onStart = { /* spinner already shown above */ },
-            onComplete = { result ->
-                if (result.isSuccess) {
-                    // Upload accepted — keep the spinner until the AmaniEvent socket
-                    // delivers the verdict for this step.
-                    Timber.i("V2 upload accepted for docType=$docType, awaiting steps result")
-                } else {
-                    Timber.e(
-                        "V2 upload failed docType=$docType code=${result.onError} err=${result.throwable}"
-                    )
-                    // Surface the failure as a rejection on this step so the next step
-                    // stays locked, and stop the spinner.
-                    processingRuleId = null
-                    ruleId?.let { id ->
-                        statusOverrides[id] = AppConstant.STATUS_REJECTED
-                        errorOverrides[id] = uploadErrorMessage(result)
-                    }
-                    refreshReady()
-                }
+        val onComplete: (ai.amani.sdk.model.UploadResultModel) -> Unit = { result ->
+            handleUploadResult(result, docType)
+        }
+
+        if (isSelfie) {
+            // Selfies upload through the selfie SDK path (not IDCapture). The variant is
+            // resolved the same way the capture screen mounted it, so the upload always
+            // matches what was captured. Mirrors v1 HomeKYCViewModel.uploadSelfie dispatch.
+            when (SelfieTypeResolver.resolve(version)) {
+                SelfieType.Auto -> selfieCaptureRepository.uploadAutoSelfie(activity, docType, {}, onComplete)
+                SelfieType.Manual -> selfieCaptureRepository.uploadManualSelfie(activity, docType, {}, onComplete)
+                // Pose estimation (V1 and V2) share the same upload endpoint.
+                else -> selfieCaptureRepository.uploadSelfiePoseEstimation(activity, docType, {}, onComplete)
             }
-        )
+        } else {
+            idCaptureRepository.upload(activity, docType, {}, onComplete)
+        }
+    }
+
+    /**
+     * Upload completion callback for every step kind. We deliberately do **not** act on
+     * [ai.amani.sdk.model.UploadResultModel.isSuccess]: a successful upload only means the
+     * document reached the server, not that it was approved — and approval (not delivery)
+     * is what the step's state must reflect. So the step keeps its processing loader after
+     * upload regardless of this result; only the AmaniEvent socket verdict (see
+     * [listenAmaniEvents]) clears [processingRuleId] and swaps the spinner for the real
+     * status (Done / Rejected / Pending review). An APPROVED verdict then unlocks the next
+     * step. A failure here is logged only; the loader stays until that socket status comes.
+     */
+    private fun handleUploadResult(
+        result: ai.amani.sdk.model.UploadResultModel,
+        docType: String
+    ) {
+        if (result.isSuccess) {
+            Timber.i("V2 upload accepted for docType=$docType, awaiting AmaniEvent verdict")
+        } else {
+            Timber.e(
+                "V2 upload reported failure docType=$docType code=${result.onError} " +
+                    "err=${result.throwable}; keeping loader until AmaniEvent verdict"
+            )
+        }
     }
 
     private fun login(activity: Activity, config: RegisterConfig) {
@@ -349,11 +394,6 @@ class HomeKYCViewModel(
             ?: docList?.firstOrNull { (statusOverrides[it.id] ?: it.status) != STATUS_APPROVED }?.id
     }
 
-    private fun uploadErrorMessage(result: ai.amani.sdk.model.UploadResultModel): String =
-        result.throwable?.localizedMessage?.takeIf { it.isNotBlank() }
-            ?: result.onError?.let { "Upload failed (code $it)" }
-            ?: "Upload failed. Please try again."
-
     /**
      * Filters the customer rules down to the KYC-flow rules, caching the result in the
      * shared [CachingHomeKYC.onlyKYCRules]. Mirrors v1 `HomeKYCViewModel.getDocList()`.
@@ -405,7 +445,8 @@ class HomeKYCViewModel(
                     LoginRepoImp(),
                     ConfigRepositoryImp(),
                     CustomerDetailRepoImp(),
-                    IDCaptureRepoImp()
+                    IDCaptureRepoImp(),
+                    SelfieCaptureRepoImp()
                 ) as T
         }
     }

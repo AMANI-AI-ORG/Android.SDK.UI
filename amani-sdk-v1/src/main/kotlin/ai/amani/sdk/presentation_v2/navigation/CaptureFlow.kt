@@ -4,32 +4,27 @@ import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.utils.AmaniDocumentTypes
-import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
-import ai.amani.sdk.utils.AppConstant.STATUS_PENDING_REVIEW
-import ai.amani.sdk.utils.AppConstant.STATUS_PROCESSING
 import datamanager.model.config.Version
 
 /**
  * Navigation logic for the V2 capture flow, reusing the shared SDK data layer
  * ([CachingHomeKYC], the [getStepConfig] extension) instead of re-implementing it.
  *
- * It mirrors three pieces of v1 behaviour without the Fragment/NavDirections coupling:
+ * It mirrors two pieces of v1 behaviour without the Fragment/NavDirections coupling:
  *  - `HomeKYCViewModel.setVersionList` → [prepareVersions]
- *  - the single-vs-multi version branch in `HomeKYCViewModel.navigateScreen` → callers
- *    use [visibleVersions]/[initialCaptureFor]
+ *  - the single-vs-multi version branch in `HomeKYCViewModel.navigateScreen` →
+ *    [startDestination] / [directDestinationFor]
  *  - the front/back side decision in `PreviewScreenViewModel.navigateScreen` →
  *    [resolveAfterConfirm]
+ *
+ * Which step is actionable is *not* decided here: that uses the view model's live overlays
+ * (processing / verdict / mandatory lock) via `HomeKYCMapper.resolveActiveRule`, so this
+ * object never reads the cache's stale `rule.status` for sequencing.
  *
  * Kept free of Compose so it stays unit-testable; the nav host just calls these and
  * turns the results into [AmaniV2Navigator] moves.
  */
 internal object CaptureFlow {
-
-    private val DONE_STATUSES = setOf(STATUS_APPROVED, STATUS_PENDING_REVIEW, STATUS_PROCESSING)
-
-    /** First KYC step still needing the user's action (mirrors v1 sequential unlock). */
-    fun firstActionableRule(): Rule? =
-        CachingHomeKYC.onlyKYCRules?.firstOrNull { it.status !in DONE_STATUSES }
 
     /**
      * Builds and caches the version list for [rule] from the step config, stamping each
@@ -59,19 +54,75 @@ internal object CaptureFlow {
         CachingHomeKYC.versionsList.orEmpty().firstOrNull { it.type == versionType }
 
     /**
-     * Initial capture destination for a chosen [version]. Only the photo-ID documents
-     * route into the V2 capture flow (matching v1's SelectDocumentType → IDFrontSide);
-     * other document kinds (physical contract, etc.) have no V2 screen yet.
+     * Capture destination for a single chosen [version], keyed on its `documentId` —
+     * the V2 port of v1's `HomeKYCViewModel.navigateScreen` `when (documentID)` (the
+     * "single version" branch): each document kind opens its own capture screen.
+     *
+     *  - ID / Passport / Driving licence / Visa → photo-ID capture (front first)
+     *  - Selfie → selfie capture
+     *  - NFC / Signature / Physical contract → no V2 screen yet (deferred, returns null)
+     *
+     * This is also what the document-type chooser calls once the user picks a card.
      */
-    fun initialCaptureFor(version: Version): AmaniV2Destination? {
+    fun directDestinationFor(version: Version): AmaniV2Destination? {
         val type = version.type ?: return null
         return when (version.documentId) {
             AmaniDocumentTypes.IDENTIFICATION,
             AmaniDocumentTypes.PASSPORT,
-            AmaniDocumentTypes.DRIVING_LICENSE ->
+            AmaniDocumentTypes.DRIVING_LICENSE,
+            AmaniDocumentTypes.VISA ->
                 AmaniV2Destination.Capture(type, CaptureSide.Front)
 
-            else -> null // TODO(wiring): physical contract / other document V2 screens
+            AmaniDocumentTypes.SELFIE ->
+                AmaniV2Destination.SelfieCapture(type)
+
+            // TODO(wiring): these document kinds have no V2 screen yet.
+            AmaniDocumentTypes.NFC,
+            AmaniDocumentTypes.SIGNATURE,
+            AmaniDocumentTypes.PHYSICAL_CONTRACT -> null
+
+            else -> null
+        }
+    }
+
+    /**
+     * Entry destination for the currently prepared step (call right after
+     * [prepareVersions]). This is the V2 port of v1's `HomeKYCViewModel.navigateScreen`,
+     * preserving its two-branch shape so each document kind opens the right screen:
+     *
+     *  - **Single selectable document** (only one version, or only one not hidden):
+     *    route straight into that document's capture screen via [directDestinationFor]
+     *    (v1's single-version branch — Selfie → selfie, ID family → ID capture, …). This
+     *    is why a selfie step never lands on the document-type chooser.
+     *  - **Several selectable documents**: only the photo-ID family (ID / Passport /
+     *    Driving licence / Visa / Physical contract) opens the [AmaniV2Destination.DocumentType]
+     *    chooser (v1's multi-version branch); anything else still resolves directly.
+     *
+     * Returns `null` when there are no versions or the resolved document kind has no V2
+     * screen yet (the caller then simply doesn't navigate).
+     */
+    fun startDestination(): AmaniV2Destination? {
+        val all = CachingHomeKYC.versionsList.orEmpty()
+        if (all.isEmpty()) return null
+        val nonHidden = visibleVersions()
+        // v1: single when `versionsList.size == 1 || non-hidden count == 1`.
+        val isSingle = all.size == 1 || nonHidden.size == 1
+        // The document the step is actually about (v1 reads documentId off the current
+        // version); prefer the visible one so a hidden lead version can't mislead routing.
+        val primary = nonHidden.firstOrNull() ?: all.first()
+        if (isSingle) return directDestinationFor(primary)
+
+        return when (primary.documentId) {
+            AmaniDocumentTypes.IDENTIFICATION,
+            AmaniDocumentTypes.PASSPORT,
+            AmaniDocumentTypes.DRIVING_LICENSE,
+            AmaniDocumentTypes.VISA,
+            AmaniDocumentTypes.PHYSICAL_CONTRACT ->
+                AmaniV2Destination.DocumentType
+
+            // Selfie / signature / nfc never offer a document-type chooser (v1 keeps them
+            // single-version); resolve straight to their capture screen.
+            else -> directDestinationFor(primary)
         }
     }
 

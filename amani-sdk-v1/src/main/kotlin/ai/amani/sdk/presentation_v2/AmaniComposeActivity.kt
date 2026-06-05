@@ -92,7 +92,12 @@ class AmaniComposeActivity : FragmentActivity() {
                             // processing and listens to AmaniEvents for the verdict.
                             onCaptureLegFinished = { version ->
                                 viewModel.uploadStep(this@AmaniComposeActivity, version)
-                            }
+                            },
+                            // The home primary button starts whatever step is actionable now,
+                            // resolved from the view model's live overlays (processing / verdict
+                            // / mandatory lock) so it never re-opens an approved step or jumps a
+                            // step still locked while another processes.
+                            resolveActiveRule = viewModel::resolveActiveRule
                         )
                     }
 

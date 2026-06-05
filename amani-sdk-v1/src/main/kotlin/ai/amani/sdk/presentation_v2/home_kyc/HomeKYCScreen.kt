@@ -43,7 +43,10 @@ data class HomeKYCUiState(
     val title: String?,
     val subtitle: String,
     val steps: List<VerificationStep>,
-    val primaryButtonText: String
+    val primaryButtonText: String,
+    // False disables the primary button: there is no step ready for the user right now
+    // (e.g. the active step is uploading / awaiting its verdict and the next is locked).
+    val primaryButtonEnabled: Boolean = true
 )
 
 /**
@@ -128,7 +131,11 @@ private fun HomeKYCContent(
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
                 .padding(bottom = 20.dp)
         ) {
-            PrimaryButton(text = state.primaryButtonText, onClick = onPrimary)
+            PrimaryButton(
+                text = state.primaryButtonText,
+                enabled = state.primaryButtonEnabled,
+                onClick = onPrimary
+            )
         }
     }
 }
