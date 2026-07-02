@@ -9,10 +9,12 @@ import ai.amani.sdk.interfaces.IFragmentCallBack
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.OnFailurePoseEstimation
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.PoseEstimationObserver
+import ai.amani.sdk.modules.selfie.pose_estimation.v2.model.PoseEstimationV2UiState
 import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.BitmapUtils
 import ai.amani.voice_assistant.AmaniVoiceAssistant
 import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
+import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -177,6 +179,32 @@ class SelfieCaptureFragment: Fragment() {
                 alertDescription = args.dataModel.version?.selfieAlertDescription,
                 alertTryAgain = args.dataModel.version?.selfieAlertTryAgain
             )
+            .onUiStateChanged { state ->
+                when (state) {
+                    PoseEstimationV2UiState.PREPARATION_STARTED -> {
+                        VoiceAssistantSDKManager.play(
+                            context = requireContext(),
+                            key = AmaniVAVoiceKeys.VOICE_SE1,
+                            callBack = object : AmaniVAPlayerCallBack {
+                                override fun onFailure(exception: Exception) {
+                                }
+
+                                override fun onPlay() {
+                                }
+
+                                override fun onStop() {
+                                }
+                            }
+                        )
+                    }
+
+                    PoseEstimationV2UiState.PREPARATION_CONFIRMED -> {
+                        VoiceAssistantSDKManager.stop()
+                    }
+
+                    else -> Unit
+                }
+            }
             .videoRecord(videoRecord = videoRecord)
             .ovalViewAnimationDurationMilSec(500)
             .observe(observable)
