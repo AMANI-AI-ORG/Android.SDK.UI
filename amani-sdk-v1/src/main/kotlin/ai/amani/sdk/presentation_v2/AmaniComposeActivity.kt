@@ -2,6 +2,11 @@ package ai.amani.sdk.presentation_v2
 
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation_v2.approved.ApprovedMapper
+import ai.amani.sdk.presentation_v2.approved.ApprovedScreen
+import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCEffect
+import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCMapper
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCState
@@ -16,6 +21,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +68,20 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
         onNfcIntent?.invoke(intent)
     }
 
+    /**
+     * Finishes the flow returning KYCResult APPROVED to the caller — the V2 counterpart of
+     * v1 CongratulationsFragment.finishActivity (same Intent contract).
+     */
+    private fun finishApproved() {
+        val returnIntent = Intent()
+        returnIntent.putExtra(
+            AppConstant.KYC_RESULT,
+            ai.amani.sdk.model.KYCResult(profileStatus = ai.amani.sdk.utils.ProfileStatus.APPROVED)
+        )
+        setResult(RESULT_OK, returnIntent)
+        finish()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -88,12 +108,41 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
 
             val state by viewModel.state.collectAsStateWithLifecycle()
 
+            // ProfileApproved is a one-shot effect (fired either right after the initial
+            // fetch when everything is already approved, or when the last socket verdict
+            // lands); latch it so the success screen survives recompositions.
+            val approved = androidx.compose.runtime.saveable.rememberSaveable {
+                androidx.compose.runtime.mutableStateOf(false)
+            }
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        HomeKYCEffect.ProfileApproved -> approved.value = true
+                        else -> {}
+                    }
+                }
+            }
+
             // While loading, the palette stays at the static defaults and the window is
             // translucent, so only the centered loader shows over the launching screen.
             // Once Ready, the config-driven palette is applied to the whole graph.
-            val palette = (state as? HomeKYCState.Ready)?.palette ?: AmaniV2Palette()
+            val palette = (state as? HomeKYCState.Ready)?.palette
+                ?: (if (approved.value) HomeKYCMapper.resolvePalette(CachingHomeKYC.appConfig) else AmaniV2Palette())
 
             AmaniV2Theme(palette = palette) {
+                if (approved.value) {
+                    // Final success screen (v1 CongratulationsFragment): continue/close/back
+                    // all return KYCResult APPROVED to the caller and finish.
+                    BackHandler { finishApproved() }
+                    ApprovedScreen(
+                        state = ApprovedMapper.toUiState(
+                            general = CachingHomeKYC.appConfig?.generalConfigs,
+                            rules = CachingHomeKYC.onlyKYCRules
+                        ),
+                        onContinue = { finishApproved() }
+                    )
+                    return@AmaniV2Theme
+                }
                 when (val current = state) {
                     HomeKYCState.Loading -> HomeKYCScreen(state = HomeKYCScreenState.Loading)
 

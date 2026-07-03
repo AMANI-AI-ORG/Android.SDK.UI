@@ -22,7 +22,7 @@ internal object SelfieMapper {
     fun toPreviewScreenState(
         version: Version,
         general: GeneralConfigs?,
-        imagePath: String?
+        bitmap: android.graphics.Bitmap?
     ): PreviewScreenUiState {
         val step = version.steps?.firstOrNull()
         return PreviewScreenUiState(
@@ -33,7 +33,7 @@ internal object SelfieMapper {
             ),
             confirmButtonText = (step?.confirm ?: general?.confirmText).orFallback("Looks good"),
             retakeButtonText = general?.tryAgainText.orFallback("Retake selfie"),
-            imagePath = imagePath
+            bitmap = bitmap
         )
     }
 

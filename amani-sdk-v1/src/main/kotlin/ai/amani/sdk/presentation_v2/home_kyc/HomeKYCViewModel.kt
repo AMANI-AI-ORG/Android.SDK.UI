@@ -114,6 +114,16 @@ class HomeKYCViewModel(
         if (started) return
         started = true
 
+        // Fresh flow = fresh data. The shared cache is process-wide and v1 clears it when
+        // its activity is destroyed (AmaniMainActivity.onDestroy → clearCache); without the
+        // same reset here, buildDocList() would return the *previous* session's rules (stale
+        // step statuses on first login) instead of building from the customer detail this
+        // start is about to fetch. Overlays are reset with it so nothing stale survives.
+        CachingHomeKYC.clearCache()
+        statusOverrides.clear()
+        errorOverrides.clear()
+        processingRuleId = null
+
         featureConfig?.let { this.featureConfig = it }
         this.registerConfig = registerConfig
 

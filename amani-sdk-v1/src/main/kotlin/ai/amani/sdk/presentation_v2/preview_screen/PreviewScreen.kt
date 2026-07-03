@@ -7,7 +7,6 @@ import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,7 +42,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import java.io.File
 
 /** State backing [PreviewScreen]. */
 data class PreviewScreenUiState(
@@ -52,8 +50,12 @@ data class PreviewScreenUiState(
     val description: String,
     val confirmButtonText: String,
     val retakeButtonText: String,
-    /** Absolute path of the captured frame to preview; null only in previews/inspection. */
-    val imagePath: String? = null,
+    /**
+     * The just-captured frame, handed over in memory (see [CapturedFrame]) so it keeps the
+     * orientation the camera delivered — no file round-trip, no EXIF handling. Null only in
+     * previews/inspection (renders the placeholder).
+     */
+    val bitmap: android.graphics.Bitmap? = null,
     /**
      * Reassurance checklist shown under the photo (HTML confirm design). Empty hides the
      * card (e.g. selfie confirm).
@@ -97,12 +99,9 @@ fun PreviewScreen(
                 color = palette.inkMuted
             )
             Spacer(Modifier.height(20.dp))
-            // Decode the captured frame, remembered on the path so it isn't repeated on recomposition.
-            val captured = remember(state.imagePath) {
-                state.imagePath
-                    ?.takeIf { File(it).exists() }
-                    ?.let { runCatching { BitmapFactory.decodeFile(it) }.getOrNull() }
-            }
+            // The captured frame arrives as an in-memory bitmap straight from the camera
+            // callback, already upright — no decode, no EXIF handling needed.
+            val captured = state.bitmap
             // Size the frame to the *photo's* aspect ratio so it fills the full width with no
             // dead side/top margins, and shows as large as possible (HTML-style responsive).
             val imageAspect = remember(captured) {

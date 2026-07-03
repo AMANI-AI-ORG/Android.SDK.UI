@@ -8,8 +8,8 @@ import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.id_capture.CaptureFramePlaceholder
 import ai.amani.sdk.presentation_v2.id_capture.findFragmentActivity
+import ai.amani.sdk.presentation_v2.preview_screen.CapturedFrame
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
-import ai.amani.sdk.utils.BitmapUtils
 import android.graphics.Bitmap
 import android.view.View
 import android.widget.FrameLayout
@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -56,7 +57,7 @@ data class SelfieCaptureUiState(
 fun SelfieCaptureScreen(
     state: SelfieCaptureUiState,
     version: Version,
-    onCaptured: (filePath: String) -> Unit,
+    onCaptured: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
@@ -71,6 +72,9 @@ fun SelfieCaptureScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                // Edge-to-edge: end the camera fragment above the system navigation bar so
+                // the SDK's internal capture button is never overlapped by it.
+                .navigationBarsPadding()
                 .clipToBounds()
         ) {
             if (LocalInspectionMode.current) {
@@ -90,7 +94,8 @@ fun SelfieCaptureScreen(
  * Embeds the shared AmaniAi selfie camera into Compose. Resolves the selfie variant from
  * [version] and starts the matching SDK flow (the same calls v1's SelfieCaptureFragment
  * makes), committing the returned Fragment into the hosted container. The captured frame
- * is persisted and its path handed back via [onCaptured].
+ * is handed to the confirm screen in memory via [CapturedFrame] (keeping the camera's
+ * orientation — no persist/re-decode, no EXIF handling) and [onCaptured] advances the flow.
  *
  * The Fragment is committed and removed with the composable's lifecycle so navigating away
  * (or retaking) tears the camera down cleanly.
@@ -98,7 +103,7 @@ fun SelfieCaptureScreen(
 @Composable
 private fun SelfieCameraHost(
     version: Version,
-    onCaptured: (filePath: String) -> Unit,
+    onCaptured: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activity = LocalContext.current.findFragmentActivity()
@@ -115,14 +120,21 @@ private fun SelfieCameraHost(
         var selfieFragment: Fragment? = null
 
         if (fm != null && activity != null) {
-            // Persist the captured frame (or use the file the SDK already wrote) and hand
-            // the absolute path back, marshalled onto the UI thread.
+            // Hand the frame over in memory, marshalled onto the UI thread. Prefer the
+            // in-memory bitmap (already upright); fall back to decoding the file some SDK
+            // variants deliver instead.
             val deliver: (Bitmap?, File?) -> Unit = { bitmap, file ->
                 activity.runOnUiThread {
-                    val path = file?.absolutePath
-                        ?: bitmap?.let { BitmapUtils.saveBitmapAsFile(it, "selfie", activity)?.absolutePath }
-                    if (path != null) currentOnCaptured(path)
-                    else Timber.e("V2 selfie capture: failed to persist captured frame")
+                    val frame = bitmap
+                        ?: file?.absolutePath?.let {
+                            runCatching { android.graphics.BitmapFactory.decodeFile(it) }.getOrNull()
+                        }
+                    if (frame != null) {
+                        CapturedFrame.latest = frame
+                        currentOnCaptured()
+                    } else {
+                        Timber.e("V2 selfie capture: callback delivered no frame")
+                    }
                 }
             }
 

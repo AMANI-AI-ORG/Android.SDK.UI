@@ -131,14 +131,13 @@ fun AmaniV2NavHost(
                         side = destination.side
                     )
                     val onBack = { if (!navigator.popBackStack()) onExit() }
-                    // The embedded AmaniAi camera persists the captured frame and hands back
-                    // its path; carry it into the confirm/preview step.
-                    val onCaptured: (String) -> Unit = { path ->
+                    // The embedded AmaniAi camera hands the captured frame over in memory
+                    // (CapturedFrame); the confirm/preview step reads it from there.
+                    val onCaptured: () -> Unit = {
                         navigator.navigateTo(
                             AmaniV2Destination.CaptureConfirm(
                                 versionType = destination.versionType,
-                                side = destination.side,
-                                imagePath = path
+                                side = destination.side
                             )
                         )
                     }
@@ -264,13 +263,12 @@ fun AmaniV2NavHost(
                         state = SelfieMapper.toSelfieCaptureState(version),
                         version = version,
                         onBack = { if (!navigator.popBackStack()) onExit() },
-                        // The embedded AmaniAi selfie camera persists the captured frame and
-                        // hands back its path; carry it into the confirm step.
-                        onCaptured = { path ->
+                        // The embedded AmaniAi selfie camera hands the captured frame over
+                        // in memory (CapturedFrame); the confirm step reads it from there.
+                        onCaptured = {
                             navigator.navigateTo(
                                 AmaniV2Destination.SelfieConfirm(
-                                    versionType = destination.versionType,
-                                    imagePath = path
+                                    versionType = destination.versionType
                                 )
                             )
                         }
@@ -287,7 +285,7 @@ fun AmaniV2NavHost(
                         state = SelfieMapper.toPreviewScreenState(
                             version = version,
                             general = CachingHomeKYC.appConfig?.generalConfigs,
-                            imagePath = destination.imagePath
+                            bitmap = ai.amani.sdk.presentation_v2.preview_screen.CapturedFrame.latest
                         ),
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // Selfies are single-sided: confirming always finishes the leg —
@@ -386,7 +384,7 @@ private fun CaptureConfirmRoute(
                 version = version,
                 side = destination.side,
                 general = CachingHomeKYC.appConfig?.generalConfigs,
-                imagePath = destination.imagePath
+                bitmap = ai.amani.sdk.presentation_v2.preview_screen.CapturedFrame.latest
             ),
             onBack = { if (!navigator.popBackStack()) onExit() },
             onConfirm = onConfirm@{

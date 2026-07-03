@@ -2,9 +2,9 @@ package ai.amani.sdk.presentation_v2.id_capture
 
 import ai.amani.sdk.Amani
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
+import ai.amani.sdk.presentation_v2.preview_screen.CapturedFrame
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.utils.AppConstant
-import ai.amani.sdk.utils.BitmapUtils
 import android.graphics.Bitmap
 import android.view.View
 import android.widget.FrameLayout
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -26,7 +27,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentContainerView
 import timber.log.Timber
-import java.io.File
 
 /**
  * Back-side document capture screen. Same chrome as the front leg (toolbar over a live
@@ -42,7 +42,7 @@ fun IdCaptureBackScreen(
     state: IdCaptureUiState,
     versionType: String,
     videoRecord: Boolean,
-    onCaptured: (filePath: String) -> Unit,
+    onCaptured: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
@@ -57,6 +57,9 @@ fun IdCaptureBackScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                // Edge-to-edge: end the camera fragment above the system navigation bar so
+                // the SDK's internal capture button is never overlapped by it.
+                .navigationBarsPadding()
                 .clipToBounds()
         ) {
             if (LocalInspectionMode.current) {
@@ -76,8 +79,9 @@ fun IdCaptureBackScreen(
 /**
  * Embeds the shared AmaniAi ID-capture camera for the BACK side into Compose: sets the
  * per-version video-record flag and forces `hologramDetection(false)`, then
- * `start(..., frontSide = false)`. The captured bitmap is persisted as "backSide" and its
- * path handed back via [onCaptured]. The manual-crop timeout is set explicitly so the
+ * `start(..., frontSide = false)`. The captured bitmap is handed to the confirm screen in
+ * memory via [CapturedFrame] (no file round-trip, so the camera's orientation is preserved)
+ * and [onCaptured] advances the flow. The manual-crop timeout is set explicitly so the
  * manual button still appears even without a prior front leg in this process.
  *
  * The Fragment is committed and removed with the composable's lifecycle so navigating away
@@ -87,7 +91,7 @@ fun IdCaptureBackScreen(
 private fun IdCaptureBackCameraHost(
     versionType: String,
     videoRecord: Boolean,
-    onCaptured: (filePath: String) -> Unit,
+    onCaptured: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activity = LocalContext.current.findFragmentActivity()
@@ -121,12 +125,12 @@ private fun IdCaptureBackCameraHost(
             ) { bitmap: Bitmap?, _, _ ->
                 activity.runOnUiThread {
                     if (bitmap != null) {
-                        val file: File? = BitmapUtils.saveBitmapAsFile(bitmap, "backSide", activity)
-                        if (file != null) {
-                            currentOnCaptured(file.absolutePath)
-                        } else {
-                            Timber.e("V2 ID capture (back): failed to persist captured bitmap")
-                        }
+                        // Hand the frame to the confirm screen in memory — keeps the
+                        // camera's orientation (no persist/re-decode, no EXIF handling).
+                        CapturedFrame.latest = bitmap
+                        currentOnCaptured()
+                    } else {
+                        Timber.e("V2 ID capture (back): callback delivered no bitmap")
                     }
                 }
             }

@@ -39,17 +39,17 @@ sealed interface AmaniV2Destination : Parcelable {
     ) : AmaniV2Destination
 
     /**
-     * Captured-image confirmation — V2 counterpart of PreviewScreenFragment. [imagePath]
-     * is the just-captured frame persisted by the camera host, shown for review. Confirming
-     * here applies the v1 side logic: a two-sided document (`version.steps.size > 1`)
-     * advances to the back-side [Capture]; a single-sided one finishes without ever
-     * opening a back-side capture screen.
+     * Captured-image confirmation — V2 counterpart of PreviewScreenFragment. The
+     * just-captured frame is handed over in memory (see
+     * [ai.amani.sdk.presentation_v2.preview_screen.CapturedFrame]), keeping the camera's
+     * orientation and this destination Parcelable-small. Confirming here applies the v1
+     * side logic: a two-sided document (`version.steps.size > 1`) advances to the back-side
+     * [Capture]; a single-sided one finishes without ever opening a back-side capture screen.
      */
     @Parcelize
     data class CaptureConfirm(
         val versionType: String,
-        val side: CaptureSide,
-        val imagePath: String
+        val side: CaptureSide
     ) : AmaniV2Destination
 
     /**
@@ -66,14 +66,13 @@ sealed interface AmaniV2Destination : Parcelable {
 
     /**
      * Captured-selfie confirmation — the selfie counterpart of [CaptureConfirm] (selfies
-     * are single-sided, so there is no `side`). Confirming finishes the leg: the host
-     * uploads through the selfie SDK path and pops to Home, where the step shows its
-     * processing spinner.
+     * are single-sided, so there is no `side`; the frame is handed over in memory the same
+     * way). Confirming finishes the leg: the host uploads through the selfie SDK path and
+     * pops to Home, where the step shows its processing spinner.
      */
     @Parcelize
     data class SelfieConfirm(
-        val versionType: String,
-        val imagePath: String
+        val versionType: String
     ) : AmaniV2Destination
 
     /**

@@ -36,7 +36,7 @@ internal object CaptureMapper {
         version: Version,
         side: CaptureSide,
         general: GeneralConfigs?,
-        imagePath: String?
+        bitmap: android.graphics.Bitmap?
     ): PreviewScreenUiState {
         val step = version.stepFor(side)
         return PreviewScreenUiState(
@@ -47,7 +47,7 @@ internal object CaptureMapper {
             ),
             confirmButtonText = (step?.confirm ?: general?.confirmText).orFallback("Looks good"),
             retakeButtonText = general?.tryAgainText.orFallback("Retake photo"),
-            imagePath = imagePath,
+            bitmap = bitmap,
             // TODO: config-driven
             qualityChecks = listOf(
                 "Sharp & in focus",
