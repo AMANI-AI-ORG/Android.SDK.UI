@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Row states for a verification step. [Processing] is the transient state while the
@@ -81,14 +82,20 @@ fun StepRow(
         StepRowStatus.Locked -> palette.inkLight
         else -> palette.accent
     }
-    val containerColor = accent.copy(alpha = 0.10f)   // inner fill: light, slightly transparent
-    val borderColor = accent                          // border: full color
+    // Only the active/selected step gets the prominent colored border + tinted fill (exactly
+    // like the document-select cards); every other row is plain white with a hairline, so the
+    // "you're here" step is unmistakable.
+    val isSelected = step.status == StepRowStatus.Active || step.status == StepRowStatus.Processing
+    val containerColor = if (isSelected) accent.copy(alpha = 0.14f) else palette.surface
+    val borderColor = if (isSelected) accent else palette.border
+    val borderWidth = if (isSelected) 1.5.dp else 0.5.dp
     // StepConfig.buttonTextColor drives the title/subtitle text (distinct from the accent
     // fill and the always-white badge glyph). Falls back to the accent when config is absent.
     val textColor = step.textColor ?: accent
 
-    // v1 dims a not-yet-activatable (locked) button to 0.5 alpha; the rest are full strength.
-    val rowAlpha = if (step.status == StepRowStatus.Locked) 0.5f else 1f
+    // A locked step is dimmed to read as not-yet-available, but not so faint that its number
+    // badge becomes unreadable (the badge itself uses a readable scheme below).
+    val rowAlpha = if (step.status == StepRowStatus.Locked) 0.6f else 1f
     val rowShape = RoundedCornerShape(14.dp.scaled())
 
     Column(
@@ -96,21 +103,23 @@ fun StepRow(
             .fillMaxWidth()
             .alpha(rowAlpha)
             .background(containerColor, rowShape)
-            .border(1.5.dp, borderColor, rowShape)
+            .border(borderWidth, borderColor, rowShape)
+            // Slightly smaller than the document-select cards (44dp icon / 18dp radius there).
             .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp.scaled())
+            horizontalArrangement = Arrangement.spacedBy(14.dp.scaled())
         ) {
             StepBadge(step.status, step.index, accent)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     step.title,
+                    // Bold, full-strength, larger title so it reads as the row's headline.
                     style = AmaniV2Type.body.copy(
-                        fontWeight = FontWeight.Medium,
-                        fontSize = AmaniV2Type.body.fontSize.scaled()
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp.scaled()
                     ),
                     // Step text uses the config buttonTextColor (falls back to accent).
                     color = textColor,
@@ -123,16 +132,16 @@ fun StepRow(
                     val subtitleWeight = if (step.status == StepRowStatus.Locked) FontWeight.Normal else FontWeight.Medium
                     Text(
                         subtitle,
-                        style = AmaniV2Type.label.copy(
+                        style = AmaniV2Type.bodySmall.copy(
                             fontWeight = subtitleWeight,
-                            fontSize = AmaniV2Type.label.fontSize.scaled()
+                            fontSize = 13.sp.scaled()
                         ),
-                        // Same buttonTextColor as the title, slightly dimmed for hierarchy.
-                        color = textColor.copy(alpha = 0.85f),
+                        // Same buttonTextColor as the title, only slightly dimmed for hierarchy.
+                        color = textColor.copy(alpha = 0.9f),
                         // Single line too (see title TODO).
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp.scaled())
+                        modifier = Modifier.padding(top = 3.dp.scaled())
                     )
                 }
             }
@@ -157,20 +166,23 @@ fun StepRow(
 
 @Composable
 private fun StepBadge(status: StepRowStatus, index: Int, accent: Color) {
-    // Number box: full status color fill ([accent] = buttonColor) with a white glyph/number,
-    // per the HTML second-screen design.
-    val bg = accent
-    val fg = Color.White
+    val palette = AmaniV2Theme.palette
+    // Active/done/rejected: full status-color fill + white glyph (HTML). Locked: a light warm
+    // fill with a dark muted number, so the number stays readable through the row's dimming
+    // (a white number on the grey lock color washed out at low opacity).
+    val locked = status == StepRowStatus.Locked
+    val bg = if (locked) palette.backgroundWarm else accent
+    val fg = if (locked) palette.inkMuted else Color.White
     Box(
         modifier = Modifier
-            .size(32.dp.scaled())
-            .background(bg, RoundedCornerShape(10.dp.scaled())),
+            .size(36.dp.scaled())
+            .background(bg, RoundedCornerShape(11.dp.scaled())),
         contentAlignment = Alignment.Center
     ) {
         when (status) {
-            StepRowStatus.Done -> Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.size(16.dp.scaled()))
+            StepRowStatus.Done -> Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.size(18.dp.scaled()))
             StepRowStatus.Rejected -> Icon(Icons.Filled.Close, null, tint = fg, modifier = Modifier.size(18.dp.scaled()))
-            else -> Text("$index", style = AmaniV2Type.bodySmall.copy(fontWeight = FontWeight.SemiBold, fontSize = AmaniV2Type.bodySmall.fontSize.scaled()), color = fg)
+            else -> Text("$index", style = AmaniV2Type.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp.scaled()), color = fg)
         }
     }
 }

@@ -164,10 +164,8 @@ internal object HomeKYCMapper {
             // Config-driven: GeneralConfigs.mainTitleText (v1 toolbar title), fallback when blank/null.
             headerTitle = g?.mainTitleText.orFallback("Verification"),
             dots = dots,
-            // The large page heading had no dedicated GeneralConfigs field (mainTitleText
-            // already drives the toolbar), so it is dropped (null = not rendered).
-            title = null,
-            // Config-driven: GeneralConfigs.mainDescriptionText (v1 description), fallback when blank/null.
+            // TODO: config-driven
+            title = "Let's get you verified",
             subtitle = g?.mainDescriptionText.orFallback("Complete the steps below to finish verification."),
             steps = steps,
             // Config-driven: GeneralConfigs.continueText, fallback when blank/null.

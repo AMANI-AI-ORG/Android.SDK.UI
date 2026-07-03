@@ -43,7 +43,8 @@ internal object SelectDocumentTypeMapper {
             subtitle = stepConfig?.documentSelectionDescription
                 .orFallback("Choose a government-issued ID. Make sure it's valid and not expired."),
             options = options,
-            selectedId = null,
+            // Preselect the first document (HTML shows the top option already chosen).
+            selectedId = options.firstOrNull()?.id,
             continueButtonText = general?.continueText.orFallback("Continue")
         )
     }

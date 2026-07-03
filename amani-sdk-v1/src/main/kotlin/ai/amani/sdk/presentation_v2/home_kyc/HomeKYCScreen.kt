@@ -31,7 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * State backing [HomeKYCScreen]. The same screen renders the start, mid-flow and
@@ -111,19 +113,30 @@ private fun HomeKYCContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
         ) {
+            // Pull the heading + steps down from the header so the screen breathes.
+            Spacer(Modifier.height(24.dp))
             state.title?.takeIf { it.isNotBlank() }?.let { title ->
-                Text(title, style = AmaniV2Type.title.scaled(), color = palette.ink)
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    title,
+                    // Bigger, bold, full-strength heading (HTML "Let's get you verified").
+                    style = AmaniV2Type.title.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 30.sp
+                    ).scaled(),
+                    color = palette.ink
+                )
+                Spacer(Modifier.height(10.dp))
             }
             Text(
                 state.subtitle,
                 style = AmaniV2Type.body.scaled(),
                 color = palette.inkMuted
             )
-            Spacer(Modifier.height(24.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(28.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 state.steps.forEach { StepRow(step = it) }
             }
+            Spacer(Modifier.height(24.dp))
         }
         Column(
             modifier = Modifier
