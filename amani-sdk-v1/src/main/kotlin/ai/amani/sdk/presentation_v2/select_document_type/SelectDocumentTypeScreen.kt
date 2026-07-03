@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -124,6 +125,8 @@ fun SelectDocumentTypeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = contentMaxWidth)
+                // Clear the system navigation bar so the button isn't overlapped.
+                .navigationBarsPadding()
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
                 .padding(bottom = 20.dp)
         ) {

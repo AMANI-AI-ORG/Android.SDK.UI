@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -24,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
@@ -53,7 +56,8 @@ fun DotProgressBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+            // Trim side padding so the weight(1f) label columns get more width.
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.Top
     ) {
         steps.forEachIndexed { idx, step ->
@@ -69,7 +73,7 @@ fun DotProgressBar(
                 // within it, so it sits between the dots — never over the labels below.
                 Box(
                     modifier = Modifier
-                        .width(28.dp.scaled())
+                        .width(14.dp.scaled())
                         .height(DotRowHeight),
                     contentAlignment = Alignment.Center
                 ) {
@@ -130,7 +134,17 @@ private fun DotItem(
             StepStatus.Pending -> if (onDark) Color.White.copy(alpha = 0.5f) else palette.inkLight
         }
         val weight = if (step.status == StepStatus.Pending) FontWeight.Normal else FontWeight.Medium
-        Text(step.label, style = AmaniV2Type.label.copy(fontWeight = weight).scaled(), color = labelColor)
+        // TODO(width): keep each step label on one line so many-step bars don't overflow
+        // downward. Long labels are truncated with an ellipsis for now.
+        Text(
+            step.label,
+            style = AmaniV2Type.label.copy(fontWeight = weight).scaled(),
+            color = labelColor,
+            maxLines = 1,
+            modifier = Modifier.wrapContentWidth(),
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

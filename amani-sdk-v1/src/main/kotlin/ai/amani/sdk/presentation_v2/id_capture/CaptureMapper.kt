@@ -47,7 +47,13 @@ internal object CaptureMapper {
             ),
             confirmButtonText = (step?.confirm ?: general?.confirmText).orFallback("Looks good"),
             retakeButtonText = general?.tryAgainText.orFallback("Retake photo"),
-            imagePath = imagePath
+            imagePath = imagePath,
+            // TODO: config-driven
+            qualityChecks = listOf(
+                "Sharp & in focus",
+                "Document fully visible",
+                "No glare or shadows"
+            )
         )
     }
 

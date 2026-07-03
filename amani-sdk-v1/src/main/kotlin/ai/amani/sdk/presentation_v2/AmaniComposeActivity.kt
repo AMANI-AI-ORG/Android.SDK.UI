@@ -8,9 +8,11 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCViewModel
 import ai.amani.sdk.presentation_v2.navigation.AmaniV2NavHost
 import ai.amani.sdk.presentation_v2.navigation.rememberAmaniV2Navigator
+import ai.amani.sdk.presentation_v2.nfc_scan.NfcIntentHost
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.utils.AppConstant
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
@@ -41,10 +43,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 // shared AmaniAi camera Fragment through supportFragmentManager — the same Fragment v1 mounts,
 // embedded into Compose via AndroidView (see IdCaptureCameraHost). setContent still works since
 // FragmentActivity is a ComponentActivity.
-class AmaniComposeActivity : FragmentActivity() {
+class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
 
     private var registerConfig: RegisterConfig? = null
     private var featureConfig: FeatureConfig? = null
+
+    /**
+     * Set by the NFC screen while it is armed. NFC foreground dispatch delivers the
+     * discovered tag Intent to this activity via [onNewIntent]; we forward it here so the
+     * NFC view model can read the chip. Null when no NFC screen is armed.
+     */
+    override var onNfcIntent: ((Intent) -> Unit)? = null
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // The pending intent for NFC dispatch is SINGLE_TOP, so tags arrive here while the
+        // NFC screen is in the foreground; hand them to the registered NFC handler.
+        onNfcIntent?.invoke(intent)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,6 +108,11 @@ class AmaniComposeActivity : FragmentActivity() {
                             // processing and listens to AmaniEvents for the verdict.
                             onCaptureLegFinished = { version ->
                                 viewModel.uploadStep(this@AmaniComposeActivity, version)
+                            },
+                            // NFC leg outcome: success uploads ID + NFC together, false the
+                            // ID only (v1 HomeKYCFragment withNFC(true/false) → uploadID).
+                            onNfcLegFinished = { version, success ->
+                                viewModel.finishNfcLeg(this@AmaniComposeActivity, version, success)
                             },
                             // The home primary button starts whatever step is actionable now,
                             // resolved from the view model's live overlays (processing / verdict

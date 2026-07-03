@@ -60,12 +60,7 @@ internal object HomeKYCMapper {
      */
     private const val STATIC_ERROR_FALLBACK_ENABLED = true
 
-    /**
-     * TODO(config): there is no per-step duration estimate in the server StepConfig / Rule
-     * yet, so each step's secondary line shows this static, informative placeholder (like the
-     * HTML prototype's "~30 sec" / "~1 min"). Wire it to a config/server field once one exists
-     * (and ideally vary it per step instead of this single constant).
-     */
+    // TODO: config-driven
     private const val STATIC_STEP_DURATION = "~30 sec"
 
     /**
@@ -73,6 +68,7 @@ internal object HomeKYCMapper {
      * server provided no per-step message. Pending-review steps are *not* given this
      * fallback (they carry no rejection text); only true rejections fall back to it.
      */
+    // TODO: config-driven
     private val STATIC_ERROR_FALLBACK = StepError(
         title = "We couldn't verify this step",
         message = "Something didn't look right. Please tap the step and try again."

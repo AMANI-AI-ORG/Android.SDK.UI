@@ -8,6 +8,8 @@ import ai.amani.sdk.presentation_v2.preview_screen.PreviewScreen
 import ai.amani.sdk.presentation_v2.id_capture.CaptureMapper
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureFrontScreen
+import ai.amani.sdk.presentation_v2.nfc_scan.NfcScanScreen
+import ai.amani.sdk.presentation_v2.nfc_scan.deviceHasNfcHardware
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScreen
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeMapper
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieCaptureScreen
@@ -30,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 /**
  * Host for the V2 (Compose) KYC flow. The single place that maps a
@@ -55,12 +59,17 @@ fun AmaniV2NavHost(
     // to upload now or run the NFC leg; this composable just pops back to Home afterwards
     // so the user watches the step upload from the overview.
     onCaptureLegFinished: (datamanager.model.config.Version) -> Unit,
+    // Invoked when the NFC leg is over: success = chip read (upload ID + NFC together),
+    // false = out of attempts (upload the ID only). The host uploads and this composable
+    // pops back to Home so the step shows its processing spinner there.
+    onNfcLegFinished: (datamanager.model.config.Version, Boolean) -> Unit,
     // Resolves the step the home primary button should start, applying the view model's
     // live overlays (processing / verdict / mandatory lock). Returns null when nothing is
     // actionable right now, so the button is a no-op while a step processes.
     resolveActiveRule: () -> ai.amani.sdk.model.customer.Rule?,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     BackHandler {
         if (!navigator.popBackStack()) onExit()
     }
@@ -153,29 +162,32 @@ fun AmaniV2NavHost(
                 if (version == null) {
                     navigator.popToRoot()
                 } else {
-                    PreviewScreen(
-                        state = CaptureMapper.toPreviewScreenState(
-                            version = version,
-                            side = destination.side,
-                            general = CachingHomeKYC.appConfig?.generalConfigs,
-                            imagePath = destination.imagePath
-                        ),
+                    CaptureConfirmRoute(
+                        destination = destination,
+                        version = version,
+                        navigator = navigator,
+                        onExit = onExit,
+                        onCaptureLegFinished = onCaptureLegFinished
+                    )
+                }
+            }
+
+            is AmaniV2Destination.NfcScan -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    NfcScanScreen(
+                        version = version,
+                        nfcOnly = destination.nfcOnly,
+                        mrz = destination.mrz,
                         onBack = { if (!navigator.popBackStack()) onExit() },
-                        // The core "skip the back side" rule lives in CaptureFlow: a
-                        // two-sided document advances to its back-side capture; anything
-                        // else (single-sided, or the back already confirmed) finishes the
-                        // leg — hand the version to the host to upload, then pop to Home so
-                        // the step shows its uploading/processing spinner there.
-                        onConfirm = {
-                            val next = CaptureFlow.resolveAfterConfirm(version, destination.side)
-                            if (next != null) {
-                                navigator.navigateTo(next)
-                            } else {
-                                onCaptureLegFinished(version)
-                                navigator.popToRoot()
-                            }
-                        },
-                        onRetake = { navigator.popBackStack() }
+                        // Chip read (success) → upload ID + NFC together; out of attempts →
+                        // upload the ID only. Either way pop to Home to watch it process.
+                        onFinished = { success ->
+                            onNfcLegFinished(version, success)
+                            navigator.popToRoot()
+                        }
                     )
                 }
             }
@@ -282,4 +294,110 @@ private fun DocumentTypeRoute(
             CaptureFlow.versionByType(versionType)?.let(onContinue)
         }
     )
+}
+
+/**
+ * Captured-image confirmation. Beyond the stateless [PreviewScreen] this owns the
+ * NFC hand-off: on confirm of the *final* side of an NFC-enabled ID it reads the MRZ off
+ * the captured document (v1 PreviewScreenViewModel) — showing a loader *on this screen*
+ * meanwhile — and only then navigates to the NFC screen. If the MRZ can't be read it drops
+ * back to re-capture (retake) rather than proceeding.
+ */
+@Composable
+private fun CaptureConfirmRoute(
+    destination: AmaniV2Destination.CaptureConfirm,
+    version: datamanager.model.config.Version,
+    navigator: AmaniV2Navigator,
+    onExit: () -> Unit,
+    onCaptureLegFinished: (datamanager.model.config.Version) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val nfcRepository = remember { ai.amani.sdk.data.repository.nfc.NFCRepositoryImp() }
+    var loadingMrz by remember { mutableStateOf(false) }
+
+    androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
+        PreviewScreen(
+            state = CaptureMapper.toPreviewScreenState(
+                version = version,
+                side = destination.side,
+                general = CachingHomeKYC.appConfig?.generalConfigs,
+                imagePath = destination.imagePath
+            ),
+            onBack = { if (!navigator.popBackStack()) onExit() },
+            onConfirm = onConfirm@{
+                if (loadingMrz) return@onConfirm
+                val next = CaptureFlow.resolveAfterConfirm(version, destination.side)
+                when {
+                    // Another side to capture (front of a two-sided doc) — go there.
+                    next != null -> navigator.navigateTo(next)
+
+                    // Final side confirmed and NFC is enabled + available: read the MRZ off
+                    // the captured ID *here* (loader shown over this screen). Success → NFC
+                    // screen with the MRZ; failure → back to re-capture. (v1 PreviewScreen.)
+                    CaptureFlow.isNfcEnabled(version) && deviceHasNfcHardware(context) -> {
+                        val type = version.type
+                        if (type.isNullOrEmpty()) {
+                            onCaptureLegFinished(version)
+                            navigator.popToRoot()
+                            return@onConfirm
+                        }
+                        loadingMrz = true
+                        nfcRepository.getMRZ(
+                            type = type,
+                            onComplete = { result ->
+                                scope.launch {
+                                    loadingMrz = false
+                                    val birth = result.mRZBirthDate
+                                    val expiry = result.mRZExpiryDate
+                                    val docNo = result.mRZDocumentNumber
+                                    if (!birth.isNullOrEmpty() && !expiry.isNullOrEmpty() && !docNo.isNullOrEmpty()) {
+                                        navigator.navigateTo(
+                                            AmaniV2Destination.NfcScan(
+                                                versionType = destination.versionType,
+                                                mrz = ai.amani.sdk.model.MRZModel(birth, expiry, docNo),
+                                                nfcOnly = false
+                                            )
+                                        )
+                                    } else {
+                                        // MRZ unreadable → make the user re-capture the side.
+                                        navigator.popBackStack()
+                                    }
+                                }
+                            },
+                            onError = {
+                                scope.launch {
+                                    loadingMrz = false
+                                    navigator.popBackStack()
+                                }
+                            }
+                        )
+                    }
+
+                    // No NFC — finish the leg and upload the ID.
+                    else -> {
+                        onCaptureLegFinished(version)
+                        navigator.popToRoot()
+                    }
+                }
+            },
+            onRetake = { if (!loadingMrz) navigator.popBackStack() }
+        )
+
+        // MRZ read loader: dim the confirm screen and block interaction while reading.
+        if (loadingMrz) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AmaniV2Theme.palette.ink.copy(alpha = 0.35f)),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    color = AmaniV2Theme.palette.accent,
+                    strokeWidth = 3.dp
+                )
+            }
+        }
+    }
 }

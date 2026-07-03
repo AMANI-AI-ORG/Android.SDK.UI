@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -128,6 +129,9 @@ private fun HomeKYCContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = contentMaxWidth)
+                // Clear the system navigation bar so the button isn't overlapped on devices
+                // that draw a bottom nav bar (gesture / 3-button).
+                .navigationBarsPadding()
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
                 .padding(bottom = 20.dp)
         ) {

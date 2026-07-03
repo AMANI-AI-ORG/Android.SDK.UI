@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
@@ -112,7 +113,11 @@ fun StepRow(
                         fontSize = AmaniV2Type.body.fontSize.scaled()
                     ),
                     // Step text uses the config buttonTextColor (falls back to accent).
-                    color = textColor
+                    color = textColor,
+                    // TODO(width): keep the title on one line for now so many-step lists
+                    // don't get tall from wrapping. Revisit if we want full multi-line titles.
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 step.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
                     val subtitleWeight = if (step.status == StepRowStatus.Locked) FontWeight.Normal else FontWeight.Medium
@@ -124,6 +129,9 @@ fun StepRow(
                         ),
                         // Same buttonTextColor as the title, slightly dimmed for hierarchy.
                         color = textColor.copy(alpha = 0.85f),
+                        // Single line too (see title TODO).
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp.scaled())
                     )
                 }

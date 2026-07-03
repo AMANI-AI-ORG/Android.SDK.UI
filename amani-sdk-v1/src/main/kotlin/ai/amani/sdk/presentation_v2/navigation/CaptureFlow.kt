@@ -130,10 +130,11 @@ internal object CaptureFlow {
      * Where to go after the user confirms a captured side. The core "skip the back side"
      * rule: a two-sided document (`version.steps.size > 1`) whose front was just confirmed
      * advances to the back-side capture; anything else (single-sided, or the back already
-     * done) finishes the capture leg — represented by `null` (the host pops to Home).
+     * done) finishes the capture leg — represented by `null`.
      *
-     * NOTE(wiring): v1 also branches into the NFC scan here when the version enables NFC.
-     * That screen doesn't exist in V2 yet, so it's deferred.
+     * When the leg is finished the caller then checks [isNfcEnabled] (+ device support): an
+     * NFC-enabled ID routes to [AmaniV2Destination.NfcScan] before upload (v1
+     * PreviewScreenViewModel → NFCScanFragment), otherwise the host pops to Home and uploads.
      */
     fun resolveAfterConfirm(version: Version, side: CaptureSide): AmaniV2Destination? {
         val isTwoSided = (version.steps?.size ?: 0) > 1
@@ -143,4 +144,11 @@ internal object CaptureFlow {
             null
         }
     }
+
+    /**
+     * Whether this document enables NFC in config — the V2 port of v1's
+     * `version.nfcAndroid ?: version.nfc` check. Device NFC availability is checked
+     * separately (needs a Context) at the call site.
+     */
+    fun isNfcEnabled(version: Version): Boolean = version.nfcAndroid ?: version.nfc
 }

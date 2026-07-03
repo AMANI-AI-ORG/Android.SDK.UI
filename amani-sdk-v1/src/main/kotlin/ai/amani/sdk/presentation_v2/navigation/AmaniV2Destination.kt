@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation_v2.navigation
 
+import ai.amani.sdk.model.MRZModel
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
@@ -73,6 +74,21 @@ sealed interface AmaniV2Destination : Parcelable {
     data class SelfieConfirm(
         val versionType: String,
         val imagePath: String
+    ) : AmaniV2Destination
+
+    /**
+     * NFC chip scan — V2 counterpart of NFCScanFragment. Reached after the final side of an
+     * NFC-enabled ID is confirmed *and* its MRZ has been read (on the confirm screen, mirroring
+     * v1 PreviewScreenViewModel → NFCScanFragment). [versionType] keys the chosen version;
+     * [mrz] is the MRZ already read from the captured ID, so the NFC screen opens ready to scan.
+     * [nfcOnly] mirrors v1's NFCScanScreenModel flag: false = NFC + ID uploaded together,
+     * true = NFC without an ID leg.
+     */
+    @Parcelize
+    data class NfcScan(
+        val versionType: String,
+        val mrz: MRZModel,
+        val nfcOnly: Boolean = false
     ) : AmaniV2Destination
 }
 

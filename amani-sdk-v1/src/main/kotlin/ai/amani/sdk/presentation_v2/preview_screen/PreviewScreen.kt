@@ -10,6 +10,7 @@ import ai.amani.sdk.presentation_v2.theme.scaled
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,9 +20,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
@@ -31,9 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.io.File
@@ -46,7 +53,13 @@ data class PreviewScreenUiState(
     val confirmButtonText: String,
     val retakeButtonText: String,
     /** Absolute path of the captured frame to preview; null only in previews/inspection. */
-    val imagePath: String? = null
+    val imagePath: String? = null,
+    /**
+     * Reassurance checklist shown under the photo (HTML confirm design). Empty hides the
+     * card (e.g. selfie confirm).
+     */
+    // TODO: config-driven
+    val qualityChecks: List<String> = emptyList()
 )
 
 /**
@@ -72,8 +85,8 @@ fun PreviewScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = AmaniV2Dimens.screenPadding),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = AmaniV2Dimens.screenPadding)
         ) {
             Spacer(Modifier.height(8.dp))
             Text(state.title, style = AmaniV2Type.heading.scaled(), color = palette.ink)
@@ -81,32 +94,37 @@ fun PreviewScreen(
             Text(
                 state.description,
                 style = AmaniV2Type.body.scaled(),
-                color = palette.inkMuted,
-                textAlign = TextAlign.Center
+                color = palette.inkMuted
             )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
             // Decode the captured frame, remembered on the path so it isn't repeated on recomposition.
             val captured = remember(state.imagePath) {
                 state.imagePath
                     ?.takeIf { File(it).exists() }
                     ?.let { runCatching { BitmapFactory.decodeFile(it) }.getOrNull() }
             }
-            // Center the captured frame between the description and the action buttons.
-            Spacer(Modifier.weight(1f))
+            // Size the frame to the *photo's* aspect ratio so it fills the full width with no
+            // dead side/top margins, and shows as large as possible (HTML-style responsive).
+            val imageAspect = remember(captured) {
+                captured?.takeIf { it.height > 0 }?.let { it.width.toFloat() / it.height } ?: 1.586f
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.586f)
+                    .aspectRatio(imageAspect)
                     .clip(RoundedCornerShape(AmaniV2Dimens.cardRadius))
-                    .background(palette.backgroundWarm, RoundedCornerShape(AmaniV2Dimens.cardRadius)),
+                    .background(
+                        if (captured != null) Color.Black else palette.backgroundWarm,
+                        RoundedCornerShape(AmaniV2Dimens.cardRadius)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (captured != null) {
-                    // Fit (not Crop) so the whole captured document stays visible.
+                    // Box already matches the photo aspect, so Crop fills it exactly (no gaps).
                     Image(
                         bitmap = captured.asImageBitmap(),
                         contentDescription = null,
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -119,11 +137,17 @@ fun PreviewScreen(
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
+            if (state.qualityChecks.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                QualityChecksCard(state.qualityChecks)
+            }
+            Spacer(Modifier.height(20.dp))
         }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // Clear the system navigation bar so the buttons aren't overlapped.
+                .navigationBarsPadding()
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
                 .padding(bottom = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(AmaniV2Dimens.gapSm)
@@ -143,6 +167,44 @@ fun PreviewScreen(
     }
 }
 
+/** Reassurance checklist card under the photo (HTML confirm design). */
+@Composable
+private fun QualityChecksCard(items: List<String>) {
+    val palette = AmaniV2Theme.palette
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(AmaniV2Dimens.fieldRadius))
+            .background(palette.surface)
+            .border(0.5.dp, palette.border, RoundedCornerShape(AmaniV2Dimens.fieldRadius))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items.forEach { item ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(palette.accentSoft),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = palette.accent,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+                Text(item, style = AmaniV2Type.bodySmall.scaled(), color = palette.ink)
+            }
+        }
+    }
+}
+
 // region Sample state (also used by previews)
 
 internal val SamplePreviewScreen = PreviewScreenUiState(
@@ -150,7 +212,8 @@ internal val SamplePreviewScreen = PreviewScreenUiState(
     title = "Is your ID clear and readable?",
     description = "Check that all four corners are visible and there's no glare before continuing.",
     confirmButtonText = "Looks good",
-    retakeButtonText = "Retake photo"
+    retakeButtonText = "Retake photo",
+    qualityChecks = listOf("Sharp & in focus", "Document fully visible", "No glare or shadows")
 )
 
 @Preview(name = "CaptureConfirm", showBackground = true, widthDp = 360, heightDp = 740)

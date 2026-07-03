@@ -9,7 +9,6 @@ import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
-import ai.amani.sdk.extentions.deviceHasNFC
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.FeatureConfig
@@ -173,18 +172,9 @@ class HomeKYCViewModel(
 
         val isSelfie = version.documentId == AmaniDocumentTypes.SELFIE
 
-        // NFC only branches off the ID leg; selfie has no NFC variant.
-        if (!isSelfie) {
-            val nfcActive = (version.nfcAndroid ?: version.nfc) && deviceHasNFC(activity)
-            if (nfcActive) {
-                // TODO(NFC): NFC-active leg — fetch MRZ, open the NFC scan screen, then upload
-                //  the ID + NFC together (v1 PreviewScreenViewModel → NFCScanFragment path).
-                //  Deferred for now; the step is left untouched.
-                Timber.w("V2 upload: NFC-active flow not implemented yet (TODO), docType=$docType")
-                return
-            }
-        }
-
+        // NFC-enabled IDs never reach here: the nav host routes them to the NFC screen first,
+        // and the outcome comes back through [finishNfcLeg]. So this path is the plain
+        // (non-NFC) upload — mirror v1's `IDCapture().withNFC(false)` before an ID-only upload.
         val ruleId = ruleIdFor(version)
         // Clear any stale rejection on this step and show the spinner before uploading.
         ruleId?.let { errorOverrides.remove(it) }
@@ -206,7 +196,31 @@ class HomeKYCViewModel(
                 else -> selfieCaptureRepository.uploadSelfiePoseEstimation(activity, docType, {}, onComplete)
             }
         } else {
+            Amani.sharedInstance().IDCapture().withNFC(false)
             idCaptureRepository.upload(activity, docType, {}, onComplete)
+        }
+    }
+
+    /**
+     * Finishes the NFC leg for [version] (from the V2 NFC screen). Mirrors v1
+     * HomeKYCFragment's post-NFC dispatch: [success] true → set `IDCapture().withNFC(true)`
+     * and upload so the ID *and* NFC data go up together; false (out of attempts) →
+     * `withNFC(false)` and upload the ID only. Either way the step shows its spinner and the
+     * verdict then arrives over the AmaniEvent socket (see [listenAmaniEvents]).
+     */
+    fun finishNfcLeg(activity: FragmentActivity, version: Version, success: Boolean) {
+        val docType = version.type ?: run {
+            Timber.e("V2 NFC finish: version.type is null, cannot upload")
+            return
+        }
+        val ruleId = ruleIdFor(version)
+        ruleId?.let { errorOverrides.remove(it) }
+        processingRuleId = ruleId
+        refreshReady()
+
+        Amani.sharedInstance().IDCapture().withNFC(success)
+        idCaptureRepository.upload(activity, docType, {}) { result ->
+            handleUploadResult(result, docType)
         }
     }
 
