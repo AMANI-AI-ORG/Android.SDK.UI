@@ -61,7 +61,8 @@ internal object CaptureFlow {
      *  - ID / Passport / Driving licence / Visa → photo-ID capture (front first)
      *  - Selfie → selfie capture
      *  - Signature → sign-contract (digital signature) screen
-     *  - NFC-only / Physical contract → no V2 screen yet (deferred, returns null)
+     *  - Physical contract / utility bill ("IB") → verify-address screen
+     *  - NFC-only → no V2 screen yet (deferred, returns null)
      *
      * This is also what the document-type chooser calls once the user picks a card.
      */
@@ -80,9 +81,11 @@ internal object CaptureFlow {
             AmaniDocumentTypes.SIGNATURE ->
                 AmaniV2Destination.Signature(type)
 
-            // TODO(wiring): these document kinds have no V2 screen yet.
-            AmaniDocumentTypes.NFC,
-            AmaniDocumentTypes.PHYSICAL_CONTRACT -> null
+            AmaniDocumentTypes.PHYSICAL_CONTRACT ->
+                AmaniV2Destination.AddressVerify(type)
+
+            // TODO(wiring): NFC-only has no V2 screen yet.
+            AmaniDocumentTypes.NFC -> null
 
             else -> null
         }

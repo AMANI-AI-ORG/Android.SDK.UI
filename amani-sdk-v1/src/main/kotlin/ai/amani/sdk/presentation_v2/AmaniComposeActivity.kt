@@ -114,6 +114,11 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             onNfcLegFinished = { version, success ->
                                 viewModel.finishNfcLeg(this@AmaniComposeActivity, version, success)
                             },
+                            // Verify-address leg: photographed document or picked PDF uploads
+                            // through the shared document repository (v1 uploadDocument).
+                            onAddressLegFinished = { version, flow ->
+                                viewModel.uploadAddressStep(this@AmaniComposeActivity, version, flow)
+                            },
                             // The home primary button starts whatever step is actionable now,
                             // resolved from the view model's live overlays (processing / verdict
                             // / mandatory lock) so it never re-opens an approved step or jumps a

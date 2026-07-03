@@ -101,6 +101,18 @@ sealed interface AmaniV2Destination : Parcelable {
     data class Signature(
         val versionType: String
     ) : AmaniV2Destination
+
+    /**
+     * Verify address (utility bill / physical contract, "IB") — V2 counterpart of
+     * PhysicalContractFragment. The shared AmaniAi document-capture fragment is hosted in
+     * the screen (or the user picks a PDF from storage); either way the host uploads through
+     * the shared document repository and pops to Home (v1's navigate-home-then-upload
+     * hand-off). [versionType] keys the chosen version.
+     */
+    @Parcelize
+    data class AddressVerify(
+        val versionType: String
+    ) : AmaniV2Destination
 }
 
 /** Which face of a document is being captured. */

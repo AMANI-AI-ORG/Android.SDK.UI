@@ -5,8 +5,10 @@ import ai.amani.sdk.data.repository.config.ConfigRepositoryImp
 import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
 import ai.amani.sdk.data.repository.id_capture.IDCaptureRepoImp
 import ai.amani.sdk.data.repository.login.LoginRepoImp
+import ai.amani.sdk.data.repository.document.DocumentRepoImp
 import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.data.repository.signature.SignatureRepoImp
+import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -60,7 +62,8 @@ class HomeKYCViewModel(
     private val customerDetailRepository: CustomerDetailRepoImp,
     private val idCaptureRepository: IDCaptureRepoImp,
     private val selfieCaptureRepository: SelfieCaptureRepoImp,
-    private val signatureRepository: SignatureRepoImp
+    private val signatureRepository: SignatureRepoImp,
+    private val documentRepository: DocumentRepoImp
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HomeKYCState>(HomeKYCState.Loading)
@@ -205,6 +208,37 @@ class HomeKYCViewModel(
                 idCaptureRepository.upload(activity, docType, {}, onComplete)
             }
         }
+    }
+
+    /**
+     * Finishes the verify-address leg for [version]. Mirrors v1 HomeKYCFragment's
+     * PHYSICAL_CONTRACT dispatch → `uploadDocument`: the photographed document
+     * ([GenericDocumentFlow.DataFromCamera]) or the picked PDF
+     * ([GenericDocumentFlow.DataFromGallery]) uploads through the shared
+     * [DocumentRepoImp]; the step shows its spinner and the verdict arrives over the
+     * AmaniEvent socket (see [listenAmaniEvents]).
+     */
+    fun uploadAddressStep(
+        activity: FragmentActivity,
+        version: Version,
+        flow: GenericDocumentFlow
+    ) {
+        val docType = version.type ?: run {
+            Timber.e("V2 address upload: version.type is null, cannot upload")
+            return
+        }
+        val ruleId = ruleIdFor(version)
+        ruleId?.let { errorOverrides.remove(it) }
+        processingRuleId = ruleId
+        refreshReady()
+
+        documentRepository.upload(
+            activity = activity,
+            docType = docType,
+            onStart = {},
+            onComplete = { result -> handleUploadResult(result, docType) },
+            genericDocumentFlow = flow
+        )
     }
 
     /**
@@ -467,7 +501,8 @@ class HomeKYCViewModel(
                     CustomerDetailRepoImp(),
                     IDCaptureRepoImp(),
                     SelfieCaptureRepoImp(),
-                    SignatureRepoImp()
+                    SignatureRepoImp(),
+                    DocumentRepoImp()
                 ) as T
         }
     }

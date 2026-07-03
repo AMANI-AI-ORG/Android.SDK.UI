@@ -1,6 +1,8 @@
 package ai.amani.sdk.presentation_v2.navigation
 
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyMapper
+import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCUiState
@@ -65,6 +67,10 @@ fun AmaniV2NavHost(
     // false = out of attempts (upload the ID only). The host uploads and this composable
     // pops back to Home so the step shows its processing spinner there.
     onNfcLegFinished: (datamanager.model.config.Version, Boolean) -> Unit,
+    // Invoked when the verify-address leg finishes: the flow says whether the document was
+    // photographed (DataFromCamera) or picked as a PDF (DataFromGallery). The host uploads
+    // through the shared document repository and this composable pops back to Home.
+    onAddressLegFinished: (datamanager.model.config.Version, ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow) -> Unit,
     // Resolves the step the home primary button should start, applying the view model's
     // live overlays (processing / verdict / mandatory lock). Returns null when nothing is
     // actionable right now, so the button is a no-op while a step processes.
@@ -210,6 +216,39 @@ fun AmaniV2NavHost(
                         // step shows its processing spinner (v1 navigate-home-then-upload).
                         onCompleted = {
                             onCaptureLegFinished(version)
+                            navigator.popToRoot()
+                        }
+                    )
+                }
+            }
+
+            is AmaniV2Destination.AddressVerify -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    AddressVerifyScreen(
+                        state = AddressVerifyMapper.toUiState(
+                            version = version,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
+                        versionType = destination.versionType,
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // Capture confirmed in the shared document fragment → upload the
+                        // photographed document (v1 DataFromCamera hand-off) and pop to Home.
+                        onCaptured = {
+                            onAddressLegFinished(
+                                version,
+                                ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromCamera
+                            )
+                            navigator.popToRoot()
+                        },
+                        // PDF picked from storage → upload it (v1 DataFromGallery hand-off).
+                        onPdfPicked = { uri ->
+                            onAddressLegFinished(
+                                version,
+                                ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
+                            )
                             navigator.popToRoot()
                         }
                     )
