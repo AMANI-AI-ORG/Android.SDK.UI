@@ -90,6 +90,17 @@ sealed interface AmaniV2Destination : Parcelable {
         val mrz: MRZModel,
         val nfcOnly: Boolean = false
     ) : AmaniV2Destination
+
+    /**
+     * Sign contract (digital signature) — V2 counterpart of SignatureFragment. The shared
+     * AmaniAi signature pad is hosted in the screen; once the required signature count is
+     * taken the host uploads through the shared signature repository and pops to Home
+     * (v1's navigate-home-then-upload hand-off). [versionType] keys the chosen version.
+     */
+    @Parcelize
+    data class Signature(
+        val versionType: String
+    ) : AmaniV2Destination
 }
 
 /** Which face of a document is being captured. */

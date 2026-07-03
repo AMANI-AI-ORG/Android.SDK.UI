@@ -14,6 +14,8 @@ import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScree
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeMapper
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieCaptureScreen
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieMapper
+import ai.amani.sdk.presentation_v2.signature.SignatureMapper
+import ai.amani.sdk.presentation_v2.signature.SignatureScreen
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -186,6 +188,28 @@ fun AmaniV2NavHost(
                         // upload the ID only. Either way pop to Home to watch it process.
                         onFinished = { success ->
                             onNfcLegFinished(version, success)
+                            navigator.popToRoot()
+                        }
+                    )
+                }
+            }
+
+            is AmaniV2Destination.Signature -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    SignatureScreen(
+                        state = SignatureMapper.toUiState(
+                            version = version,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // All required signatures taken: hand the version to the host to
+                        // upload through the signature repository, then pop to Home so the
+                        // step shows its processing spinner (v1 navigate-home-then-upload).
+                        onCompleted = {
+                            onCaptureLegFinished(version)
                             navigator.popToRoot()
                         }
                     )

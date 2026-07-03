@@ -6,6 +6,7 @@ import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
 import ai.amani.sdk.data.repository.id_capture.IDCaptureRepoImp
 import ai.amani.sdk.data.repository.login.LoginRepoImp
 import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
+import ai.amani.sdk.data.repository.signature.SignatureRepoImp
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
@@ -58,7 +59,8 @@ class HomeKYCViewModel(
     private val configRepository: ConfigRepositoryImp,
     private val customerDetailRepository: CustomerDetailRepoImp,
     private val idCaptureRepository: IDCaptureRepoImp,
-    private val selfieCaptureRepository: SelfieCaptureRepoImp
+    private val selfieCaptureRepository: SelfieCaptureRepoImp,
+    private val signatureRepository: SignatureRepoImp
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HomeKYCState>(HomeKYCState.Loading)
@@ -170,8 +172,6 @@ class HomeKYCViewModel(
             return
         }
 
-        val isSelfie = version.documentId == AmaniDocumentTypes.SELFIE
-
         // NFC-enabled IDs never reach here: the nav host routes them to the NFC screen first,
         // and the outcome comes back through [finishNfcLeg]. So this path is the plain
         // (non-NFC) upload — mirror v1's `IDCapture().withNFC(false)` before an ID-only upload.
@@ -185,19 +185,25 @@ class HomeKYCViewModel(
             handleUploadResult(result, docType)
         }
 
-        if (isSelfie) {
+        when (version.documentId) {
             // Selfies upload through the selfie SDK path (not IDCapture). The variant is
             // resolved the same way the capture screen mounted it, so the upload always
             // matches what was captured. Mirrors v1 HomeKYCViewModel.uploadSelfie dispatch.
-            when (SelfieTypeResolver.resolve(version)) {
+            AmaniDocumentTypes.SELFIE -> when (SelfieTypeResolver.resolve(version)) {
                 SelfieType.Auto -> selfieCaptureRepository.uploadAutoSelfie(activity, docType, {}, onComplete)
                 SelfieType.Manual -> selfieCaptureRepository.uploadManualSelfie(activity, docType, {}, onComplete)
                 // Pose estimation (V1 and V2) share the same upload endpoint.
                 else -> selfieCaptureRepository.uploadSelfiePoseEstimation(activity, docType, {}, onComplete)
             }
-        } else {
-            Amani.sharedInstance().IDCapture().withNFC(false)
-            idCaptureRepository.upload(activity, docType, {}, onComplete)
+
+            // Sign contract: the signatures the pad collected upload through the shared
+            // signature repository. Mirrors v1 HomeKYCViewModel.uploadSignature dispatch.
+            AmaniDocumentTypes.SIGNATURE -> signatureRepository.uploadSignature(onComplete)
+
+            else -> {
+                Amani.sharedInstance().IDCapture().withNFC(false)
+                idCaptureRepository.upload(activity, docType, {}, onComplete)
+            }
         }
     }
 
@@ -460,7 +466,8 @@ class HomeKYCViewModel(
                     ConfigRepositoryImp(),
                     CustomerDetailRepoImp(),
                     IDCaptureRepoImp(),
-                    SelfieCaptureRepoImp()
+                    SelfieCaptureRepoImp(),
+                    SignatureRepoImp()
                 ) as T
         }
     }
