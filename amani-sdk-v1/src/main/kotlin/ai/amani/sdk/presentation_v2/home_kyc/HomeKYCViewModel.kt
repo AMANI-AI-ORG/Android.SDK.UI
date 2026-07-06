@@ -22,6 +22,7 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import ai.amani.sdk.utils.AmaniUIErrorConstants
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
@@ -72,6 +73,16 @@ class HomeKYCViewModel(
     private val _effects = Channel<HomeKYCEffect>(Channel.BUFFERED)
     val effects: Flow<HomeKYCEffect> = _effects.receiveAsFlow()
 
+    /**
+     * The brand palette resolved from GeneralConfigs — set at exactly one point: the app
+     * config fetch's onComplete, i.e. only after the server values have actually arrived.
+     * Null until then. Window-level chrome (the status bar color) keys off this instead of
+     * deriving from UI state, so it can never race ahead of the config fetch and paint the
+     * static defaults.
+     */
+    private val _brandPalette = MutableStateFlow<AmaniV2Palette?>(null)
+    val brandPalette: StateFlow<AmaniV2Palette?> = _brandPalette.asStateFlow()
+
     private var registerConfig: RegisterConfig? = null
     private var featureConfig: FeatureConfig = FeatureConfig()
     private var started = false
@@ -91,9 +102,10 @@ class HomeKYCViewModel(
     )
 
     /**
-     * Statuses whose server message is surfaced inline under the step — rejections plus
-     * PENDING_REVIEW (manual-review note), matching v1's KYCAdapter and
-     * [HomeKYCMapper.ERROR_BEARING_STATUSES].
+     * Socket verdict statuses whose message is stored as an inline-error overlay —
+     * rejections plus PENDING_REVIEW (manual-review note), matching v1's KYCAdapter.
+     * (Display-side gating is wider: HomeKYCMapper shows any step-carried message except
+     * on approved/processing steps, so first-login rule errors surface too.)
      */
     private val ERROR_BEARING_STATUSES = setOf(
         AppConstant.STATUS_REJECTED,
@@ -123,6 +135,7 @@ class HomeKYCViewModel(
         statusOverrides.clear()
         errorOverrides.clear()
         processingRuleId = null
+        _brandPalette.value = null
 
         featureConfig?.let { this.featureConfig = it }
         this.registerConfig = registerConfig
@@ -327,6 +340,9 @@ class HomeKYCViewModel(
             },
             onComplete = { config ->
                 CachingHomeKYC.appConfig = config
+                // GeneralConfigs values are now definitively present — resolve and publish
+                // the brand palette (drives the status bar color, see [brandPalette]).
+                _brandPalette.value = HomeKYCMapper.resolvePalette(config)
                 fetchCustomerDetail()
             }
         )
@@ -426,9 +442,9 @@ class HomeKYCViewModel(
                             // Rejections AND pending-review verdicts carry a server message
                             // to surface inline — same statuses v1's KYCAdapter shows it for.
                             in ERROR_BEARING_STATUSES -> {
-                                res.errors?.firstOrNull()?.errorMessage?.toString()
-                                    ?.takeIf { it.isNotBlank() }
-                                    ?.let { errorOverrides[id] = it }
+                                res.errors?.firstNotNullOfOrNull {
+                                    it?.errorMessage?.toString()?.takeIf(String::isNotBlank)
+                                }?.let { errorOverrides[id] = it }
                             }
                             STATUS_APPROVED -> errorOverrides.remove(id)
                         }

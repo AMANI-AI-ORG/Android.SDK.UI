@@ -6,7 +6,6 @@ import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation_v2.approved.ApprovedMapper
 import ai.amani.sdk.presentation_v2.approved.ApprovedScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCEffect
-import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCMapper
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCState
@@ -23,6 +22,9 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +68,21 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
         // The pending intent for NFC dispatch is SINGLE_TOP, so tags arrive here while the
         // NFC screen is in the foreground; hand them to the registered NFC handler.
         onNfcIntent?.invoke(intent)
+    }
+
+    /**
+     * Paints the status bar with the config-driven header/toolbar background and matching
+     * icon contrast. Called ONLY once GeneralConfigs has resolved into a brand palette —
+     * never with the static defaults — so the bar goes straight from the host app's color
+     * to the dynamic brand color with no static-fallback flash in between. (The translucent
+     * framework theme doesn't set windowDrawsSystemBarBackgrounds, and statusBarColor is
+     * ignored without it, hence the flag.)
+     */
+    private fun applyDynamicStatusBar(background: androidx.compose.ui.graphics.Color) {
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = background.toArgb()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = background.luminance() > 0.5f
     }
 
     /**
@@ -123,11 +140,23 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                 }
             }
 
-            // While loading, the palette stays at the static defaults and the window is
-            // translucent, so only the centered loader shows over the launching screen.
-            // Once Ready, the config-driven palette is applied to the whole graph.
-            val palette = (state as? HomeKYCState.Ready)?.palette
-                ?: (if (approved.value) HomeKYCMapper.resolvePalette(CachingHomeKYC.appConfig) else AmaniV2Palette())
+            // The brand palette is published by the view model at exactly one point: the
+            // GeneralConfigs fetch onComplete. Null until the server values have actually
+            // arrived — deriving it from UI state here raced the fetch and could paint
+            // before the values existed. The theme falls back to the static defaults for
+            // the loader, but the status bar deliberately does NOT (see below).
+            val brandPalette by viewModel.brandPalette.collectAsStateWithLifecycle()
+            val palette = (state as? HomeKYCState.Ready)?.palette ?: brandPalette ?: AmaniV2Palette()
+
+            // Status bar = toolbar color (GeneralConfigs.topBarBackground via
+            // palette.topBar — the same color ScreenHeader paints, so bar + header read as
+            // one surface). Painted exclusively via applyDynamicStatusBar and only once
+            // the config-driven palette has been published: while loading the bar stays
+            // untouched (translucent window, host app still visible), so the static
+            // default color never shows on it.
+            LaunchedEffect(brandPalette) {
+                brandPalette?.let { applyDynamicStatusBar(it.topBar) }
+            }
 
             AmaniV2Theme(palette = palette) {
                 if (approved.value) {
@@ -182,6 +211,7 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
             }
         }
     }
+
 }
 
 private inline fun <reified T : android.os.Parcelable> Bundle.parcelable(key: String): T? =

@@ -39,9 +39,11 @@ fun PrimaryButton(
             .fillMaxWidth()
             .height(AmaniV2Dimens.buttonHeight.scaled()),
         shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
+        // GeneralConfigs.primaryButtonBorderColor; the default is transparent (borderless).
+        border = BorderStroke(1.dp, palette.primaryButtonBorder),
         colors = ButtonDefaults.buttonColors(
             containerColor = palette.accent,
-            contentColor = palette.surface
+            contentColor = palette.primaryButtonText
         )
     ) {
         Row(
@@ -73,10 +75,12 @@ fun SecondaryButton(
             .fillMaxWidth()
             .height(AmaniV2Dimens.buttonHeight.scaled()),
         shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
-        border = BorderStroke(1.dp, palette.border),
+        // GeneralConfigs.secondaryButton{BorderColor, BackgroundColor, TextColor}; the
+        // defaults reproduce the previous hardcoded look (white fill, hairline border, ink).
+        border = BorderStroke(1.dp, palette.secondaryButtonBorder),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = palette.surface,
-            contentColor = palette.ink
+            containerColor = palette.secondaryButtonBackground,
+            contentColor = palette.secondaryButtonText
         )
     ) {
         Row(

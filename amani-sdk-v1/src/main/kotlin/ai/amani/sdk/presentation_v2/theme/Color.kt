@@ -8,25 +8,19 @@ import androidx.compose.ui.graphics.Color
  */
 object AmaniV2Colors {
     val Pink = Color(0xFFDC2655)
-    val PinkDark = Color(0xFF993556)
     val PinkSoft = Color(0xFFFBEAF0)
     val PinkSofter = Color(0xFFFDF4F7)
-    val Coral = Color(0xFFF4C0D1)
 
     val Ink = Color(0xFF0F172A)
-    val InkSoft = Color(0xFF475569)
     val InkMuted = Color(0xFF64748B)
     val InkLight = Color(0xFF94A3B8)
 
     val Bg = Color(0xFFFAFAF7)
     val BgWarm = Color(0xFFF1EFE8)
-    val PageBg = Color(0xFFE8E6DD)
     val Border = Color(0x140F172A) // rgba(15,23,42,0.08)
 
     val Success = Color(0xFF15803D)
-    val SuccessBg = Color(0xFFDCFCE7)
     val Danger = Color(0xFFDC2626)
-    val DangerBg = Color(0xFFFEE2E2)
 
     val White = Color(0xFFFFFFFF)
 
@@ -34,5 +28,4 @@ object AmaniV2Colors {
     val DotIdle = BgWarm
     val DotIdleBorder = Color(0xFFD4D2C8)
     val ConnectorIdle = Color(0xFFE5E3D9)
-    val ChevronIdle = Color(0xFFCBD5E1)
 }

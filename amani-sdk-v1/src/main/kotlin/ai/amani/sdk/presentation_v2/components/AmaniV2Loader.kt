@@ -25,7 +25,8 @@ fun AmaniV2Loader(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator(
-            color = AmaniV2Theme.palette.accent,
+            // GeneralConfigs.loaderColor (falls back to the accent inside the palette factory).
+            color = AmaniV2Theme.palette.loader,
             strokeWidth = 3.dp
         )
     }

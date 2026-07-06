@@ -39,9 +39,14 @@ fun ScreenHeader(
     steps: List<DotStep>? = null,
     onBack: () -> Unit = {}
 ) {
+    val palette = AmaniV2Theme.palette
     Column(
         modifier = modifier
             .fillMaxWidth()
+            // Toolbar zone paints GeneralConfigs.topBarBackground (defaults to the app
+            // background, keeping the previous seamless look) — the status bar is painted
+            // the same color at the activity level so they read as one surface.
+            .background(palette.topBar)
             .padding(top = AmaniV2Dimens.topInset, start = AmaniV2Dimens.screenPadding, end = AmaniV2Dimens.screenPadding)
     ) {
         Row(
@@ -49,8 +54,12 @@ fun ScreenHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            HeaderIconButton(icon = Icons.AutoMirrored.Filled.ArrowBack, onClick = onBack)
-            Text(title, style = AmaniV2Type.header.scaled(), color = AmaniV2Theme.palette.ink)
+            HeaderIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentColor = palette.topBarFont,
+                onClick = onBack
+            )
+            Text(title, style = AmaniV2Type.header.scaled(), color = palette.topBarFont)
             Spacer(Modifier.size(AmaniV2Dimens.iconButtonSize.scaled()))
         }
         if (steps != null) {

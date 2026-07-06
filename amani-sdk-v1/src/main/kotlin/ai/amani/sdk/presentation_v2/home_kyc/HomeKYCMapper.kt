@@ -46,17 +46,12 @@ internal object HomeKYCMapper {
      * The earlier V2 mapper gated this on [REJECTED_STATUSES] only, so PENDING_REVIEW
      * messages (and any rejection that arrives as pending review) were silently dropped.
      */
-    private val ERROR_BEARING_STATUSES = setOf(
-        AppConstant.STATUS_REJECTED,
-        AppConstant.STATUS_AUTOMATICALLY_REJECTED,
-        AppConstant.STATUS_PENDING_REVIEW
-    )
-
     /**
      * Master switch for the static error fallback. When `true`, a rejected step that the
      * server returned *no* message for still shows the inline error block, using
-     * [STATIC_ERROR_FALLBACK] so the card explains itself. Flip to
-     * `false` to render the inline error only when the backend actually sends a message.
+     * [STATIC_ERROR_FALLBACK] so the card explains itself. `false` renders the inline
+     * error only from the message carried by the step itself ([Rule.errors] / the socket
+     * verdict) — v1 behaviour, and the current product decision.
      */
     private const val STATIC_ERROR_FALLBACK_ENABLED = true
 
@@ -81,10 +76,22 @@ internal object HomeKYCMapper {
      */
     fun resolvePalette(config: ResGetConfig?): AmaniV2Palette {
         val g = config?.generalConfigs ?: return AmaniV2Palette()
+        // Every GeneralConfigs color field with a V2 counterpart, mapped 1:1; anything
+        // null/blank/malformed falls back inside amaniV2PaletteFromHex.
         return amaniV2PaletteFromHex(
             accent = g.primaryButtonBackgroundColor,
             ink = g.appFontColor,
-            background = g.appBackground
+            background = g.appBackground,
+            success = g.successIconColor,
+            danger = g.errorIconColor,
+            topBar = g.topBarBackground,
+            topBarFont = g.topBarFontColor,
+            primaryButtonText = g.primaryButtonTextColor,
+            primaryButtonBorder = g.primaryButtonBorderColor,
+            secondaryButtonBackground = g.secondaryButtonBackgroundColor,
+            secondaryButtonText = g.secondaryButtonTextColor,
+            secondaryButtonBorder = g.secondaryButtonBorderColor,
+            loader = g.loaderColor
         )
     }
 
@@ -153,9 +160,12 @@ internal object HomeKYCMapper {
                 error = if (isProcessing) null else errorFor(
                     status = status,
                     // Fresh socket / upload message wins; otherwise fall back to the
-                    // message baked into the cached rule (initially-rejected steps).
+                    // message carried by the step itself (initially-rejected steps) —
+                    // first non-blank across the rule's errors.
                     overrideMessage = errorOverrides[rule.id]
-                        ?: rule.errors?.firstOrNull()?.errorMessage?.toString()
+                        ?: rule.errors?.firstNotNullOfOrNull {
+                            it?.errorMessage?.toString()?.takeIf(String::isNotBlank)
+                        }
                 )
             )
         }
@@ -317,19 +327,24 @@ internal object HomeKYCMapper {
     }
 
     /**
-     * Surfaces the server message on a step as an inline block, for any
-     * [ERROR_BEARING_STATUSES] status (rejected, auto-rejected, or pending review — same
-     * as v1's KYCAdapter). The [overrideMessage] is the AmaniEvent socket / failed-upload
-     * message, falling back to the cached [Rule.errors] message at the call site. The error
-     * *title* had no GeneralConfigs equivalent so it is dropped (null).
+     * Surfaces the server message on a step as an inline block. Any step that carries a
+     * message shows it, *except* approved ones (nothing left to explain) — deliberately
+     * wider than gating on the rejected-family statuses alone: the first-login rule list
+     * can arrive with [Rule.errors] attached to a step whose status was already reset for
+     * retry (e.g. NOT_UPLOADED after a rejection), and those must still be shown. The
+     * [overrideMessage] is the AmaniEvent socket / failed-upload message, falling back to
+     * the cached [Rule.errors] message at the call site. The error *title* had no
+     * GeneralConfigs equivalent so it is dropped (null).
      */
     private fun errorFor(status: String?, overrideMessage: String?): StepError? {
-        if (status !in ERROR_BEARING_STATUSES) return null
+        // Approved: resolved, nothing to explain. Processing: the server is re-evaluating;
+        // a leftover rejection message would be stale/confusing while it runs.
+        if (status == AppConstant.STATUS_APPROVED || status == AppConstant.STATUS_PROCESSING) return null
         // Server message wins when present.
         val message = overrideMessage?.takeIf { it.isNotBlank() }
         if (message != null) return StepError(title = null, message = message)
         // No backend message: show the static fallback (toggleable) so a *rejected* step
-        // still explains itself. Pending-review without a message stays silent.
+        // still explains itself. Everything else without a message stays silent.
         return if (STATIC_ERROR_FALLBACK_ENABLED && status in REJECTED_STATUSES) {
             STATIC_ERROR_FALLBACK
         } else {

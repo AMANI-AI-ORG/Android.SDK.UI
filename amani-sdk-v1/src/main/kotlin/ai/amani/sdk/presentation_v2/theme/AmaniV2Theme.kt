@@ -15,12 +15,9 @@ import androidx.compose.ui.graphics.Color
 @Immutable
 data class AmaniV2Palette(
     val accent: Color = AmaniV2Colors.Pink,
-    val accentDark: Color = AmaniV2Colors.PinkDark,
     val accentSoft: Color = AmaniV2Colors.PinkSoft,
     val accentSofter: Color = AmaniV2Colors.PinkSofter,
-    val accentCoral: Color = AmaniV2Colors.Coral,
     val ink: Color = AmaniV2Colors.Ink,
-    val inkSoft: Color = AmaniV2Colors.InkSoft,
     val inkMuted: Color = AmaniV2Colors.InkMuted,
     val inkLight: Color = AmaniV2Colors.InkLight,
     val background: Color = AmaniV2Colors.Bg,
@@ -28,8 +25,26 @@ data class AmaniV2Palette(
     val border: Color = AmaniV2Colors.Border,
     val success: Color = AmaniV2Colors.Success,
     val danger: Color = AmaniV2Colors.Danger,
-    val dangerBg: Color = AmaniV2Colors.DangerBg,
     val surface: Color = AmaniV2Colors.White,
+    // ── GeneralConfigs-mapped chrome & control colors ────────────────────────────
+    // Defaults deliberately equal the values the HTML design used implicitly, so
+    // previews and configs without these fields look identical to before.
+    /** Header/toolbar zone background (GeneralConfigs.topBarBackground); also the status bar. */
+    val topBar: Color = AmaniV2Colors.Bg,
+    /** Header title + back icon color (GeneralConfigs.topBarFontColor). */
+    val topBarFont: Color = AmaniV2Colors.Ink,
+    /** Primary button label/icon (GeneralConfigs.primaryButtonTextColor). */
+    val primaryButtonText: Color = AmaniV2Colors.White,
+    /** Primary button border (GeneralConfigs.primaryButtonBorderColor). Transparent = none. */
+    val primaryButtonBorder: Color = Color.Transparent,
+    /** Secondary button fill (GeneralConfigs.secondaryButtonBackgroundColor). */
+    val secondaryButtonBackground: Color = AmaniV2Colors.White,
+    /** Secondary button label/icon (GeneralConfigs.secondaryButtonTextColor). */
+    val secondaryButtonText: Color = AmaniV2Colors.Ink,
+    /** Secondary button border (GeneralConfigs.secondaryButtonBorderColor). */
+    val secondaryButtonBorder: Color = AmaniV2Colors.Border,
+    /** Spinner/loader color (GeneralConfigs.loaderColor). */
+    val loader: Color = AmaniV2Colors.Pink,
 )
 
 /**
@@ -39,7 +54,6 @@ data class AmaniV2Palette(
  */
 fun amaniV2PaletteFromHex(
     accent: String? = null,
-    accentDark: String? = null,
     accentSoft: String? = null,
     accentSofter: String? = null,
     ink: String? = null,
@@ -50,11 +64,18 @@ fun amaniV2PaletteFromHex(
     surface: String? = null,
     success: String? = null,
     danger: String? = null,
+    topBar: String? = null,
+    topBarFont: String? = null,
+    primaryButtonText: String? = null,
+    primaryButtonBorder: String? = null,
+    secondaryButtonBackground: String? = null,
+    secondaryButtonText: String? = null,
+    secondaryButtonBorder: String? = null,
+    loader: String? = null,
 ): AmaniV2Palette {
     val d = AmaniV2Palette()
     return d.copy(
         accent = accent.toAmaniColorOrNull() ?: d.accent,
-        accentDark = accentDark.toAmaniColorOrNull() ?: d.accentDark,
         accentSoft = accentSoft.toAmaniColorOrNull() ?: d.accentSoft,
         accentSofter = accentSofter.toAmaniColorOrNull() ?: d.accentSofter,
         ink = ink.toAmaniColorOrNull() ?: d.ink,
@@ -65,6 +86,19 @@ fun amaniV2PaletteFromHex(
         surface = surface.toAmaniColorOrNull() ?: d.surface,
         success = success.toAmaniColorOrNull() ?: d.success,
         danger = danger.toAmaniColorOrNull() ?: d.danger,
+        // Top bar falls back to the (possibly config-driven) app background rather than
+        // the static default, so a config that sets only appBackground still gets a
+        // seamless header + status bar.
+        topBar = topBar.toAmaniColorOrNull() ?: background.toAmaniColorOrNull() ?: d.topBar,
+        topBarFont = topBarFont.toAmaniColorOrNull() ?: ink.toAmaniColorOrNull() ?: d.topBarFont,
+        primaryButtonText = primaryButtonText.toAmaniColorOrNull() ?: d.primaryButtonText,
+        primaryButtonBorder = primaryButtonBorder.toAmaniColorOrNull() ?: d.primaryButtonBorder,
+        secondaryButtonBackground = secondaryButtonBackground.toAmaniColorOrNull() ?: d.secondaryButtonBackground,
+        secondaryButtonText = secondaryButtonText.toAmaniColorOrNull() ?: d.secondaryButtonText,
+        secondaryButtonBorder = secondaryButtonBorder.toAmaniColorOrNull() ?: d.secondaryButtonBorder,
+        // Loader falls back to the config accent so the spinner stays on-brand even when
+        // loaderColor is absent.
+        loader = loader.toAmaniColorOrNull() ?: accent.toAmaniColorOrNull() ?: d.loader,
     )
 }
 
