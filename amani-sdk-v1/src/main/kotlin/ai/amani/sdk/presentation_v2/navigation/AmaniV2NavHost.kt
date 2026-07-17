@@ -340,7 +340,10 @@ private fun DocumentTypeRoute(
     val state = remember {
         SelectDocumentTypeMapper.toUiState(
             versions = CaptureFlow.visibleVersions(),
-            config = CachingHomeKYC.appConfig
+            config = CachingHomeKYC.appConfig,
+            // Nav title = the KYC step's name ("Identification"), captured when the
+            // capture leg was prepared from Home.
+            ruleTitle = CaptureFlow.currentRuleTitle
         )
     }
     var selectedId by rememberSaveable { mutableStateOf(state.selectedId) }

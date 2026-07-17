@@ -58,10 +58,14 @@ data class PreviewScreenUiState(
     val bitmap: android.graphics.Bitmap? = null,
     /**
      * Reassurance checklist shown under the photo (HTML confirm design). Empty hides the
-     * card (e.g. selfie confirm).
+     * card. Config-driven: Version.v2DocumentQuality1..3.
      */
-    // TODO: config-driven
-    val qualityChecks: List<String> = emptyList()
+    val qualityChecks: List<String> = emptyList(),
+    /**
+     * Eyebrow header of the checklist card ("ID QUALITY CHECKS"). Blank/null hides the
+     * header line. Config-driven: Version.v2DocumentQualityHeader.
+     */
+    val qualityChecksHeader: String? = null
 )
 
 /**
@@ -138,7 +142,7 @@ fun PreviewScreen(
             }
             if (state.qualityChecks.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                QualityChecksCard(state.qualityChecks)
+                QualityChecksCard(state.qualityChecks, state.qualityChecksHeader)
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -168,7 +172,7 @@ fun PreviewScreen(
 
 /** Reassurance checklist card under the photo (HTML confirm design). */
 @Composable
-private fun QualityChecksCard(items: List<String>) {
+private fun QualityChecksCard(items: List<String>, header: String? = null) {
     val palette = AmaniV2Theme.palette
     Column(
         modifier = Modifier
@@ -179,6 +183,10 @@ private fun QualityChecksCard(items: List<String>) {
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Eyebrow header ("ID QUALITY CHECKS") above the checklist rows (design v2.6).
+        header?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = AmaniV2Type.eyebrow.scaled(), color = palette.inkMuted)
+        }
         items.forEach { item ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -212,7 +220,8 @@ internal val SamplePreviewScreen = PreviewScreenUiState(
     description = "Check that all four corners are visible and there's no glare before continuing.",
     confirmButtonText = "Looks good",
     retakeButtonText = "Retake photo",
-    qualityChecks = listOf("Sharp & in focus", "Document fully visible", "No glare or shadows")
+    qualityChecks = listOf("Sharp & in focus", "Document fully visible", "No glare or shadows"),
+    qualityChecksHeader = "ID QUALITY CHECKS"
 )
 
 @Preview(name = "CaptureConfirm", showBackground = true, widthDp = 360, heightDp = 740)

@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation_v2.select_document_type
 
 import ai.amani.sdk.presentation_v2.components.DotStep
+import ai.amani.sdk.presentation_v2.components.Pill
 import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.components.StepStatus
@@ -30,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.CreditCard
@@ -52,7 +54,11 @@ data class DocumentTypeOption(
     val id: String,
     val title: String,
     val subtitle: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    // Chips shown on the *selected* card (design v2.6). Null NFC label = the document has
+    // no NFC path, chip hidden. Config-driven: Version.v2NfcChipLabel / v2EstimatedTime.
+    val nfcChipLabel: String? = null,
+    val estimatedTime: String? = null
 )
 
 /** State backing [SelectDocumentTypeScreen]. */
@@ -64,6 +70,10 @@ data class SelectDocumentTypeUiState(
     val subtitle: String,
     val options: List<DocumentTypeOption>,
     val selectedId: String?,
+    // CTA composition (design v2.6): with a selection the button reads
+    // "<continuePrefix> <selected title>"; without one it shows [placeholder] disabled.
+    val continuePrefix: String = "Continue with",
+    val placeholder: String = "Select an ID type to continue",
     val continueButtonText: String
 )
 
@@ -130,9 +140,12 @@ fun SelectDocumentTypeScreen(
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
                 .padding(bottom = 20.dp)
         ) {
+            // CTA names the selected document; without a selection it shows the config
+            // placeholder ("Select an ID type to continue") and stays disabled.
+            val selected = state.options.firstOrNull { it.id == state.selectedId }
             PrimaryButton(
-                text = state.continueButtonText,
-                enabled = state.selectedId != null,
+                text = selected?.let { "${state.continuePrefix} ${it.title}" } ?: state.placeholder,
+                enabled = selected != null,
                 onClick = onContinue
             )
         }
@@ -152,61 +165,93 @@ private fun DocumentOptionCard(
     val borderWidth = if (selected) 1.5.dp else 0.5.dp
     val cardShape = RoundedCornerShape(AmaniV2Dimens.cardRadius.scaled())
 
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(containerColor, cardShape)
             .border(borderWidth, borderColor, cardShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled()),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp.scaled())
+            .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp.scaled())
-                .background(
-                    // Selected card → accent fill (white icon); unselected → soft accent
-                    // tint (accent-colored icon).
-                    if (selected) palette.accent else palette.accentSoft,
-                    RoundedCornerShape(AmaniV2Dimens.iconButtonRadius.scaled())
-                ),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp.scaled())
         ) {
-            Icon(
-                option.icon,
-                contentDescription = null,
-                tint = if (selected) palette.surface else palette.accent,
-                modifier = Modifier.size(22.dp.scaled())
-            )
+            Box(
+                modifier = Modifier
+                    .size(44.dp.scaled())
+                    .background(
+                        // Selected card → accent fill (white icon); unselected → soft accent
+                        // tint (accent-colored icon).
+                        if (selected) palette.accent else palette.accentSoft,
+                        RoundedCornerShape(AmaniV2Dimens.iconButtonRadius.scaled())
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    option.icon,
+                    contentDescription = null,
+                    tint = if (selected) palette.surface else palette.accent,
+                    modifier = Modifier.size(22.dp.scaled())
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    option.title,
+                    style = AmaniV2Type.rowTitle.scaled(),
+                    color = palette.ink
+                )
+                option.subtitle.takeIf { it.isNotBlank() }?.let { subtitle ->
+                    Text(
+                        subtitle,
+                        style = AmaniV2Type.label.copy(fontWeight = FontWeight.Normal).scaled(),
+                        color = palette.inkMuted,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+            if (selected) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = palette.accent,
+                    modifier = Modifier.size(22.dp.scaled())
+                )
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = palette.inkLight,
+                    modifier = Modifier.size(22.dp.scaled())
+                )
+            }
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                option.title,
-                style = AmaniV2Type.rowTitle.scaled(),
-                color = palette.ink
-            )
-            Text(
-                option.subtitle,
-                style = AmaniV2Type.label.copy(fontWeight = FontWeight.Normal).scaled(),
-                color = palette.inkMuted,
-                modifier = Modifier.padding(top = 2.dp)
-            )
-        }
-        if (selected) {
-            Icon(
-                Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = palette.accent,
-                modifier = Modifier.size(22.dp.scaled())
-            )
-        } else {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = palette.inkLight,
-                modifier = Modifier.size(22.dp.scaled())
-            )
+        // Chips only expand on the selected card (design v2.6): the accent NFC pitch
+        // ("Fastest with NFC") when the document supports it, plus the outlined estimated
+        // duration ("~30 sec").
+        if (selected && (option.nfcChipLabel != null || option.estimatedTime != null)) {
+            Row(
+                modifier = Modifier.padding(top = 12.dp.scaled()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp.scaled())
+            ) {
+                option.nfcChipLabel?.let { label ->
+                    Pill(
+                        text = label,
+                        containerColor = palette.accent,
+                        contentColor = palette.surface,
+                        leadingIcon = Icons.Filled.Bolt
+                    )
+                }
+                option.estimatedTime?.let { time ->
+                    Pill(
+                        text = time,
+                        containerColor = palette.surface,
+                        contentColor = palette.ink,
+                        borderColor = palette.border
+                    )
+                }
+            }
         }
     }
 }
@@ -228,7 +273,9 @@ internal val SampleSelectDocumentType = SelectDocumentTypeUiState(
             id = "id_card",
             title = "ID Card",
             subtitle = "National identity card",
-            icon = Icons.Outlined.Badge
+            icon = Icons.Outlined.Badge,
+            nfcChipLabel = "Fastest with NFC",
+            estimatedTime = "~30 sec"
         ),
         DocumentTypeOption(
             id = "passport",

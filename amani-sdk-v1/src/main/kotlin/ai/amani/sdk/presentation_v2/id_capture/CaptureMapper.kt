@@ -40,22 +40,30 @@ internal object CaptureMapper {
     ): PreviewScreenUiState {
         val step = version.stepFor(side)
         return PreviewScreenUiState(
-            headerTitle = step?.confirmationTitle.orFallback("Verification"),
-            title = step?.confirmationTitle.orFallback("Is your ID clear and readable?"),
-            description = step?.confirmationDescription.orFallback(
-                "Check that all four corners are visible and there's no glare before continuing."
+            // The v2 confirmation strings live on the Version; the per-side step strings
+            // remain the fallback so older configs still render.
+            headerTitle = version.v2DocumentConfirmationNavTitle.orFallback(
+                step?.confirmationTitle.orFallback("Review your ID")
+            ),
+            title = version.v2DocumentConfirmationHeader.orFallback("Looks good?"),
+            description = version.v2DocumentConfirmationSubtitle.orFallback(
+                step?.confirmationDescription.orFallback(
+                    "Make sure all text is sharp and fully visible."
+                )
             ),
             confirmButtonText = (step?.confirm ?: general?.confirmText).orFallback("Looks good"),
             retakeButtonText = general?.tryAgainText.orFallback("Retake photo"),
             bitmap = bitmap,
-            // TODO: config-driven
-            qualityChecks = listOf(
-                "Sharp & in focus",
-                "Document fully visible",
-                "No glare or shadows"
-            )
+            qualityChecks = listOfNotNull(
+                version.v2DocumentQuality1.nonBlank() ?: "Sharp & in focus",
+                version.v2DocumentQuality2.nonBlank() ?: "Document fully visible",
+                version.v2DocumentQuality3.nonBlank() ?: "No glare or shadows"
+            ),
+            qualityChecksHeader = version.v2DocumentQualityHeader.orFallback("ID QUALITY CHECKS")
         )
     }
+
+    private fun String?.nonBlank(): String? = this?.takeIf { it.isNotBlank() }
 
     private fun String?.orFallback(fallback: String): String =
         this?.takeIf { it.isNotBlank() } ?: fallback

@@ -27,10 +27,18 @@ import datamanager.model.config.Version
 internal object CaptureFlow {
 
     /**
+     * Title of the KYC rule the prepared versions belong to ("Identification", "Selfie",
+     * …) — the document-type chooser's nav title. Set by [prepareVersions].
+     */
+    var currentRuleTitle: String? = null
+        private set
+
+    /**
      * Builds and caches the version list for [rule] from the step config, stamping each
      * version with its documentId/stepId. Mirrors `HomeKYCViewModel.setVersionList`.
      */
     fun prepareVersions(rule: Rule): List<Version> {
+        currentRuleTitle = rule.title
         val config = CachingHomeKYC.appConfig ?: return emptyList()
         val sortOrder = rule.sortOrder ?: return emptyList()
         val stepConfig = config.getStepConfig(sortOrder)

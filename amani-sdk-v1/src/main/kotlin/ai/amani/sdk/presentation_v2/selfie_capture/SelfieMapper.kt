@@ -26,16 +26,30 @@ internal object SelfieMapper {
     ): PreviewScreenUiState {
         val step = version.steps?.firstOrNull()
         return PreviewScreenUiState(
-            headerTitle = step?.confirmationTitle.orFallback("Verification"),
-            title = step?.confirmationTitle.orFallback("Is your selfie clear?"),
-            description = step?.confirmationDescription.orFallback(
-                "Make sure your face is well lit and fully visible before continuing."
+            // The v2 confirmation strings live on the Version; the step strings remain the
+            // fallback so older configs still render.
+            headerTitle = version.v2DocumentConfirmationNavTitle.orFallback(
+                step?.confirmationTitle.orFallback("Review your selfie")
+            ),
+            title = version.v2DocumentConfirmationHeader.orFallback("Looks good?"),
+            description = version.v2DocumentConfirmationSubtitle.orFallback(
+                step?.confirmationDescription.orFallback(
+                    "Make sure your face is clear and well illuminated."
+                )
             ),
             confirmButtonText = (step?.confirm ?: general?.confirmText).orFallback("Looks good"),
             retakeButtonText = general?.tryAgainText.orFallback("Retake selfie"),
-            bitmap = bitmap
+            bitmap = bitmap,
+            qualityChecks = listOfNotNull(
+                version.v2DocumentQuality1.nonBlank() ?: "Face clearly visible",
+                version.v2DocumentQuality2.nonBlank() ?: "Well lit, no harsh shadows",
+                version.v2DocumentQuality3.nonBlank() ?: "Eyes open and looking forward"
+            ),
+            qualityChecksHeader = version.v2DocumentQualityHeader.orFallback("SELFIE QUALITY CHECKS")
         )
     }
+
+    private fun String?.nonBlank(): String? = this?.takeIf { it.isNotBlank() }
 
     private fun String?.orFallback(fallback: String): String =
         this?.takeIf { it.isNotBlank() } ?: fallback

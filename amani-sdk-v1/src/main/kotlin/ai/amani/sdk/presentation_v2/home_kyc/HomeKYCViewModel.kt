@@ -281,7 +281,9 @@ class HomeKYCViewModel(
         processingRuleId = ruleId
         refreshReady()
 
-        Amani.sharedInstance().IDCapture().withNFC(success)
+        Amani.sharedInstance().IDCapture()
+            .setCaptureAreaScaleFactor(0.80f)
+            .withNFC(success)
         idCaptureRepository.upload(activity, docType, {}) { result ->
             handleUploadResult(result, docType)
         }

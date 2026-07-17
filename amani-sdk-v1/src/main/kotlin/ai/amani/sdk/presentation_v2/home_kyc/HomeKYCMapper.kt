@@ -13,6 +13,7 @@ import ai.amani.sdk.utils.AppConstant
 import androidx.compose.ui.graphics.Color
 import datamanager.model.config.ResGetConfig
 import datamanager.model.config.StepConfig
+import datamanager.model.config.Version
 
 /**
  * Pure, side-effect-free mapping from the shared SDK data layer (server [ResGetConfig]
@@ -55,15 +56,16 @@ internal object HomeKYCMapper {
      */
     private const val STATIC_ERROR_FALLBACK_ENABLED = true
 
-    // TODO: config-driven
+    /** Fallback when the step's version carries no `v2EstimatedTime`. */
     private const val STATIC_STEP_DURATION = "~30 sec"
 
     /**
-     * Generic rejection message shown when [STATIC_ERROR_FALLBACK_ENABLED] is on and the
-     * server provided no per-step message. Pending-review steps are *not* given this
-     * fallback (they carry no rejection text); only true rejections fall back to it.
+     * Generic rejection message shown when [STATIC_ERROR_FALLBACK_ENABLED] is on and
+     * neither the server nor the step's version config (`v2StepRejectionTitle` /
+     * `v2StepRejectionDescription`) provided a per-step message. Pending-review steps are
+     * *not* given this fallback (they carry no rejection text); only true rejections fall
+     * back to it.
      */
-    // TODO: config-driven
     private val STATIC_ERROR_FALLBACK = StepError(
         title = "We couldn't verify this step",
         message = "Something didn't look right. Please tap the step and try again."
@@ -125,6 +127,16 @@ internal object HomeKYCMapper {
         // (and enables on) exactly this step.
         val activeIndex = activeRuleIndex(rules, config, statusOverrides, processingRuleId)
 
+        // Aggregate step counts that drive the home heading + CTA wording. "Done" here is
+        // deliberately narrower than [DONE_STATUSES]: a step that is merely uploading /
+        // server-processing hasn't been completed by the user yet, so it must not flip the
+        // heading into the progress state (the design keeps the initial heading while the
+        // first step processes).
+        val doneCount = rules.count {
+            eff(it) == AppConstant.STATUS_APPROVED || eff(it) == AppConstant.STATUS_PENDING_REVIEW
+        }
+        val rejectedCount = rules.count { eff(it) in REJECTED_STATUSES }
+
         val dots = rules.mapIndexed { index, rule ->
             DotStep(
                 // Per-step label is server content (the KYC rule title), not a
@@ -134,6 +146,14 @@ internal object HomeKYCMapper {
             )
         }
 
+        // "Start here · ~30 sec" on a fresh flow; once something is done the next
+        // actionable step reads "Up next · ~30 sec" instead (design v2.6).
+        val actionLabel = if (doneCount > 0) {
+            g?.v2StepUpNextLabel.orFallback("Up next")
+        } else {
+            g?.v2StepStartHereLabel.orFallback("Start here")
+        }
+
         val steps = rules.mapIndexed { index, rule ->
             val isProcessing = rule.id != null && rule.id == processingRuleId
             val status = eff(rule)
@@ -141,17 +161,29 @@ internal object HomeKYCMapper {
             // selected by the rule's status with a "processing" override while uploading.
             val stepConfig = config?.stepConfigForSortOrder(rule.sortOrder)
             val style = stepStyle(stepConfig, status, isProcessing)
+            val rowStatus = if (isProcessing) StepRowStatus.Processing
+            else rowStatus(status, index == activeIndex)
+            // The step's version config carries the v2 per-document strings (estimated
+            // time, rejection fallback texts).
+            val version = config?.firstVisibleVersionFor(rule.sortOrder)
             VerificationStep(
                 index = index + 1,
-                // Top line: the config-driven status label (StepConfig.buttonText for this
-                // status, v1's textOfButton) — moved up from the old subtitle slot. Falls back
-                // to the server rule title when config has no label so the row is never blank.
-                title = style.label ?: rule.title ?: "",
-                // Bottom line: static, informative duration hint (see STATIC_STEP_DURATION).
-                // The status label used to live here; it now sits on the top line.
-                subtitle = STATIC_STEP_DURATION,
-                status = if (isProcessing) StepRowStatus.Processing
-                else rowStatus(status, index == activeIndex),
+                // Top line: the step's action name — stable across statuses (design v2.6:
+                // "Upload ID" stays the title while the status moves to the subtitle).
+                // buttonText.notUploaded is that action label; the server rule title is the
+                // fallback so the row is never blank.
+                title = (stepConfig?.buttonText?.notUploaded?.takeIf { it.isNotBlank() })
+                    ?: rule.title ?: "",
+                // Bottom line: actionable steps show "<Start here|Up next> · <estimated
+                // time>" (config-driven); every other status shows its config status label
+                // (StepConfig.buttonText — "Document is currently processing", "Your ID
+                // rejected. Please try again", …).
+                subtitle = when (rowStatus) {
+                    StepRowStatus.Active, StepRowStatus.Locked ->
+                        "$actionLabel · ${version?.v2EstimatedTime.orFallback(STATIC_STEP_DURATION)}"
+                    else -> style.label
+                },
+                status = rowStatus,
                 // Config-driven per-status colors (StepConfig). buttonColor is the saturated
                 // accent (border, inner wash, number-badge fill, trailing icon); buttonTextColor
                 // drives the step's text. The number-badge glyph stays white (set in StepRow).
@@ -165,27 +197,77 @@ internal object HomeKYCMapper {
                     overrideMessage = errorOverrides[rule.id]
                         ?: rule.errors?.firstNotNullOfOrNull {
                             it?.errorMessage?.toString()?.takeIf(String::isNotBlank)
-                        }
+                        },
+                    version = version
                 )
             )
+        }
+
+        // Home heading follows the flow state (design v2.6): rejected wins, then progress
+        // (something already done), then the fresh-start heading. The config strings are
+        // sentence *suffixes* — the step-count prefix is composed here.
+        val remaining = rules.size - doneCount
+        val (title, subtitle) = when {
+            rejectedCount > 0 -> Pair(
+                g?.v2HomeRejectedTitle.orFallback("Verification incomplete"),
+                countWord(rejectedCount) +
+                    (if (rejectedCount == 1) " step needs " else " steps need ") +
+                    g?.v2HomeRejectedSubtitle.orFallback("your attention before we can continue.")
+            )
+            doneCount > 0 -> Pair(
+                g?.v2HomeProgressTitle.orFallback("You're making progress"),
+                countWord(remaining) +
+                    (if (remaining == 1) " more step " else " more steps ") +
+                    g?.v2HomeProgressSubtitle.orFallback("to finish verification.")
+            )
+            else -> Pair(
+                g?.v2HomeInitialTitle.orFallback("Let's get you verified"),
+                countWord(rules.size) + " " +
+                    g?.v2HomeInitialSubtitle.orFallback("quick steps. Should take about 2 minutes.")
+            )
+        }
+
+        // CTA names the step it will start: "Start with Identification" on a fresh flow,
+        // "Continue with Selfie" mid-flow, "Retake Identification" after a rejection. While
+        // a step is uploading (nothing actionable) the label still names the next step but
+        // the button is disabled. No step at all → plain config continue text.
+        val ctaRule = activeIndex.takeIf { it >= 0 }?.let { rules[it] }
+            ?: rules.firstOrNull { !isDone(eff(it)) && it.id != processingRuleId }
+        val primaryButtonText = if (ctaRule != null) {
+            val prefix = when {
+                eff(ctaRule) in REJECTED_STATUSES -> g?.v2HomeCtaRetake.orFallback("Retake")
+                doneCount > 0 -> g?.v2HomeCtaContinue.orFallback("Continue with")
+                else -> g?.v2HomeCtaStart.orFallback("Start with")
+            }
+            "$prefix ${ctaRule.title.orEmpty()}".trim()
+        } else {
+            g?.continueText.orFallback("Continue")
         }
 
         return HomeKYCUiState(
             // Config-driven: GeneralConfigs.mainTitleText (v1 toolbar title), fallback when blank/null.
             headerTitle = g?.mainTitleText.orFallback("Verification"),
             dots = dots,
-            // TODO: config-driven
-            title = "Let's get you verified",
-            subtitle = g?.mainDescriptionText.orFallback("Complete the steps below to finish verification."),
+            title = title,
+            subtitle = subtitle,
             steps = steps,
-            // Config-driven: GeneralConfigs.continueText, fallback when blank/null.
-            primaryButtonText = g?.continueText.orFallback("Continue"),
+            primaryButtonText = primaryButtonText,
             // The primary button only advances when there's a step ready for the user. It
             // is disabled while the active step is uploading / awaiting its verdict (and the
             // next step is still locked behind it), and re-enables once that step is approved
             // and the next becomes active.
             primaryButtonEnabled = activeIndex >= 0
         )
+    }
+
+    /**
+     * Spelled-out step count for the home subtitles ("Four quick steps…", "One step
+     * needs…"). Past ten (unrealistic for a KYC flow) the numeral is used as-is.
+     */
+    private fun countWord(count: Int): String = when (count) {
+        1 -> "One"; 2 -> "Two"; 3 -> "Three"; 4 -> "Four"; 5 -> "Five"
+        6 -> "Six"; 7 -> "Seven"; 8 -> "Eight"; 9 -> "Nine"; 10 -> "Ten"
+        else -> count.toString()
     }
 
     private fun effectiveStatus(rule: Rule, statusOverrides: Map<String, String>): String? =
@@ -296,6 +378,18 @@ internal object HomeKYCMapper {
     }
 
     /**
+     * First selectable (non-hidden) [Version] of the step at [sortOrder] — the carrier of
+     * the per-document v2 strings (`v2EstimatedTime`, `v2StepRejection*`). Read-only: unlike
+     * CaptureFlow.prepareVersions it stamps nothing onto the version objects.
+     */
+    private fun ResGetConfig.firstVisibleVersionFor(sortOrder: Int?): Version? {
+        val documents = stepConfigForSortOrder(sortOrder)?.mDocuments ?: return null
+        return documents.firstNotNullOfOrNull { document ->
+            document?.versions?.firstOrNull { it.isHidden != true }
+        }
+    }
+
+    /**
      * Picks the per-status fields from the step's [StepConfig], mirroring v1's KYCAdapter
      * `when (status)` branches: each status maps to its matching buttonText / buttonColor /
      * buttonTextColor, and a step that is currently uploading uses the `processing` fields
@@ -336,20 +430,25 @@ internal object HomeKYCMapper {
      * the cached [Rule.errors] message at the call site. The error *title* had no
      * GeneralConfigs equivalent so it is dropped (null).
      */
-    private fun errorFor(status: String?, overrideMessage: String?): StepError? {
+    private fun errorFor(status: String?, overrideMessage: String?, version: Version?): StepError? {
         // Approved: resolved, nothing to explain. Processing: the server is re-evaluating;
         // a leftover rejection message would be stale/confusing while it runs.
         if (status == AppConstant.STATUS_APPROVED || status == AppConstant.STATUS_PROCESSING) return null
+        // The block's title is the version config's rejection headline ("ID could not be
+        // verified") — shown above whichever message wins below.
+        val configTitle = version?.v2StepRejectionTitle?.takeIf { it.isNotBlank() }
         // Server message wins when present.
         val message = overrideMessage?.takeIf { it.isNotBlank() }
-        if (message != null) return StepError(title = null, message = message)
-        // No backend message: show the static fallback (toggleable) so a *rejected* step
-        // still explains itself. Everything else without a message stays silent.
-        return if (STATIC_ERROR_FALLBACK_ENABLED && status in REJECTED_STATUSES) {
-            STATIC_ERROR_FALLBACK
-        } else {
-            null
-        }
+        if (message != null) return StepError(title = configTitle, message = message)
+        // No backend message: a *rejected* step still explains itself with the version
+        // config texts (v2StepRejectionTitle/Description), then the static fallback
+        // (toggleable). Everything else without a message stays silent.
+        if (!STATIC_ERROR_FALLBACK_ENABLED || status !in REJECTED_STATUSES) return null
+        return StepError(
+            title = configTitle ?: STATIC_ERROR_FALLBACK.title,
+            message = version?.v2StepRejectionDescription?.takeIf { it.isNotBlank() }
+                ?: STATIC_ERROR_FALLBACK.message
+        )
     }
 
     private fun String?.orFallback(fallback: String): String =

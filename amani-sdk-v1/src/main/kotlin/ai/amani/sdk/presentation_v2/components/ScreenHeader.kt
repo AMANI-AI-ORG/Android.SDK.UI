@@ -40,17 +40,20 @@ fun ScreenHeader(
     onBack: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            // Toolbar zone paints GeneralConfigs.topBarBackground (defaults to the app
-            // background, keeping the previous seamless look) — the status bar is painted
-            // the same color at the activity level so they read as one surface.
-            .background(palette.topBar)
-            .padding(top = AmaniV2Dimens.topInset, start = AmaniV2Dimens.screenPadding, end = AmaniV2Dimens.screenPadding)
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Toolbar zone paints GeneralConfigs.topBarBackground (defaults to the app
+        // background, keeping the previous seamless look) — the status bar is painted
+        // the same color at the activity level so they read as one surface.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(palette.topBar)
+                .padding(
+                    top = AmaniV2Dimens.topInset,
+                    start = AmaniV2Dimens.screenPadding,
+                    end = AmaniV2Dimens.screenPadding
+                )
+                .padding(bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -63,10 +66,20 @@ fun ScreenHeader(
             Spacer(Modifier.size(AmaniV2Dimens.iconButtonSize.scaled()))
         }
         if (steps != null) {
-            Spacer(Modifier.height(24.dp))
-            DotProgressBar(steps = steps)
+            // The step progress zone sits below the toolbar on the app background
+            // (GeneralConfigs.appBackground) — deliberately NOT topBarBackground, so the
+            // dots read as screen content, not toolbar chrome.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(palette.background)
+                    .padding(horizontal = AmaniV2Dimens.screenPadding)
+            ) {
+                Spacer(Modifier.height(12.dp))
+                DotProgressBar(steps = steps)
+                Spacer(Modifier.height(18.dp))
+            }
         }
-        Spacer(Modifier.height(if (steps != null) 18.dp else 12.dp))
     }
 }
 

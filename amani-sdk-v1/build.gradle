@@ -126,7 +126,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-compose:2.8.7"
 
     // AmaniSDK impl
-    def amani_sdk = "3.20.0"
+    def amani_sdk = "3.21.0alpha01"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Nav graph. Pinned to the 2.8.x line on purpose: navigation 2.9.x transitively

@@ -24,7 +24,9 @@ internal object NfcMapper {
             headerTitle = version.nfcTitle.orFallback("NFC"),
             title = version.nfcPleaseHold.orFallback("Hold your ID to your phone"),
             descriptions = descriptions,
-            searchingLabel = version.nfcDialogTitle.orFallback("Searching for chip…"),
+            // v2 searching text wins when present; the v1 dialog title stays the fallback.
+            searchingLabel = version.v2NfcSearchingText.nonBlank()
+                ?: version.nfcDialogTitle.orFallback("Searching for chip..."),
             cancelButtonText = (version.cancelButtonText ?: general?.tryAgainText).orFallback("Cancel"),
             continueButtonText = general?.continueText.orFallback("Start scan"),
             mrzCheckTitle = version.nfcConfigureTitle.orFallback("Check your document details"),

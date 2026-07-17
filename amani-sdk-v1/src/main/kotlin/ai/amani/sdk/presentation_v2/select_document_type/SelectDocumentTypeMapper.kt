@@ -20,7 +20,11 @@ import datamanager.model.config.Version
  */
 internal object SelectDocumentTypeMapper {
 
-    fun toUiState(versions: List<Version>, config: ResGetConfig?): SelectDocumentTypeUiState {
+    fun toUiState(
+        versions: List<Version>,
+        config: ResGetConfig?,
+        ruleTitle: String? = null
+    ): SelectDocumentTypeUiState {
         val general = config?.generalConfigs
         // documentSelection* strings live on the step config; all versions share a stepId.
         val stepConfig = versions.firstOrNull()?.stepId?.let { config?.getStepConfig(it) }
@@ -31,12 +35,23 @@ internal object SelectDocumentTypeMapper {
                 title = version.title.orFallback("Document"),
                 subtitle = version.informationScreenDesc1.orEmpty(),
                 // Key off the document type code; documentId may carry the numeric id at this stage.
-                icon = iconFor(version.type ?: version.documentId)
+                icon = iconFor(version.type ?: version.documentId),
+                // Chips on the selected card (design v2.6): the NFC pitch only when this
+                // document actually enables NFC (CaptureFlow.isNfcEnabled's check), plus the
+                // per-document estimated duration.
+                nfcChipLabel = if (version.nfcAndroid ?: version.nfc) {
+                    version.v2NfcChipLabel.orFallback("Fastest with NFC")
+                } else null,
+                estimatedTime = version.v2EstimatedTime.orFallback("~30 sec")
             )
         }
 
         return SelectDocumentTypeUiState(
-            headerTitle = stepConfig?.documentSelectionTitle.orFallback("Verification"),
+            // Nav title is the KYC step's name ("Identification"); the in-content heading
+            // below carries the documentSelection* strings.
+            headerTitle = ruleTitle.orFallback(
+                stepConfig?.documentSelectionTitle.orFallback("Verification")
+            ),
             dots = emptyList<DotStep>(),
             eyebrow = "",
             title = stepConfig?.documentSelectionTitle.orFallback("Which document will you use?"),
@@ -45,6 +60,11 @@ internal object SelectDocumentTypeMapper {
             options = options,
             // Preselect the first document (HTML shows the top option already chosen).
             selectedId = options.firstOrNull()?.id,
+            // CTA names the selected document ("Continue with Global ID Card"); with no
+            // selection it shows the config placeholder and stays disabled.
+            continuePrefix = general?.v2HomeCtaContinue.orFallback("Continue with"),
+            placeholder = (versions.firstOrNull()?.v2DocSelectionPlaceholder)
+                .orFallback("Select an ID type to continue"),
             continueButtonText = general?.continueText.orFallback("Continue")
         )
     }
