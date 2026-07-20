@@ -14,5 +14,6 @@ object AmaniDocumentTypes {
     const val SIGNATURE = "SG"
     const val PHYSICAL_CONTRACT = "IB"
     const val VISA = "VA"
+    const val SPEECH = "ST"
 
 }

@@ -48,6 +48,15 @@ android {
         compose true
     }
 
+    // Exposes `components.release` for maven-publish (required since AGP 7.1). Without this
+    // the publish task fails with "Could not find component 'release'". withSourcesJar() ships
+    // sources so consumers get parameter names / KDoc in the IDE.
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+
     packaging {
         resources {
             it.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
@@ -129,6 +138,16 @@ dependencies {
     def amani_sdk = "3.21.0alpha01"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
+    // Optional speech-verification module — compileOnly ON PURPOSE: the UI SDK compiles
+    // against its public API (see presentation_v2/speech_verify) but does NOT bundle it, so
+    // apps that never use the speech (`ST`) step carry none of its weight (it ships its own
+    // Vosk model + native libs). An integrator who needs `ST` steps adds it themselves:
+    //     implementation 'ai.amani.android:AmaniSpeechVerifier:<version>'
+    // Without it, entering an `ST` step fails with a descriptive runtime error
+    // (SpeechVerifierAvailability) instead of silently doing nothing.
+    def speech_verifier = "1.0.0alpha06"
+    compileOnly "ai.amani.android:AmaniSpeechVerifier:$speech_verifier"
+
     // Nav graph. Pinned to the 2.8.x line on purpose: navigation 2.9.x transitively
     // requires the androidx.lifecycle 2.9.x group (which self-aligns and would pull the
     // lifecycle-*-compose artifacts to 2.9.x, demanding compileSdk 35 + AGP 8.6). Staying
@@ -156,7 +175,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.41.3'
+                version = '1.42.0alpha2'
             }
         }
     }

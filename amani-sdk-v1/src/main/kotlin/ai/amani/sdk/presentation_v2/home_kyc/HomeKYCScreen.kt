@@ -28,6 +28,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,7 +75,9 @@ fun HomeKYCScreen(
     state: HomeKYCScreenState,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onPrimary: () -> Unit = {}
+    // Start the given step (its backing rule id). Called by the primary button with the
+    // currently-selected step — the user picks a step by tapping a row, then presses this.
+    onStartStep: (ruleId: String?) -> Unit = {}
 ) {
     when (state) {
         HomeKYCScreenState.Loading -> AmaniV2Loader(modifier)
@@ -79,7 +85,7 @@ fun HomeKYCScreen(
             state = state.content,
             modifier = modifier,
             onBack = onBack,
-            onPrimary = onPrimary
+            onStartStep = onStartStep
         )
     }
 }
@@ -90,10 +96,26 @@ private fun HomeKYCContent(
     state: HomeKYCUiState,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onPrimary: () -> Unit = {}
+    onStartStep: (ruleId: String?) -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
     val contentMaxWidth = amaniV2ContentMaxWidth()
+
+    // A step is actionable (selectable + startable) when it's Active or Rejected.
+    fun VerificationStep.actionable() =
+        status == StepRowStatus.Active || status == StepRowStatus.Rejected
+
+    // Local selection: which step the primary button will start. Defaults to the first
+    // actionable step; re-seeded whenever the set of actionable steps changes (e.g. a
+    // verdict lands and the next step unlocks). Tapping a row moves the selection.
+    val actionableIds = state.steps.filter { it.actionable() }.mapNotNull { it.ruleId }
+    var selectedRuleId by remember(actionableIds) {
+        mutableStateOf(actionableIds.firstOrNull())
+    }
+    val selectedStep = state.steps.firstOrNull { it.ruleId != null && it.ruleId == selectedRuleId }
+    val buttonText = selectedStep?.ctaLabel ?: state.primaryButtonText
+    val buttonEnabled = selectedRuleId != null && state.primaryButtonEnabled
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -134,7 +156,18 @@ private fun HomeKYCContent(
             )
             Spacer(Modifier.height(28.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                state.steps.forEach { StepRow(step = it) }
+                state.steps.forEach { step ->
+                    // Actionable rows (Active/Rejected) are tappable to SELECT that step; the
+                    // bottom button then starts the selected one. Other statuses are inert.
+                    val actionable = step.actionable()
+                    StepRow(
+                        step = step,
+                        selected = actionable && step.ruleId != null && step.ruleId == selectedRuleId,
+                        onClick = if (actionable) {
+                            { selectedRuleId = step.ruleId }
+                        } else null
+                    )
+                }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -149,9 +182,9 @@ private fun HomeKYCContent(
                 .padding(bottom = 20.dp)
         ) {
             PrimaryButton(
-                text = state.primaryButtonText,
-                enabled = state.primaryButtonEnabled,
-                onClick = onPrimary
+                text = buttonText,
+                enabled = buttonEnabled,
+                onClick = { onStartStep(selectedRuleId) }
             )
         }
     }

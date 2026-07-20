@@ -22,6 +22,8 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierLauncher
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierOptions
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import ai.amani.sdk.utils.AmaniUIErrorConstants
 import ai.amani.sdk.utils.AppConstant
@@ -72,6 +74,14 @@ class HomeKYCViewModel(
 
     private val _effects = Channel<HomeKYCEffect>(Channel.BUFFERED)
     val effects: Flow<HomeKYCEffect> = _effects.receiveAsFlow()
+
+    /**
+     * Transient, user-facing messages surfaced in the host snackbar (e.g. a speech-upload
+     * failure). Separate from [effects] so the host can pipe it straight into its
+     * SnackbarHost without widening the navigation-effect contract.
+     */
+    private val _messages = Channel<String>(Channel.BUFFERED)
+    val messages: Flow<String> = _messages.receiveAsFlow()
 
     /**
      * The brand palette resolved from GeneralConfigs — set at exactly one point: the app
@@ -137,6 +147,12 @@ class HomeKYCViewModel(
         processingRuleId = null
         _brandPalette.value = null
 
+        // Hand the session's profile-scoped JWT to the optional speech-verifier flow (backs
+        // SpeechVerifier.session for its upload + SSE result stream). The server URL is
+        // captured separately at SDK init. Neutral holder — no speech-verifier type is
+        // referenced here, so this is safe even without the optional module.
+        SpeechVerifierOptions.token = registerConfig?.token
+
         featureConfig?.let { this.featureConfig = it }
         this.registerConfig = registerConfig
 
@@ -158,24 +174,6 @@ class HomeKYCViewModel(
     /** A step row / primary button was tapped — defer the concrete routing to wiring. */
     fun onStepSelected(rule: Rule) {
         sendEffect(HomeKYCEffect.StartStep(rule))
-    }
-
-    /**
-     * The step the home primary button should start right now, or `null` when nothing is
-     * actionable (the active step is uploading / awaiting its verdict and the next is still
-     * locked behind it). Resolved with the live overlays so navigation matches exactly the
-     * Active row the user sees: it never re-opens a just-approved step and never jumps a
-     * step still locked while another processes. The capture entry (see the nav host) uses
-     * this instead of the cache's stale `rule.status`.
-     */
-    fun resolveActiveRule(): Rule? {
-        val rules = CachingHomeKYC.onlyKYCRules ?: return null
-        return HomeKYCMapper.resolveActiveRule(
-            rules = rules,
-            config = CachingHomeKYC.appConfig,
-            statusOverrides = statusOverrides,
-            processingRuleId = processingRuleId
-        )
     }
 
     /**
@@ -262,6 +260,61 @@ class HomeKYCViewModel(
             onComplete = { result -> handleUploadResult(result, docType) },
             genericDocumentFlow = flow
         )
+    }
+
+    /**
+     * Finishes the speech-verification leg for [version] (from the V2 speech screen). Unlike
+     * the other legs, the recorded session is uploaded by the optional AmaniSpeechVerifier
+     * module itself ([SpeechVerifierLauncher.upload] → `SpeechVerifier.upload`), not an
+     * AmaniAi repository — but it targets the same profile, so the step verdict also arrives
+     * over the AmaniEvent socket (see [listenAmaniEvents]).
+     *
+     * We show the processing spinner right away, kick off the module upload, and apply the
+     * status it reports as an overlay ([applySpeechVerdict]) — idempotent with the socket
+     * verdict, so the step still resolves if that socket push is missed.
+     *
+     * Only reachable once the optional module is confirmed present (the nav host guards the
+     * speech screen with [ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierAvailability]),
+     * so referencing [SpeechVerifierLauncher] here cannot fail for a correctly-configured app.
+     */
+    fun uploadSpeechStep(activity: FragmentActivity, version: Version) {
+        val ruleId = ruleIdFor(version)
+        ruleId?.let { errorOverrides.remove(it) }
+        processingRuleId = ruleId
+        refreshReady()
+
+        SpeechVerifierLauncher.upload(
+            context = activity,
+            onResult = { stepStatus, _ -> applySpeechVerdict(ruleId, stepStatus) },
+            onError = { code, message ->
+                Timber.e("V2 speech upload error code=$code msg=$message")
+                // Hard upload failure: no socket verdict will come, so stop the spinner and
+                // return the step to its actionable state, then surface the error in the
+                // host snackbar.
+                if (ruleId == processingRuleId) processingRuleId = null
+                refreshReady()
+                viewModelScope.launch { _messages.send(message) }
+            }
+        )
+    }
+
+    /**
+     * Applies a speech-verification upload verdict as a status overlay. Mirrors the per-rule
+     * bookkeeping the AmaniEvent socket does (status override, clear rejection on approval,
+     * stop the spinner, re-render, and fire [HomeKYCEffect.ProfileApproved] when every KYC
+     * step is approved). Invoked on the main thread (the upload observer marshals there).
+     */
+    private fun applySpeechVerdict(ruleId: String?, status: String) {
+        if (ruleId == null) return
+        statusOverrides[ruleId] = status
+        if (status == STATUS_APPROVED) errorOverrides.remove(ruleId)
+        if (ruleId == processingRuleId) processingRuleId = null
+        refreshReady()
+
+        val docList = CachingHomeKYC.onlyKYCRules ?: return
+        if (docList.all { (statusOverrides[it.id] ?: it.status) == STATUS_APPROVED }) {
+            sendEffect(HomeKYCEffect.ProfileApproved)
+        }
     }
 
     /**
@@ -470,6 +523,14 @@ class HomeKYCViewModel(
     }
 
     /** Resolves the KYC rule id matching [version] (same step sort order). */
+    /**
+     * The KYC rule with [id], or null. Backs free step selection: a tapped Home row starts
+     * exactly this rule (the row is only actionable when the mapper marked it selectable, so
+     * no extra gating is needed here).
+     */
+    fun resolveRuleById(id: String?): Rule? =
+        id?.let { rid -> CachingHomeKYC.onlyKYCRules?.firstOrNull { it.id == rid } }
+
     private fun ruleIdFor(version: Version): String? {
         val docList = CachingHomeKYC.onlyKYCRules
         return docList?.firstOrNull { it.sortOrder == version.stepId }?.id

@@ -197,11 +197,18 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             onAddressLegFinished = { version, flow ->
                                 viewModel.uploadAddressStep(this@AmaniComposeActivity, version, flow)
                             },
-                            // The home primary button starts whatever step is actionable now,
-                            // resolved from the view model's live overlays (processing / verdict
-                            // / mandatory lock) so it never re-opens an approved step or jumps a
-                            // step still locked while another processes.
-                            resolveActiveRule = viewModel::resolveActiveRule
+                            // Speech-verification leg finished: the optional module uploads
+                            // its recorded session and the step verdict arrives over the
+                            // socket (and the module's own result).
+                            onSpeechLegFinished = { version ->
+                                viewModel.uploadSpeechStep(this@AmaniComposeActivity, version)
+                            },
+                            // The home screen owns step selection; resolve the selected
+                            // row's rule so the button starts that exact step.
+                            resolveRuleById = viewModel::resolveRuleById,
+                            // Transient errors (e.g. a failed speech upload) shown in the
+                            // host snackbar.
+                            snackbarMessages = viewModel.messages
                         )
                     }
 

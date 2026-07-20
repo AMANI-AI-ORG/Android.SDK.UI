@@ -5,6 +5,7 @@ import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,7 +59,13 @@ data class VerificationStep(
     val accentColor: Color? = null,
     // StepConfig.buttonTextColor — drives the step's title/subtitle text color (kept distinct
     // from the badge glyph, which stays white). Null falls back to [accentColor].
-    val textColor: Color? = null
+    val textColor: Color? = null,
+    // Id of the backing KYC rule, so a tap on an actionable row can start that exact step
+    // (used by free selection when no mandatory gating is configured). Null in previews.
+    val ruleId: String? = null,
+    // Primary-button label to show while THIS step is the selected one (e.g. "Start with
+    // Identification"). Set only for actionable rows; null otherwise.
+    val ctaLabel: String? = null
 )
 
 /**
@@ -68,7 +75,14 @@ data class VerificationStep(
 @Composable
 fun StepRow(
     step: VerificationStep,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Whether this row is the currently-selected step (chosen by tapping). Drives the
+    // prominent border + tinted fill. Selection lives in the screen; a Processing row is
+    // always highlighted regardless.
+    selected: Boolean = false,
+    // When non-null the whole card is tappable — used for actionable rows (Active/Rejected)
+    // so the user can pick that step. Null → non-interactive (Done/Locked/Processing).
+    onClick: (() -> Unit)? = null
 ) {
     val palette = AmaniV2Theme.palette
 
@@ -82,12 +96,15 @@ fun StepRow(
         StepRowStatus.Locked -> palette.inkLight
         else -> palette.accent
     }
-    // Only the active/selected step gets the prominent colored border + tinted fill (exactly
-    // like the document-select cards); every other row is plain white with a hairline, so the
-    // "you're here" step is unmistakable.
-    val isSelected = step.status == StepRowStatus.Active || step.status == StepRowStatus.Processing
-    val containerColor = if (isSelected) accent.copy(alpha = 0.14f) else palette.surface
-    val borderColor = if (isSelected) accent else palette.border
+    // Only the selected step (or one in progress) gets the prominent colored border + tinted
+    // fill; every other row is plain white with a hairline, so the chosen step is
+    // unmistakable. Uses the SAME structure and tokens as the document-select card
+    // (SelectDocumentTypeScreen): the brand [palette.accent] border + [palette.accentSofter]
+    // fill — deliberately the brand color (not the per-status config color, which a tenant
+    // may set low-contrast) so the selection border is always clearly visible.
+    val isSelected = selected || step.status == StepRowStatus.Processing
+    val containerColor = if (isSelected) palette.accentSofter else palette.surface
+    val borderColor = if (isSelected) palette.accent else palette.border
     val borderWidth = if (isSelected) 1.5.dp else 0.5.dp
     // StepConfig.buttonTextColor drives the title/subtitle text (distinct from the accent
     // fill and the always-white badge glyph). Falls back to the accent when config is absent.
@@ -104,6 +121,7 @@ fun StepRow(
             .alpha(rowAlpha)
             .background(containerColor, rowShape)
             .border(borderWidth, borderColor, rowShape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             // Slightly smaller than the document-select cards (44dp icon / 18dp radius there).
             .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())
     ) {

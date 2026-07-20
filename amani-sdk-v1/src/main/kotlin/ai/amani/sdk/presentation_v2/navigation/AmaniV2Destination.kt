@@ -112,6 +112,20 @@ sealed interface AmaniV2Destination : Parcelable {
     data class AddressVerify(
         val versionType: String
     ) : AmaniV2Destination
+
+    /**
+     * Speech verification (document id "ST", type like `XXX_ST_0`) — hosts the OPTIONAL,
+     * standalone AmaniSpeechVerifier module (a `compileOnly` dependency, not bundled). The
+     * user reads a passphrase aloud; on success the host uploads the recorded session through
+     * `SpeechVerifier.upload` and pops to Home (the same navigate-home-then-upload hand-off as
+     * the other legs). [versionType] keys the chosen version and is passed as the module's
+     * document type. Reachable only when the module is present on the classpath (the nav host
+     * checks and otherwise throws a descriptive error).
+     */
+    @Parcelize
+    data class SpeechVerify(
+        val versionType: String
+    ) : AmaniV2Destination
 }
 
 /** Which face of a document is being captured. */

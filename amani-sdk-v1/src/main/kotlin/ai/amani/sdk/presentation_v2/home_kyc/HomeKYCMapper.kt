@@ -127,6 +127,12 @@ internal object HomeKYCMapper {
         // (and enables on) exactly this step.
         val activeIndex = activeRuleIndex(rules, config, statusOverrides, processingRuleId)
 
+        // Free selection: when NO step in the flow declares mandatory dependencies, the order
+        // isn't enforced — every actionable step is individually selectable (not locked
+        // behind the one above it), so the user can pick whichever they want and continue.
+        // With mandatory gating configured, the sequential single-active behaviour stays.
+        val freeSelect = !hasMandatoryGating(rules, config)
+
         // Aggregate step counts that drive the home heading + CTA wording. "Done" here is
         // deliberately narrower than [DONE_STATUSES]: a step that is merely uploading /
         // server-processing hasn't been completed by the user yet, so it must not flip the
@@ -161,13 +167,28 @@ internal object HomeKYCMapper {
             // selected by the rule's status with a "processing" override while uploading.
             val stepConfig = config?.stepConfigForSortOrder(rule.sortOrder)
             val style = stepStyle(stepConfig, status, isProcessing)
+            // In free-select mode every unlocked, not-done step is Active (selectable); with
+            // gating only the single first-actionable step is Active and the rest are Locked.
+            // While something is uploading (processingRuleId set) the flow is gated in both
+            // modes, so no extra step becomes selectable mid-upload.
+            val isActive = if (freeSelect && processingRuleId == null) {
+                isUnlocked(rule, rules, config, statusOverrides)
+            } else {
+                index == activeIndex
+            }
             val rowStatus = if (isProcessing) StepRowStatus.Processing
-            else rowStatus(status, index == activeIndex)
+            else rowStatus(status, isActive)
+            // Primary-button label to show while this step is selected — same prefix logic
+            // as the default CTA below, per step. Only actionable rows carry one.
+            val ctaLabel = if (rowStatus == StepRowStatus.Active || rowStatus == StepRowStatus.Rejected) {
+                "${ctaPrefix(status, doneCount, g)} ${rule.title.orEmpty()}".trim()
+            } else null
             // The step's version config carries the v2 per-document strings (estimated
             // time, rejection fallback texts).
             val version = config?.firstVisibleVersionFor(rule.sortOrder)
             VerificationStep(
                 index = index + 1,
+                ruleId = rule.id,
                 // Top line: the step's action name — stable across statuses (design v2.6:
                 // "Upload ID" stays the title while the status moves to the subtitle).
                 // buttonText.notUploaded is that action label; the server rule title is the
@@ -189,6 +210,7 @@ internal object HomeKYCMapper {
                 // drives the step's text. The number-badge glyph stays white (set in StepRow).
                 accentColor = style.accentColor,
                 textColor = style.textColor,
+                ctaLabel = ctaLabel,
                 error = if (isProcessing) null else errorFor(
                     status = status,
                     // Fresh socket / upload message wins; otherwise fall back to the
@@ -234,12 +256,7 @@ internal object HomeKYCMapper {
         val ctaRule = activeIndex.takeIf { it >= 0 }?.let { rules[it] }
             ?: rules.firstOrNull { !isDone(eff(it)) && it.id != processingRuleId }
         val primaryButtonText = if (ctaRule != null) {
-            val prefix = when {
-                eff(ctaRule) in REJECTED_STATUSES -> g?.v2HomeCtaRetake.orFallback("Retake")
-                doneCount > 0 -> g?.v2HomeCtaContinue.orFallback("Continue with")
-                else -> g?.v2HomeCtaStart.orFallback("Start with")
-            }
-            "$prefix ${ctaRule.title.orEmpty()}".trim()
+            "${ctaPrefix(eff(ctaRule), doneCount, g)} ${ctaRule.title.orEmpty()}".trim()
         } else {
             g?.continueText.orFallback("Continue")
         }
@@ -280,6 +297,29 @@ internal object HomeKYCMapper {
      * keeps a dependent step Locked while the step it depends on is still processing /
      * uploading, and unlocks it once that prerequisite is approved.
      */
+    /**
+     * Whether the mandatory-step feature is in play for this flow — true when ANY step
+     * declares a non-empty `mandatoryStepIDs`. When false the flow has no dependency order,
+     * so steps are freely selectable (see the `freeSelect` branch in [toUiState]).
+     */
+    /**
+     * CTA verb prefix for a step given its status and the overall progress: "Retake" for a
+     * rejected step, "Continue with" once something is done, otherwise "Start with" (all
+     * config-driven with fallbacks). Shared by the default primary label and each step's
+     * per-selection [VerificationStep.ctaLabel].
+     */
+    private fun ctaPrefix(status: String?, doneCount: Int, g: datamanager.model.config.GeneralConfigs?): String =
+        when {
+            status in REJECTED_STATUSES -> g?.v2HomeCtaRetake.orFallback("Retake")
+            doneCount > 0 -> g?.v2HomeCtaContinue.orFallback("Continue with")
+            else -> g?.v2HomeCtaStart.orFallback("Start with")
+        }
+
+    private fun hasMandatoryGating(rules: List<Rule>, config: ResGetConfig?): Boolean =
+        rules.any { rule ->
+            config?.stepConfigForSortOrder(rule.sortOrder)?.mandatoryStepIDs?.isNotEmpty() == true
+        }
+
     private fun isUnlocked(
         rule: Rule,
         rules: List<Rule>,
@@ -320,21 +360,6 @@ internal object HomeKYCMapper {
                 isUnlocked(it, rules, config, statusOverrides)
         }
     }
-
-    /**
-     * The step the home primary button should start, applying the exact same overlay-,
-     * processing-, and mandatory-lock-aware logic used to mark the Active row. Returns
-     * `null` when no step is actionable (button disabled / no-op), so the button can never
-     * re-open a just-approved step or jump a step that is still locked while another
-     * processes. Shared with [toUiState] to keep navigation and the rendered state in sync.
-     */
-    fun resolveActiveRule(
-        rules: List<Rule>,
-        config: ResGetConfig?,
-        statusOverrides: Map<String, String> = emptyMap(),
-        processingRuleId: String? = null
-    ): Rule? =
-        activeRuleIndex(rules, config, statusOverrides, processingRuleId).takeIf { it >= 0 }?.let { rules[it] }
 
     private fun isDone(status: String?): Boolean = status in DONE_STATUSES
 

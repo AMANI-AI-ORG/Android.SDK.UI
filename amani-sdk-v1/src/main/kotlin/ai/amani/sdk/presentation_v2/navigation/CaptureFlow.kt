@@ -92,6 +92,11 @@ internal object CaptureFlow {
             AmaniDocumentTypes.PHYSICAL_CONTRACT ->
                 AmaniV2Destination.AddressVerify(type)
 
+            // Speech verification — hosts the optional AmaniSpeechVerifier module (single
+            // document, like selfie: never lands on the document-type chooser).
+            AmaniDocumentTypes.SPEECH ->
+                AmaniV2Destination.SpeechVerify(type)
+
             // TODO(wiring): NFC-only has no V2 screen yet.
             AmaniDocumentTypes.NFC -> null
 

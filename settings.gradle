@@ -14,6 +14,12 @@ dependencyResolutionManagement {
             url = "https://jfrog.amani.ai/artifactory/amani-sdk"
         }
 
+        // Optional AmaniSpeechVerifier module (compileOnly in :amani-sdk-v1; consumed by apps
+        // that use the speech `ST` step). Published to its own JFrog repo key.
+        maven {
+            url = "https://jfrog.amani.ai/artifactory/amani-speech-verifier"
+        }
+
         maven {
             url = "https://jitpack.io"
         }

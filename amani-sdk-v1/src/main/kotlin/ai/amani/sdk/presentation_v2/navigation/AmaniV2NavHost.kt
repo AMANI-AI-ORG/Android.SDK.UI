@@ -18,6 +18,8 @@ import ai.amani.sdk.presentation_v2.selfie_capture.SelfieCaptureScreen
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieMapper
 import ai.amani.sdk.presentation_v2.signature.SignatureMapper
 import ai.amani.sdk.presentation_v2.signature.SignatureScreen
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierAvailability
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifyScreen
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -28,15 +30,24 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -71,10 +82,19 @@ fun AmaniV2NavHost(
     // photographed (DataFromCamera) or picked as a PDF (DataFromGallery). The host uploads
     // through the shared document repository and this composable pops back to Home.
     onAddressLegFinished: (datamanager.model.config.Version, ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow) -> Unit,
+    // Invoked when the speech-verification leg succeeds (all passphrase steps passed, the
+    // session video secured). The host uploads through SpeechVerifier.upload and this
+    // composable pops back to Home so the step shows its processing spinner there.
+    onSpeechLegFinished: (datamanager.model.config.Version) -> Unit,
     // Resolves the step the home primary button should start, applying the view model's
     // live overlays (processing / verdict / mandatory lock). Returns null when nothing is
     // actionable right now, so the button is a no-op while a step processes.
-    resolveActiveRule: () -> ai.amani.sdk.model.customer.Rule?,
+    // Resolves a KYC rule by its id — the home screen hands back the selected step's id and
+    // we start that exact step.
+    resolveRuleById: (String?) -> ai.amani.sdk.model.customer.Rule?,
+    // Transient user-facing messages to surface in the host snackbar (e.g. a speech-upload
+    // failure emitted by the view model once we're back on Home). Optional.
+    snackbarMessages: Flow<String>? = null,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -82,13 +102,21 @@ fun AmaniV2NavHost(
         if (!navigator.popBackStack()) onExit()
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    // Show any message the host pushes (view-model-emitted errors) in the snackbar.
+    LaunchedEffect(snackbarMessages) {
+        snackbarMessages?.collect { snackbarHostState.showSnackbar(it) }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
     AnimatedContent(
         targetState = navigator.current,
         // Opaque backdrop for the whole Ready phase. The host window is translucent (so the
         // initial loader can show the launching screen behind it), but once the nav graph is
         // up we paint a solid background here — otherwise the fade in/out during transitions
         // would briefly reveal that launching screen through the translucent window.
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(AmaniV2Theme.palette.background),
         transitionSpec = {
@@ -110,7 +138,11 @@ fun AmaniV2NavHost(
                 // state is shown by the activity during the initial GeneralConfigs fetch.
                 state = HomeKYCScreenState.Ready(homeContent),
                 onBack = { if (!navigator.popBackStack()) onExit() },
-                onPrimary = { startCaptureFlow(navigator, resolveActiveRule) }
+                // The screen owns the selection; the button hands back the selected step's
+                // rule id and we start exactly that step.
+                onStartStep = { ruleId ->
+                    startCaptureFlowForRule(navigator, resolveRuleById(ruleId))
+                }
             )
 
             AmaniV2Destination.DocumentType -> DocumentTypeRoute(
@@ -254,6 +286,36 @@ fun AmaniV2NavHost(
                 }
             }
 
+            is AmaniV2Destination.SpeechVerify -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    // The speech verifier is an optional (compileOnly) module. A flow that
+                    // reaches here without the artifact on the classpath is a misconfiguration
+                    // — fail loudly and actionably instead of crashing deeper in.
+                    SpeechVerifierAvailability.requirePresent()
+                    SpeechVerifyScreen(
+                        headerTitle = homeContent.headerTitle,
+                        docType = destination.versionType,
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // Verification passed + video secured: hand the version to the host to
+                        // upload (SpeechVerifier.upload), then pop to Home so the step shows
+                        // its processing spinner (same navigate-home-then-upload hand-off).
+                        onCompleted = {
+                            onSpeechLegFinished(version)
+                            navigator.popToRoot()
+                        },
+                        // Non-recoverable module error: return to Home and surface it in the
+                        // host snackbar.
+                        onError = { message ->
+                            navigator.popToRoot()
+                            scope.launch { snackbarHostState.showSnackbar(message) }
+                        }
+                    )
+                }
+            }
+
             is AmaniV2Destination.SelfieCapture -> {
                 val version = CaptureFlow.versionByType(destination.versionType)
                 if (version == null) {
@@ -301,26 +363,30 @@ fun AmaniV2NavHost(
             }
         }
     }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(16.dp)
+        )
+    }
 }
 
 /**
- * Entry into the capture leg from Home: resolve the step that's actionable *right now*
- * (via [resolveActiveRule], which applies the view model's live processing / verdict /
- * mandatory-lock overlays), prepare its versions and let [CaptureFlow.startDestination]
- * decide where to go. That decision is the V2 port of v1's `HomeKYCViewModel.navigateScreen`
- * `when (documentID)` — a single selectable document routes straight into its capture
- * screen (Selfie → selfie, ID family → ID capture, …), while several photo-ID documents
- * open the [AmaniV2Destination.DocumentType] chooser.
- *
- * When no step is actionable (the active step is uploading / awaiting its verdict and the
- * next is still locked), [resolveActiveRule] returns null and this is a no-op — the button
- * can't re-open a just-approved step or jump ahead of a processing one.
+ * Entry into the capture leg from Home: prepares the selected [rule]'s versions and lets
+ * [CaptureFlow.startDestination] decide where to go — the V2 port of v1's
+ * `HomeKYCViewModel.navigateScreen` `when (documentID)`: a single selectable document routes
+ * straight into its capture screen (Selfie → selfie, ID family → ID capture, …), while
+ * several photo-ID documents open the [AmaniV2Destination.DocumentType] chooser. No-op when
+ * [rule] is null.
  */
-private fun startCaptureFlow(
+private fun startCaptureFlowForRule(
     navigator: AmaniV2Navigator,
-    resolveActiveRule: () -> ai.amani.sdk.model.customer.Rule?
+    rule: ai.amani.sdk.model.customer.Rule?
 ) {
-    val rule = resolveActiveRule() ?: return
+    rule ?: return
     CaptureFlow.prepareVersions(rule)
     CaptureFlow.startDestination()?.let(navigator::navigateTo)
 }
