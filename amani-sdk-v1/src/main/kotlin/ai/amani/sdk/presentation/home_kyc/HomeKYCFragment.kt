@@ -20,6 +20,7 @@ import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.SelectDocumentTypeModel
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.AmaniMainActivity
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierAvailability
 import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
@@ -450,6 +451,21 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                     ScreenRoutes.PhysicalContractScreen -> {
 
                         pdfPickerLauncher?.launch("application/pdf")
+                    }
+
+                    ScreenRoutes.SpeechVerifierScreen -> {
+                        // Optional-module guard: a flow with an ST step but no
+                        // AmaniSpeechVerifier on the classpath fails here with a clear,
+                        // actionable message (before navigating into a dead screen).
+                        SpeechVerifierAvailability.requirePresent()
+                        val action =
+                            HomeKYCFragmentDirections.actionHomeKYCFragmentToSpeechVerifierHostFragment(
+                                dataModel = ConfigModel(
+                                    version = viewModel.getVersion(),
+                                    generalConfigs = viewModel.getAppConfig()!!.generalConfigs
+                                )
+                            )
+                        findNavController().navigateSafely(action)
                     }
 
                     else -> {}
