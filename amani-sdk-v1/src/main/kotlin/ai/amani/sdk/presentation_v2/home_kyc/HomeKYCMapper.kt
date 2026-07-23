@@ -181,7 +181,7 @@ internal object HomeKYCMapper {
             // Primary-button label to show while this step is selected — same prefix logic
             // as the default CTA below, per step. Only actionable rows carry one.
             val ctaLabel = if (rowStatus == StepRowStatus.Active || rowStatus == StepRowStatus.Rejected) {
-                "${ctaPrefix(status, doneCount, g)} ${rule.title.orEmpty()}".trim()
+                "${ctaPrefix(status, doneCount, g)} ${stepConfig?.buttonText?.notUploaded.orEmpty()}".trim()
             } else null
             // The step's version config carries the v2 per-document strings (estimated
             // time, rejection fallback texts).

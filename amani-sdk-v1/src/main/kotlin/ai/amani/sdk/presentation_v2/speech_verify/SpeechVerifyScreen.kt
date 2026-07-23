@@ -40,14 +40,14 @@ import timber.log.Timber
  * routing here — the nav host does exactly that.
  *
  * @param headerTitle toolbar title.
- * @param docType the version type (e.g. `XXX_ST_0`) handed to the module.
+ * @param version the ST version config; drives the module's flow, thresholds, texts + colors.
  * @param onCompleted verification succeeded (all steps passed, video secured) — the host then
  *   triggers the upload and returns to Home.
  */
 @Composable
 fun SpeechVerifyScreen(
     headerTitle: String,
-    docType: String,
+    version: datamanager.model.config.Version,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onCompleted: () -> Unit = {},
@@ -75,7 +75,7 @@ fun SpeechVerifyScreen(
                 SpeechPlaceholder(Modifier.fillMaxSize())
             } else {
                 SpeechVerifierHost(
-                    docType = docType,
+                    version = version,
                     onCompleted = onCompleted,
                     onError = onError,
                     modifier = Modifier.fillMaxSize()
@@ -95,7 +95,7 @@ fun SpeechVerifyScreen(
  */
 @Composable
 private fun SpeechVerifierHost(
-    docType: String,
+    version: datamanager.model.config.Version,
     onCompleted: () -> Unit,
     onError: (message: String) -> Unit,
     modifier: Modifier = Modifier
@@ -124,13 +124,13 @@ private fun SpeechVerifierHost(
         }
     }
 
-    DisposableEffect(activity, docType) {
+    DisposableEffect(activity, version.type) {
         val fm = activity?.supportFragmentManager
         var speechFragment: androidx.fragment.app.Fragment? = null
 
         if (fm != null) {
             speechFragment = SpeechVerifierLauncher.buildFragment(
-                docType = docType,
+                version = version,
                 onPreparing = { activity.runOnUiThread { isPreparing = true } },
                 onReady = { activity.runOnUiThread { isPreparing = false } },
                 onSuccess = { activity.runOnUiThread { currentOnCompleted() } },

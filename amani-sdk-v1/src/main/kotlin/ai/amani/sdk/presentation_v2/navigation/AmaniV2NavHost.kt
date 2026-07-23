@@ -297,7 +297,7 @@ fun AmaniV2NavHost(
                     SpeechVerifierAvailability.requirePresent()
                     SpeechVerifyScreen(
                         headerTitle = homeContent.headerTitle,
-                        docType = destination.versionType,
+                        version = version,
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // Verification passed + video secured: hand the version to the host to
                         // upload (SpeechVerifier.upload), then pop to Home so the step shows

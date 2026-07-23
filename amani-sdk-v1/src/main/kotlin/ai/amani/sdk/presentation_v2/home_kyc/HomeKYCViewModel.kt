@@ -335,7 +335,6 @@ class HomeKYCViewModel(
         refreshReady()
 
         Amani.sharedInstance().IDCapture()
-            .setCaptureAreaScaleFactor(0.80f)
             .withNFC(success)
         idCaptureRepository.upload(activity, docType, {}) { result ->
             handleUploadResult(result, docType)
