@@ -30,6 +30,9 @@ import timber.log.Timber
  */
 internal object SpeechVerifierLauncher {
 
+    /** Top corner radius (dp) of the bottom-sheet panel */
+    private const val SPEECH_VERIFIER_CORNER_RADIUS_DP = 28f
+
     /**
      * Builds the speech-verification [Fragment] driven by the server [version] config
      * (`speechVerification` steps/thresholds, `speechVerifierUiTexts/UiColors`,
@@ -70,7 +73,6 @@ internal object SpeechVerifierLauncher {
         val defaultThreshold = sv?.defaultMatchThresholdPercent
             ?.takeIf { it in 1..100 }
             ?: SpeechVerifierOptions.matchThresholdPercent.takeIf { it in 1..100 }
-        defaultThreshold?.let { builder.matchThresholdPercent(it) }
 
         sv?.exemptWords?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
             ?.let { builder.verificationExemptWords(it) }
@@ -86,6 +88,9 @@ internal object SpeechVerifierLauncher {
         val timeoutMs = version.timeoutSeconds.takeIf { it > 0 }?.let { it * 1000L }
             ?: SpeechVerifierOptions.timeoutMs.takeIf { it > 0L }
         timeoutMs?.let { builder.timeoutMillis(it) }
+
+        // Rounded bottom-sheet top corners, matching the Core SDK sample (28dp).
+        builder.bottomSheetCornerRadius(SPEECH_VERIFIER_CORNER_RADIUS_DP)
 
         // Identity-question prompts (config → module's ContinuationPrompts; blanks keep defaults).
         version.speechVerifierIdentityPrompts?.let { p ->
@@ -162,13 +167,25 @@ internal object SpeechVerifierLauncher {
                 "SPOKEN_TEXT" -> {
                     val phrases = step.texts
                         .filter { it.text.isNotBlank() }
-                        .map { SpokenPhrase(text = it.text, thresholdPercent = it.matchThresholdPercent ?: step.matchThresholdPercent) }
+                        .map {
+                            SpokenPhrase(
+                                text = it.text,
+                                thresholdPercent = step.matchThresholdPercent ?: 80,
+                                successCaptureDelayMs = it.successCaptureDelayMs  // per-phrase
+                            )
+                        }
                     phrases.takeIf { it.isNotEmpty() }?.let { VerificationStep.SpokenText(it) }
                 }
                 "IDENTITY_QUESTION" -> {
                     val questions = step.questions.mapNotNull { q ->
                         runCatching { IdentityQuestionType.valueOf(q.type.trim().uppercase()) }.getOrNull()
-                            ?.let { IdentityQuestionSpec(type = it, thresholdPercent = q.matchThresholdPercent ?: step.matchThresholdPercent) }
+                            ?.let {
+                                IdentityQuestionSpec(
+                                    type = it,
+                                    thresholdPercent = step.matchThresholdPercent ?: 80,
+                                    successCaptureDelayMs = q.successCaptureDelayMs ?: 0 // per-question
+                                )
+                            }
                     }
                     questions.takeIf { it.isNotEmpty() }?.let { VerificationStep.IdentityQuestion(it) }
                 }
