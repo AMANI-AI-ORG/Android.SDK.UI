@@ -1,11 +1,11 @@
 package ai.amani.sdk.presentation_v2.speech_verify
 
 /**
- * Presence check for the optional `AmaniSpeechVerifier` artifact.
+ * Presence check for the optional `amani-speech-verifier` artifact.
  *
  * The UI SDK depends on the speech verifier as `compileOnly`, so it is NOT bundled: an
  * integrator who wants the speech-verification (`ST`) step must add
- * `implementation 'ai.amani.android:AmaniSpeechVerifier:<version>'` themselves. If they don't,
+ * `implementation 'ai.amani.android:amani-speech-verifier:<version>'` themselves. If they don't,
  * the classes are missing at runtime.
  *
  * This object references the module ONLY by string name (via [Class.forName]), so it never
@@ -31,8 +31,8 @@ internal object SpeechVerifierAvailability {
         if (!isPresent()) {
             throw IllegalStateException(
                 "This KYC flow contains a speech-verification (ST) step, but the optional " +
-                    "AmaniSpeechVerifier module is not on the classpath. Add it to your app:\n" +
-                    "    implementation 'ai.amani.android:AmaniSpeechVerifier:<version>'\n" +
+                    "amani-speech-verifier module is not on the classpath. Add it to your app:\n" +
+                    "    implementation 'ai.amani.android:amani-speech-verifier:<version>'\n" +
                     "The Amani UI SDK depends on it as compileOnly, so it is not bundled " +
                     "automatically."
             )

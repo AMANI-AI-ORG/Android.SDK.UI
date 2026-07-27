@@ -236,9 +236,9 @@ object AmaniSDKUI {
      * Passphrase(s) the user must read aloud in the speech-verification (`ST`) step. A single
      * item is a fixed phrase; several items let the module pick one at random per attempt.
      *
-     * The speech-verification step relies on the OPTIONAL `AmaniSpeechVerifier` module, which
+     * The speech-verification step relies on the OPTIONAL `amani-speech-verifier` module, which
      * is a `compileOnly` dependency of the UI SDK — it is NOT bundled. To use `ST` steps, add
-     * it to your app: `implementation 'ai.amani.android:AmaniSpeechVerifier:<version>'`.
+     * it to your app: `implementation 'ai.amani.android:amani-speech-verifier:<version>'`.
      * Without it, entering an `ST` step throws a descriptive runtime error.
      *
      * Optional — defaults to a single Turkish confirmation phrase (the server config carries
