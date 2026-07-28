@@ -90,6 +90,10 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':amani-sdk-v1')
 
+    // Optional speech-verification module. The UI SDK depends on it as compileOnly
+    // which means the consuming APP must add it as a real runtime
+    implementation 'ai.amani.android:amani-speech-verifier:1.0.0'
+
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'

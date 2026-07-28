@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Parent/host layout for the optional AmaniSpeechVerifier module. The module's own fragment
+    is added into [speech_verifier_container] as a CHILD fragment (childFragmentManager) by
+    SpeechVerifierHostFragment, so the whole thing is a normal nav-graph destination reached
+    through the NavController like every other capture screen.
+
+    [speech_loading] overlays a centered spinner while the module runs a blocking preparation
+    step (onPreparing → shown, onReady → hidden), e.g. the identity-question profile fetch.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/speech_verifier_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ProgressBar
+        android:id="@+id/speech_loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+</FrameLayout>

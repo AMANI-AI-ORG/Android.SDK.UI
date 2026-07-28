@@ -1,0 +1,104 @@
+package ai.amani.sdk.presentation_v2.components
+
+import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
+import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.theme.scaled
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+
+/**
+ * Top header with back button and centered title, with optional dot progress
+ * beneath it. A fixed-size spacer balances the back button on the trailing side
+ * so the title stays optically centered.
+ */
+@Composable
+fun ScreenHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    steps: List<DotStep>? = null,
+    onBack: () -> Unit = {}
+) {
+    val palette = AmaniV2Theme.palette
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Toolbar zone paints GeneralConfigs.topBarBackground (defaults to the app
+        // background, keeping the previous seamless look) — the status bar is painted
+        // the same color at the activity level so they read as one surface.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(palette.topBar)
+                .padding(
+                    top = AmaniV2Dimens.topInset,
+                    start = AmaniV2Dimens.screenPadding,
+                    end = AmaniV2Dimens.screenPadding
+                )
+                .padding(bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            HeaderIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentColor = palette.topBarFont,
+                onClick = onBack
+            )
+            Text(title, style = AmaniV2Type.header.scaled(), color = palette.topBarFont)
+            Spacer(Modifier.size(AmaniV2Dimens.iconButtonSize.scaled()))
+        }
+        if (steps != null) {
+            // The step progress zone sits below the toolbar on the app background
+            // (GeneralConfigs.appBackground) — deliberately NOT topBarBackground, so the
+            // dots read as screen content, not toolbar chrome.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(palette.background)
+                    .padding(horizontal = AmaniV2Dimens.screenPadding)
+            ) {
+                Spacer(Modifier.height(12.dp))
+                DotProgressBar(steps = steps)
+                Spacer(Modifier.height(18.dp))
+            }
+        }
+    }
+}
+
+/** Soft rounded icon button used in headers. */
+@Composable
+fun HeaderIconButton(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    containerColor: Color = AmaniV2Theme.palette.backgroundWarm,
+    contentColor: Color = AmaniV2Theme.palette.ink,
+    onClick: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier
+            .size(AmaniV2Dimens.iconButtonSize.scaled())
+            .background(containerColor, RoundedCornerShape(AmaniV2Dimens.iconButtonRadius.scaled()))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp.scaled()))
+    }
+}

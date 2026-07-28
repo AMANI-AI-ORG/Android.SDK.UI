@@ -4,8 +4,11 @@ import ai.amani.sdk.DynamicFeature
 import ai.amani.sdk.UploadSource
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
+import ai.amani.sdk.model.UIStyle
 import ai.amani.sdk.model.exception.AmaniException
 import ai.amani.sdk.presentation.AmaniMainActivity
+import ai.amani.sdk.presentation_v2.AmaniComposeActivity
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierOptions
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Context
@@ -41,6 +44,7 @@ object AmaniSDKUI {
         sharedSecret: String? = null,
         enabledFeatures: List<DynamicFeature> = DynamicFeature.allFeatures
     ){
+        SpeechVerifierOptions.serverUrl = serverURL
         Amani.init(
             context = applicationContext,
             server = serverURL,
@@ -83,6 +87,7 @@ object AmaniSDKUI {
         sharedSecret: String? = null,
         enabledFeatures: List<DynamicFeature> = DynamicFeature.allFeatures
     ){
+        SpeechVerifierOptions.serverUrl = serverURL
         Amani.configure(
             context = applicationContext,
             server = serverURL,
@@ -154,7 +159,11 @@ object AmaniSDKUI {
             documentNumber = documentNumber,
         )
 
-        val intent = Intent(activity, AmaniMainActivity::class.java)
+        val targetActivity = when (featureConfig.uiStyle) {
+            UIStyle.V2 -> AmaniComposeActivity::class.java
+            UIStyle.V1 -> AmaniMainActivity::class.java
+        }
+        val intent = Intent(activity, targetActivity)
 
         val bundle = Bundle().apply {
             putParcelable(AppConstant.REGISTER_CONFIG, config)
@@ -163,6 +172,19 @@ object AmaniSDKUI {
         bundle.classLoader = RegisterConfig::class.java.classLoader
         intent.putExtras(bundle)
         resultLauncher.launch(intent)
+    }
+
+    /**
+     * Selects the UI style used to run the KYC flow.
+     *
+     * Defaults to [UIStyle.V1] (the existing XML/Fragment UI) for backward
+     * compatibility. Pass [UIStyle.V2] to opt into the Jetpack Compose redesign.
+     * Must be called before [goToKycActivity].
+     *
+     * @param style: The UI style to use for the next KYC session.
+     */
+    fun setUIStyle(style: UIStyle) {
+        featureConfig.uiStyle = style
     }
 
     /**
@@ -208,6 +230,35 @@ object AmaniSDKUI {
      */
     fun setIdCaptureManualTimeOut(timeOut: Int) {
         AppConstant.ID_CAPTURE_TIME_OUT = timeOut
+    }
+
+    /**
+     * Passphrase(s) the user must read aloud in the speech-verification (`ST`) step. A single
+     * item is a fixed phrase; several items let the module pick one at random per attempt.
+     *
+     * The speech-verification step relies on the OPTIONAL `amani-speech-verifier` module, which
+     * is a `compileOnly` dependency of the UI SDK — it is NOT bundled. To use `ST` steps, add
+     * it to your app: `implementation 'ai.amani.android:amani-speech-verifier:<version>'`.
+     * Without it, entering an `ST` step throws a descriptive runtime error.
+     *
+     * Optional — defaults to a single Turkish confirmation phrase (the server config carries
+     * no speech-text field yet). Call before [goToKycActivity].
+     *
+     * @param passphrases the phrase(s); blank entries are ignored.
+     */
+    fun setSpeechVerificationPassphrases(passphrases: List<String>) {
+        passphrases.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let {
+            SpeechVerifierOptions.passphrases = it
+        }
+    }
+
+    /**
+     * Per-step time window (milliseconds) for the speech-verification (`ST`) step. If the
+     * passphrase is not matched within this window the module fails the attempt and shows its
+     * retry UI. Optional — non-positive values keep the module default (60s).
+     */
+    fun setSpeechVerificationTimeoutMillis(millis: Long) {
+        if (millis > 0L) SpeechVerifierOptions.timeoutMs = millis
     }
 
     /**

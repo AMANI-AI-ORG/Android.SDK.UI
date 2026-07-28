@@ -29,6 +29,7 @@ import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.common.BaseViewModel
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
+import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierOptions
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AmaniUIErrorConstants
 import ai.amani.sdk.utils.AmaniUIErrorConstants.CORRUPTED_DOC_LIST
@@ -475,6 +476,10 @@ open class HomeKYCViewModel(
                     AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
                         route.invoke(ScreenRoutes.PhysicalContractScreen)
                     }
+
+                    AmaniDocumentTypes.SPEECH -> {
+                        route.invoke(ScreenRoutes.SpeechVerifierScreen)
+                    }
                 }
             } else {
                 when (documentID) {
@@ -622,6 +627,12 @@ open class HomeKYCViewModel(
         }
 
         profileInfoModel.registerConfig = registerConfig
+
+        // Hand the session's profile-scoped JWT to the optional speech-verifier flow (backs
+        // SpeechVerifier.session for its upload + SSE result stream). The server URL is
+        // captured separately at SDK init. Neutral holder — no speech-verifier type is
+        // referenced here, so this is safe even without the optional module on the classpath.
+        SpeechVerifierOptions.token = registerConfig.token
     }
 
     fun listenAmaniEvents() {

@@ -1,0 +1,229 @@
+package ai.amani.sdk.presentation_v2.speech_verify
+
+import ai.amani.speechverifier.SpeechVerifier
+import ai.amani.speechverifier.model.ContinuationPrompts
+import ai.amani.speechverifier.model.IdentityQuestionSpec
+import ai.amani.speechverifier.model.IdentityQuestionType
+import ai.amani.speechverifier.model.SpeechVerifierUploadError
+import ai.amani.speechverifier.model.SpeechVerifierUploadResult
+import ai.amani.speechverifier.model.SpokenPhrase
+import ai.amani.speechverifier.model.VerificationStep
+import ai.amani.speechverifier.observable.OnFailureSpeechVerifier
+import ai.amani.speechverifier.observable.SpeechVerifierObserver
+import ai.amani.speechverifier.observable.SpeechVerifierUploadObserver
+import android.content.Context
+import android.graphics.Color
+import androidx.fragment.app.Fragment
+import datamanager.model.config.Version
+import timber.log.Timber
+
+/**
+ * The ONE place that hard-links the optional `ai.amani.speechverifier.*` API. Because the
+ * artifact is a `compileOnly` dependency, this class must only ever be loaded once the module
+ * is confirmed present (guard with [SpeechVerifierAvailability]); otherwise loading it throws
+ * `NoClassDefFoundError`.
+ *
+ * It bridges the SpeechVerifier SDK to the rest of the UI SDK with NEUTRAL callback lambdas,
+ * so no caller (the host screens, the view model) has to reference SpeechVerifier types —
+ * keeping the "missing module" failure contained to this file and its two entry points. The
+ * [datamanager.model.config.Version] it reads comes from AmaniAi (always present).
+ */
+internal object SpeechVerifierLauncher {
+
+    /** Top corner radius (dp) of the bottom-sheet panel */
+    private const val SPEECH_VERIFIER_CORNER_RADIUS_DP = 28f
+
+    /**
+     * Builds the speech-verification [Fragment] driven by the server [version] config
+     * (`speechVerification` steps/thresholds, `speechVerifierUiTexts/UiColors`,
+     * `speechVerifierIdentityPrompts`, `timeoutSeconds`). Session credentials come from
+     * [SpeechVerifierOptions] (captured at SDK init + KYC start). The caller commits the
+     * returned fragment into its own container.
+     *
+     * The flow shape follows the config verbatim: a `SPOKEN_TEXT` step yields ONLY spoken
+     * passphrases, an `IDENTITY_QUESTION` step yields ONLY identity questions.
+     */
+    fun buildFragment(
+        version: Version,
+        onPreparing: () -> Unit = {},
+        onReady: () -> Unit = {},
+        onSuccess: () -> Unit,
+        onFailure: (reason: String, attempt: Int) -> Unit,
+        onError: (message: String) -> Unit
+    ): Fragment {
+        val builder = SpeechVerifier.Builder()
+            .documentType(version.type)
+
+        val serverUrl = SpeechVerifierOptions.serverUrl
+        val token = SpeechVerifierOptions.token
+        if (!serverUrl.isNullOrBlank() && !token.isNullOrBlank()) {
+            builder.session(serverURL = serverUrl, token = token)
+        } else {
+            Timber.e("V2 speech: no session (serverUrl/token missing) — upload will fail")
+        }
+
+        val sv = version.speechVerification
+
+        // Ordered flow from config: each config step maps to exactly one VerificationStep of
+        // the matching type (SPOKEN_TEXT → spoken only, IDENTITY_QUESTION → identity only).
+        // Falls back to a single spoken passphrase when the config has no steps.
+        builder.verificationSteps(buildSteps(sv))
+
+        // Default similarity threshold (per-item overrides are carried on each phrase/question).
+        val defaultThreshold = sv?.defaultMatchThresholdPercent
+            ?.takeIf { it in 1..100 }
+            ?: SpeechVerifierOptions.matchThresholdPercent.takeIf { it in 1..100 }
+
+        sv?.exemptWords?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+            ?.let { builder.verificationExemptWords(it) }
+        sv?.let { builder.autoDetectForeignWords(it.autoDetectForeignWords) }
+
+        // Consent-integrity + Turkish-matching options from remote config.
+        sv?.let { builder.detectTurkishNegation(it.detectTurkishNegation) }
+        sv?.let { builder.ignoreTurkishDiacritics(it.ignoreTurkishDiacritics) }
+        sv?.rejectWords?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+            ?.let { builder.rejectWords(it) }
+
+        // Per-step time window: config seconds → ms, else the integrator override, else module default.
+        val timeoutMs = version.timeoutSeconds.takeIf { it > 0 }?.let { it * 1000L }
+            ?: SpeechVerifierOptions.timeoutMs.takeIf { it > 0L }
+        timeoutMs?.let { builder.timeoutMillis(it) }
+
+        // Rounded bottom-sheet top corners, matching the Core SDK sample (28dp).
+        builder.bottomSheetCornerRadius(SPEECH_VERIFIER_CORNER_RADIUS_DP)
+
+        // Identity-question prompts (config → module's ContinuationPrompts; blanks keep defaults).
+        version.speechVerifierIdentityPrompts?.let { p ->
+            val d = ContinuationPrompts()
+            builder.continuationPrompts(
+                ContinuationPrompts(
+                    instruction = d.instruction,
+                    idNumber = p.idNumber.ifBlank { d.idNumber },
+                    motherName = p.motherName.ifBlank { d.motherName },
+                    fatherName = p.fatherName.ifBlank { d.fatherName },
+                    documentNumber = p.documentNumber.ifBlank { d.documentNumber }
+                )
+            )
+        }
+
+        // On-camera texts (blank → module default via null).
+        version.speechVerifierUiTexts?.let { t ->
+            builder.userInterfaceTexts(
+                instruction = t.instruction.orNull(),
+                listening = t.listening.orNull(),
+                verifying = t.verifying.orNull(),
+                verified = t.verified.orNull(),
+                failed = t.failed.orNull(),
+                recognizerNotAvailable = t.recognizerNotAvailable.orNull(),
+                retry = t.retry.orNull()
+            )
+        }
+
+        // Colors (hex → color int; unparseable/blank → module default via null). These are raw
+        // @ColorInt ARGB values parsed from the remote config's hex strings, so use the
+        // colour-INT setter (userInterfaceColorInts) — NOT userInterfaceColors, which expects
+        // @ColorRes resource ids and would treat a hex value as a (missing) resource id and crash.
+        version.speechVerifierUiColors?.let { c ->
+            builder.userInterfaceColorInts(
+                overlayBackgroundColor = c.overlayBackgroundColor.toColorIntOrNull(),
+                scrimColor = c.scrimColor.toColorIntOrNull(),
+                speechTextColor = c.speechTextColor.toColorIntOrNull(),
+                speechTextHighlightColor = c.speechTextHighlightColor.toColorIntOrNull(),
+                instructionTextColor = c.instructionTextColor.toColorIntOrNull(),
+                statusTextColor = c.statusTextColor.toColorIntOrNull(),
+                micActiveColor = c.micActiveColor.toColorIntOrNull(),
+                micIdleColor = c.micIdleColor.toColorIntOrNull(),
+                resultSuccessColor = c.resultSuccessColor.toColorIntOrNull(),
+                resultErrorColor = c.resultErrorColor.toColorIntOrNull(),
+                failedTextColor = c.failedTextColor.toColorIntOrNull(),
+                retryButtonTextColor = c.retryButtonTextColor.toColorIntOrNull(),
+                retryButtonBackgroundColor = c.retryButtonBackgroundColor.toColorIntOrNull()
+            )
+        }
+
+        return builder
+            .observe(object : SpeechVerifierObserver {
+                override fun onPreparing() = onPreparing()
+                override fun onReady() = onReady()
+                override fun onSuccess() = onSuccess()
+                override fun onFailure(reason: OnFailureSpeechVerifier, currentAttempt: Int) =
+                    onFailure(reason.name, currentAttempt)
+                override fun onError(error: Error) = onError(error.message ?: "Speech verifier error")
+            })
+            .build()
+    }
+
+    /**
+     * Maps the config steps into the module's ordered flow. A `SPOKEN_TEXT` step contributes
+     * ONLY spoken passphrases; an `IDENTITY_QUESTION` step ONLY identity questions. Per-item
+     * threshold wins over the step threshold (null → the flow default). Unknown step/question
+     * types and empty steps are skipped; an entirely empty result falls back to one passphrase.
+     */
+    private fun buildSteps(
+        sv: datamanager.model.config.SpeechVerification?
+    ): List<VerificationStep> {
+        val steps = sv?.steps.orEmpty().mapNotNull { step ->
+            when (step.type.trim().uppercase()) {
+                "SPOKEN_TEXT" -> {
+                    val phrases = step.texts
+                        .filter { it.text.isNotBlank() }
+                        .map {
+                            SpokenPhrase(
+                                text = it.text,
+                                thresholdPercent = step.matchThresholdPercent ?: 80,
+                                successCaptureDelayMs = it.successCaptureDelayMs  // per-phrase
+                            )
+                        }
+                    phrases.takeIf { it.isNotEmpty() }?.let { VerificationStep.SpokenText(it) }
+                }
+                "IDENTITY_QUESTION" -> {
+                    val questions = step.questions.mapNotNull { q ->
+                        runCatching { IdentityQuestionType.valueOf(q.type.trim().uppercase()) }.getOrNull()
+                            ?.let {
+                                IdentityQuestionSpec(
+                                    type = it,
+                                    thresholdPercent = step.matchThresholdPercent ?: 80,
+                                    successCaptureDelayMs = q.successCaptureDelayMs ?: 0 // per-question
+                                )
+                            }
+                    }
+                    questions.takeIf { it.isNotEmpty() }?.let { VerificationStep.IdentityQuestion(it) }
+                }
+                else -> null
+            }
+        }
+        if (steps.isNotEmpty()) return steps
+
+        // No usable config → fall back to the integrator passphrases (or one default phrase).
+        val phrases = SpeechVerifierOptions.passphrases.filter { it.isNotBlank() }
+            .ifEmpty { listOf("Onaylıyorum") }
+            .map { SpokenPhrase(it) }
+        return listOf(VerificationStep.SpokenText(phrases))
+    }
+
+    /**
+     * Uploads the recorded video of the just-completed session (call after [onSuccess]) and
+     * reports the backend's step verdict through neutral callbacks.
+     */
+    fun upload(
+        context: Context,
+        onResult: (stepStatus: String, documentId: String?) -> Unit,
+        onError: (code: Int, message: String) -> Unit
+    ) {
+        SpeechVerifier.upload(
+            context = context,
+            observer = object : SpeechVerifierUploadObserver {
+                override fun onResult(result: SpeechVerifierUploadResult) =
+                    onResult(result.stepStatus, result.documentId)
+
+                override fun onError(error: SpeechVerifierUploadError, message: String) =
+                    onError(error.code, message)
+            }
+        )
+    }
+
+    private fun String?.orNull(): String? = this?.takeIf { it.isNotBlank() }
+
+    private fun String?.toColorIntOrNull(): Int? =
+        this?.takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }
+}

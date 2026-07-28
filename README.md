@@ -298,6 +298,33 @@ AmaniSDKUI.goToKycActivity(
             )
 ```
 
+## Speech Verification (`ST` step) — optional
+
+Speech Verification is a **fully independent, optional** KYC step. If your flow does not use it, you can **ignore this section entirely** — nothing about the rest of the KYC changes and no extra dependency is needed.
+
+It is compiled as **`compileOnly`**: the UI SDK is not built with it bundled, so your app compiles with or without it. Add the module only when you actually use the `ST` step; otherwise it has **zero impact** on your build or the KYC flow.
+
+**To use it:**
+
+1. Add the dependency to your app:
+
+```groovy
+// Project build.gradle → allprojects { repositories { … } }
+maven { url = "https://jfrog.amani.ai/artifactory/amani-speech-verifier" }
+
+// Module (app) build.gradle
+implementation 'ai.amani.android:amani-speech-verifier:<version>'
+```
+
+2. Have the Amani team **enable the `ST` step in your remote configuration** — the step only appears when it is activated server-side.
+
+3. (Optional) tweak it before `goToKycActivity`:
+
+```kotlin
+AmaniSDKUI.setSpeechVerificationPassphrases(listOf("I approve", "I confirm"))
+AmaniSDKUI.setSpeechVerificationTimeoutMillis(60_000)
+```
+
 ## Required Permissions
 
 You must have the folowing keys in your application's manifest file:
