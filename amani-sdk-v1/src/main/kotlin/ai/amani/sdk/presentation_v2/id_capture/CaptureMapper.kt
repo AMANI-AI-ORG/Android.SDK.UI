@@ -20,6 +20,52 @@ internal object CaptureMapper {
     private fun Version.stepFor(side: CaptureSide) =
         steps?.getOrNull(if (side == CaptureSide.Back) 1 else 0)
 
+    private fun Version.isTwoSided() = (steps?.size ?: 0) > 1
+
+    /**
+     * Builds the pre-capture guide state (prototype screens 7 & 10) for the given [side].
+     * The v2 counterpart of the legacy "Upload Front/Back Side" Lottie screens: the header
+     * reuses the per-step [captureTitle][datamanager.model.config.Step.captureTitle] (so it
+     * matches the capture screen that follows), while the instructional copy is static design
+     * text. The "Step X of 2" eyebrow only appears for two-sided documents; a single-sided
+     * document shows a plain "Photo capture" eyebrow (there is no back guide for it).
+     */
+    fun toGuideState(
+        version: Version,
+        side: CaptureSide
+    ): IdCaptureGuideUiState {
+        val step = version.stepFor(side)
+        val isFront = side == CaptureSide.Front
+        val eyebrow = when {
+            !version.isTwoSided() -> "Photo capture"
+            isFront -> "Step 1 of 2 · Photo capture"
+            else -> "Step 2 of 2 · Photo capture"
+        }
+        return IdCaptureGuideUiState(
+            headerTitle = step?.captureTitle.orFallback(if (isFront) "Front of ID" else "Back of ID"),
+            eyebrow = eyebrow,
+            title = if (isFront) "Photograph the front side" else "Now flip it over",
+            description = if (isFront)
+                "Take the photo in a bright area and make sure the document fits fully in the frame."
+            else
+                "We'll read the machine-readable zone (MRZ) on the back of your card.",
+            checklistHeader = "Before you shoot",
+            checklistItems = if (isFront)
+                listOf(
+                    "Bright, even lighting",
+                    "All four corners visible",
+                    "No glare on the photo or text"
+                )
+            else
+                listOf(
+                    "MRZ lines fully readable",
+                    "Barcode not covered by fingers",
+                    "Flat surface, no tilt"
+                ),
+            buttonText = "Open camera"
+        )
+    }
+
     fun toIdCaptureState(
         version: Version,
         side: CaptureSide

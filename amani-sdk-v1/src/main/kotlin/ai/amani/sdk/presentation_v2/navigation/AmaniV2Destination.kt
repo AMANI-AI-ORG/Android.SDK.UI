@@ -29,6 +29,20 @@ sealed interface AmaniV2Destination : Parcelable {
     data object DocumentType : AmaniV2Destination
 
     /**
+     * Pre-capture guide — V2 counterpart of the legacy "Upload Front/Back Side" Lottie
+     * screens (IDCaptureFront/BackSideFrag played `xx_id_front` / `xx_id_back` before the
+     * camera). Redesigned per prototype screens 7 & 10: an animated illustration plus a
+     * quality checklist, shown *before* [Capture] for each side so the user knows how to
+     * frame the document. "Open camera" advances to [Capture] for the same [side];
+     * [versionType] keys the chosen [datamanager.model.config.Version].
+     */
+    @Parcelize
+    data class CaptureGuide(
+        val versionType: String,
+        val side: CaptureSide
+    ) : AmaniV2Destination
+
+    /**
      * Document capture — V2 counterpart of IDCaptureFront/BackSideFrag. [side] selects
      * which face is captured; [versionType] keys the chosen [datamanager.model.config.Version].
      */

@@ -66,7 +66,8 @@ internal object CaptureFlow {
      * the V2 port of v1's `HomeKYCViewModel.navigateScreen` `when (documentID)` (the
      * "single version" branch): each document kind opens its own capture screen.
      *
-     *  - ID / Passport / Driving licence / Visa → photo-ID capture (front first)
+     *  - ID / Passport / Driving licence / Visa → the front-side capture *guide*
+     *    (prototype screen 7), which then opens the camera
      *  - Selfie → selfie capture
      *  - Signature → sign-contract (digital signature) screen
      *  - Physical contract / utility bill ("IB") → verify-address screen
@@ -81,7 +82,9 @@ internal object CaptureFlow {
             AmaniDocumentTypes.PASSPORT,
             AmaniDocumentTypes.DRIVING_LICENSE,
             AmaniDocumentTypes.VISA ->
-                AmaniV2Destination.Capture(type, CaptureSide.Front)
+                // Land on the front-side guide first (prototype screen 7); its "Open camera"
+                // action navigates on to Capture(Front).
+                AmaniV2Destination.CaptureGuide(type, CaptureSide.Front)
 
             AmaniDocumentTypes.SELFIE ->
                 AmaniV2Destination.SelfieCapture(type)
@@ -148,8 +151,9 @@ internal object CaptureFlow {
     /**
      * Where to go after the user confirms a captured side. The core "skip the back side"
      * rule: a two-sided document (`version.steps.size > 1`) whose front was just confirmed
-     * advances to the back-side capture; anything else (single-sided, or the back already
-     * done) finishes the capture leg — represented by `null`.
+     * advances to the back-side guide (prototype screen 10, which then opens the camera);
+     * anything else (single-sided, or the back already done) finishes the capture leg —
+     * represented by `null`.
      *
      * When the leg is finished the caller then checks [isNfcEnabled] (+ device support): an
      * NFC-enabled ID routes to [AmaniV2Destination.NfcScan] before upload (v1
@@ -158,7 +162,7 @@ internal object CaptureFlow {
     fun resolveAfterConfirm(version: Version, side: CaptureSide): AmaniV2Destination? {
         val isTwoSided = (version.steps?.size ?: 0) > 1
         return if (side == CaptureSide.Front && isTwoSided) {
-            AmaniV2Destination.Capture(version.type ?: return null, CaptureSide.Back)
+            AmaniV2Destination.CaptureGuide(version.type ?: return null, CaptureSide.Back)
         } else {
             null
         }

@@ -7,9 +7,11 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCUiState
 import ai.amani.sdk.presentation_v2.preview_screen.PreviewScreen
+import ai.amani.amani_sdk.R
 import ai.amani.sdk.presentation_v2.id_capture.CaptureMapper
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureFrontScreen
+import ai.amani.sdk.presentation_v2.id_capture.IdCaptureGuideScreen
 import ai.amani.sdk.presentation_v2.nfc_scan.NfcScanScreen
 import ai.amani.sdk.presentation_v2.nfc_scan.deviceHasNfcHardware
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScreen
@@ -34,6 +36,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -151,6 +156,33 @@ fun AmaniV2NavHost(
                     CaptureFlow.directDestinationFor(version)?.let(navigator::navigateTo)
                 }
             )
+
+            is AmaniV2Destination.CaptureGuide -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    // Stale arg (e.g. config reload) — fall back to the root rather than crash.
+                    navigator.popToRoot()
+                } else {
+                    // Front side plays xx_id_front (camera badge); back side plays xx_id_back
+                    // (flip badge) — the same assets the legacy v1 guide screens used.
+                    val isFront = destination.side == CaptureSide.Front
+                    IdCaptureGuideScreen(
+                        state = CaptureMapper.toGuideState(version = version, side = destination.side),
+                        animationRes = if (isFront) R.raw.xx_id_front else R.raw.xx_id_back,
+                        badgeIcon = if (isFront) Icons.Outlined.PhotoCamera else Icons.Filled.Autorenew,
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // "Open camera" advances to the actual capture for the same side.
+                        onContinue = {
+                            navigator.navigateTo(
+                                AmaniV2Destination.Capture(
+                                    versionType = destination.versionType,
+                                    side = destination.side
+                                )
+                            )
+                        }
+                    )
+                }
+            }
 
             is AmaniV2Destination.Capture -> {
                 val version = CaptureFlow.versionByType(destination.versionType)
