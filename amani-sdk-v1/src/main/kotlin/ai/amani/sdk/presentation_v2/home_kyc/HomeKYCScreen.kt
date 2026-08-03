@@ -140,10 +140,13 @@ private fun HomeKYCContent(
             state.title?.takeIf { it.isNotBlank() }?.let { title ->
                 Text(
                     title,
-                    // Bigger, bold, full-strength heading (HTML "Let's get you verified").
+                    // Bold heading ("Let's get you verified"). Sized to fit longer localized
+                    // titles on one/two lines without overflowing narrow screens; still scales
+                    // up on larger windows via .scaled().
                     style = AmaniV2Type.title.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp
+                        fontSize = 24.sp,
+                        lineHeight = 28.sp
                     ).scaled(),
                     color = palette.ink
                 )

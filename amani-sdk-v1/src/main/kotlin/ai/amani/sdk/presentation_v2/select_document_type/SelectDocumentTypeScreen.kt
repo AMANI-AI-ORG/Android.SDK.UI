@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -168,7 +169,10 @@ private fun DocumentOptionCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(containerColor, cardShape)
+            // Clip to the card shape BEFORE .clickable so the press ripple is bounded by the
+            // corner radius (otherwise it draws as a square over the rounded card).
+            .clip(cardShape)
+            .background(containerColor)
             .border(borderWidth, borderColor, cardShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())

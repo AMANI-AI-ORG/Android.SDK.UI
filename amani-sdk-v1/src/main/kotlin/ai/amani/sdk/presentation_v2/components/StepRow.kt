@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,7 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -110,34 +109,34 @@ fun StepRow(
     // fill and the always-white badge glyph). Falls back to the accent when config is absent.
     val textColor = step.textColor ?: accent
 
-    // A locked step is dimmed to read as not-yet-available, but not so faint that its number
-    // badge becomes unreadable (the badge itself uses a readable scheme below).
-    val rowAlpha = if (step.status == StepRowStatus.Locked) 0.6f else 1f
     val rowShape = RoundedCornerShape(14.dp.scaled())
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .alpha(rowAlpha)
-            .background(containerColor, rowShape)
+            // Clip to the row shape BEFORE .clickable so the press ripple is bounded by the
+            // corner radius (otherwise it draws as a square over the rounded card).
+            .clip(rowShape)
+            .background(containerColor)
             .border(borderWidth, borderColor, rowShape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            // Slightly smaller than the document-select cards (44dp icon / 18dp radius there).
-            .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())
+            // Slightly smaller than the document-select cards (44dp icon / 18dp radius there);
+            // trimmed vertical padding keeps a multi-step list compact on smaller screens.
+            .padding(horizontal = 16.dp.scaled(), vertical = 12.dp.scaled())
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp.scaled())
         ) {
-            StepBadge(step.status, step.index, accent)
+            StepBadge(step.status, step.index)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     step.title,
                     // Bold, full-strength, larger title so it reads as the row's headline.
                     style = AmaniV2Type.body.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp.scaled()
+                        fontSize = 15.sp.scaled()
                     ),
                     // Step text uses the config buttonTextColor (falls back to accent).
                     color = textColor,
@@ -164,14 +163,18 @@ fun StepRow(
                 }
             }
             when (step.status) {
-                StepRowStatus.Active -> Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = accent, modifier = Modifier.size(16.dp.scaled()))
+                // iOS parity: both actionable and locked rows show a trailing forward arrow
+                // (locked one muted). Tints use the brand primary / neutral ink so the arrow
+                // stays visible even when a tenant's per-status buttonColor is low-contrast
+                // (which previously left the arrow washed out / invisible on Android).
+                StepRowStatus.Active -> Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = palette.accent, modifier = Modifier.size(18.dp.scaled()))
+                StepRowStatus.Locked -> Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = palette.inkMuted, modifier = Modifier.size(18.dp.scaled()))
                 StepRowStatus.Processing -> CircularProgressIndicator(
                     modifier = Modifier.size(16.dp.scaled()),
-                    color = accent,
+                    color = palette.accent,
                     strokeWidth = 2.dp
                 )
-                StepRowStatus.Locked -> Icon(Icons.Filled.Lock, null, tint = accent, modifier = Modifier.size(14.dp.scaled()))
-                StepRowStatus.Rejected -> Icon(Icons.Filled.Warning, null, tint = accent, modifier = Modifier.size(18.dp.scaled()))
+                StepRowStatus.Rejected -> Icon(Icons.Filled.Warning, null, tint = palette.danger, modifier = Modifier.size(18.dp.scaled()))
                 StepRowStatus.Done -> {}
             }
         }
@@ -183,24 +186,29 @@ fun StepRow(
 }
 
 @Composable
-private fun StepBadge(status: StepRowStatus, index: Int, accent: Color) {
+private fun StepBadge(status: StepRowStatus, index: Int) {
     val palette = AmaniV2Theme.palette
-    // Active/done/rejected: full status-color fill + white glyph (HTML). Locked: a light warm
-    // fill with a dark muted number, so the number stays readable through the row's dimming
-    // (a white number on the grey lock color washed out at low opacity).
-    val locked = status == StepRowStatus.Locked
-    val bg = if (locked) palette.backgroundWarm else accent
-    val fg = if (locked) palette.inkMuted else Color.White
+    // iOS parity: solid, dark, legible badges with a WHITE glyph. Active/done/processing use
+    // the brand primary (config primaryButtonBackgroundColor); locked uses a dark neutral
+    // (dimmed ink) so it reads muted-but-legible like iOS instead of the old pale warm fill;
+    // rejected keeps the danger color. The per-status StepConfig.buttonColor is deliberately
+    // NOT used for the badge fill — a tenant may set it low-contrast, which washed the number
+    // out on Android (same reasoning as the selected-row border using the brand accent).
+    val bg = when (status) {
+        StepRowStatus.Locked -> palette.ink.copy(alpha = 0.72f)
+        StepRowStatus.Rejected -> palette.danger
+        else -> palette.accent
+    }
     Box(
         modifier = Modifier
-            .size(36.dp.scaled())
-            .background(bg, RoundedCornerShape(11.dp.scaled())),
+            .size(32.dp.scaled())
+            .background(bg, RoundedCornerShape(10.dp.scaled())),
         contentAlignment = Alignment.Center
     ) {
         when (status) {
-            StepRowStatus.Done -> Icon(Icons.Filled.Check, null, tint = fg, modifier = Modifier.size(18.dp.scaled()))
-            StepRowStatus.Rejected -> Icon(Icons.Filled.Close, null, tint = fg, modifier = Modifier.size(18.dp.scaled()))
-            else -> Text("$index", style = AmaniV2Type.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp.scaled()), color = fg)
+            StepRowStatus.Done -> Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(18.dp.scaled()))
+            StepRowStatus.Rejected -> Icon(Icons.Filled.Close, null, tint = Color.White, modifier = Modifier.size(18.dp.scaled()))
+            else -> Text("$index", style = AmaniV2Type.body.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp.scaled()), color = Color.White)
         }
     }
 }

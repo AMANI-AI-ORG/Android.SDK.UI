@@ -97,6 +97,7 @@ fun IdCaptureGuideScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AmaniV2Dimens.screenPadding)
         ) {
+            Spacer(Modifier.height(8.dp))
             Text(state.eyebrow.uppercase(), style = AmaniV2Type.eyebrow.scaled(), color = palette.inkLight)
             Spacer(Modifier.height(8.dp))
             Text(state.title, style = AmaniV2Type.heading.scaled(), color = palette.ink)
