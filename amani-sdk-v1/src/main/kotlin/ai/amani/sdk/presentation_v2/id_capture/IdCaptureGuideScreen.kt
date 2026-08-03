@@ -6,8 +6,10 @@ import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
+import ai.amani.sdk.presentation_v2.navigation.CaptureSide
 import ai.amani.sdk.presentation_v2.theme.amaniV2ContentMaxWidth
 import ai.amani.sdk.presentation_v2.theme.scaled
+import android.content.Context
 import android.widget.ImageView
 import androidx.annotation.RawRes
 import androidx.compose.foundation.background
@@ -59,6 +61,24 @@ data class IdCaptureGuideUiState(
     val checklistItems: List<String>,
     val buttonText: String
 )
+
+/**
+ * Resolves the pre-capture guide Lottie animation for a document by its type + side, mirroring
+ * when the document has no type-specific animation. So the guide shows the right document
+ * illustration per identity type
+ */
+@RawRes
+fun idGuideAnimationRes(context: Context, versionType: String?, side: CaptureSide): Int {
+    val sideSuffix = if (side == CaptureSide.Back) "back" else "front"
+    val type = versionType?.trim()?.lowercase()
+    if (!type.isNullOrEmpty()) {
+        // getIdentifier is the Android equivalent of iOS's LottieAnimation.named(name): resolve
+        // the raw resource whose name matches the document type + side at runtime.
+        val id = context.resources.getIdentifier("${type}_$sideSuffix", "raw", context.packageName)
+        if (id != 0) return id
+    }
+    return if (side == CaptureSide.Back) R.raw.xx_id_back else R.raw.xx_id_front
+}
 
 /**
  * Pre-capture guide screen shown *before* the camera for each document side. Mirrors the

@@ -12,6 +12,7 @@ import ai.amani.sdk.presentation_v2.id_capture.CaptureMapper
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureFrontScreen
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureGuideScreen
+import ai.amani.sdk.presentation_v2.id_capture.idGuideAnimationRes
 import ai.amani.sdk.presentation_v2.nfc_scan.NfcScanScreen
 import ai.amani.sdk.presentation_v2.nfc_scan.deviceHasNfcHardware
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScreen
@@ -164,12 +165,13 @@ fun AmaniV2NavHost(
                     // Stale arg (e.g. config reload) — fall back to the root rather than crash.
                     navigator.popToRoot()
                 } else {
-                    // Front side plays xx_id_front (camera badge); back side plays xx_id_back
-                    // (flip badge) — the same assets the legacy v1 guide screens used.
+                    // Animation is resolved per document type + side (e.g. tur_id_0_front,
+                    // tur_dl_0_back), mirroring iOS; it falls back to the generic xx_id_{side}
+                    // when the type has no dedicated asset.
                     val isFront = destination.side == CaptureSide.Front
                     IdCaptureGuideScreen(
                         state = CaptureMapper.toGuideState(version = version, side = destination.side),
-                        animationRes = if (isFront) R.raw.xx_id_front else R.raw.xx_id_back,
+                        animationRes = idGuideAnimationRes(context, version.type, destination.side),
                         badgeIcon = if (isFront) Icons.Outlined.PhotoCamera else Icons.Filled.Autorenew,
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // "Open camera" advances to the actual capture for the same side.
