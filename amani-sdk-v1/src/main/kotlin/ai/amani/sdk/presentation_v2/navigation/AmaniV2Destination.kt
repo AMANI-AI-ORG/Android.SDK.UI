@@ -67,6 +67,24 @@ sealed interface AmaniV2Destination : Parcelable {
     ) : AmaniV2Destination
 
     /**
+     * Pre-selfie guide — V2 counterpart of the legacy selfie instruction animations
+     * (SelfieCaptureFragment played `animation_first_selfie_instruction` /
+     * `animation_second_selfie_instruction` before mounting the camera). Which animation(s)
+     * appear follows v1's per-type logic (see [CaptureFlow]):
+     *  - Auto / Manual → one guide ([SelfieGuideStep.First]) → camera
+     *  - Pose estimation → two guides ([SelfieGuideStep.First] then [SelfieGuideStep.Second]) → camera
+     *  - Pose estimation V2 → no guide (straight to [SelfieCapture])
+     *
+     * "Open camera" advances to the next [SelfieGuideStep] or to [SelfieCapture].
+     * [versionType] keys the chosen [datamanager.model.config.Version].
+     */
+    @Parcelize
+    data class SelfieGuide(
+        val versionType: String,
+        val step: SelfieGuideStep
+    ) : AmaniV2Destination
+
+    /**
      * Selfie capture — V2 counterpart of SelfieCaptureFragment. The live AmaniAi selfie
      * camera mounts beneath the header; the concrete variant (auto / manual / pose
      * estimation) is resolved from the [datamanager.model.config.Version] via
@@ -145,3 +163,11 @@ sealed interface AmaniV2Destination : Parcelable {
 /** Which face of a document is being captured. */
 @Parcelize
 enum class CaptureSide : Parcelable { Front, Back }
+
+/**
+ * Which pre-selfie instruction animation a [AmaniV2Destination.SelfieGuide] shows —
+ * [First] = `animation_first_selfie_instruction`, [Second] = the follow-up
+ * `animation_second_selfie_instruction` used only for the pose-estimation flow (v1).
+ */
+@Parcelize
+enum class SelfieGuideStep : Parcelable { First, Second }

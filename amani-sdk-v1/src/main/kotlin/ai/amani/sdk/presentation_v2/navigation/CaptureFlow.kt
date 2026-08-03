@@ -3,6 +3,8 @@ package ai.amani.sdk.presentation_v2.navigation
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation.selfie.SelfieType
+import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import datamanager.model.config.Version
 
@@ -87,7 +89,12 @@ internal object CaptureFlow {
                 AmaniV2Destination.CaptureGuide(type, CaptureSide.Front)
 
             AmaniDocumentTypes.SELFIE ->
-                AmaniV2Destination.SelfieCapture(type)
+                // Land on the selfie guide first (legacy instruction animation), unless the
+                // pose-estimation V2 flow — which v1 skips the animations for entirely.
+                if (SelfieTypeResolver.resolve(version) == SelfieType.PoseEstimationV2)
+                    AmaniV2Destination.SelfieCapture(type)
+                else
+                    AmaniV2Destination.SelfieGuide(type, SelfieGuideStep.First)
 
             AmaniDocumentTypes.SIGNATURE ->
                 AmaniV2Destination.Signature(type)
@@ -105,6 +112,23 @@ internal object CaptureFlow {
 
             else -> null
         }
+    }
+
+    /**
+     * Where a selfie guide's "Open camera" action goes, mirroring v1's per-type animation
+     * sequence (SelfieCaptureViewModel): the pose-estimation flow shows a *second* instruction
+     * animation after the first, so [SelfieGuideStep.First] advances to
+     * [AmaniV2Destination.SelfieGuide] `Second` there; every other case (auto / manual, or the
+     * already-shown second step) opens the camera. Pose-estimation V2 never reaches a guide, so
+     * it isn't handled here.
+     */
+    fun selfieAfterGuide(version: Version, step: SelfieGuideStep): AmaniV2Destination {
+        val type = version.type ?: return AmaniV2Destination.HomeKYC
+        val isPoseEstimation = SelfieTypeResolver.resolve(version) is SelfieType.PoseEstimation
+        return if (step == SelfieGuideStep.First && isPoseEstimation)
+            AmaniV2Destination.SelfieGuide(type, SelfieGuideStep.Second)
+        else
+            AmaniV2Destination.SelfieCapture(type)
     }
 
     /**

@@ -17,6 +17,7 @@ import ai.amani.sdk.presentation_v2.nfc_scan.deviceHasNfcHardware
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScreen
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeMapper
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieCaptureScreen
+import ai.amani.sdk.presentation_v2.selfie_capture.SelfieGuideScreen
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieMapper
 import ai.amani.sdk.presentation_v2.signature.SignatureMapper
 import ai.amani.sdk.presentation_v2.signature.SignatureScreen
@@ -343,6 +344,32 @@ fun AmaniV2NavHost(
                         onError = { message ->
                             navigator.popToRoot()
                             scope.launch { snackbarHostState.showSnackbar(message) }
+                        }
+                    )
+                }
+            }
+
+            is AmaniV2Destination.SelfieGuide -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    // First step plays animation_first_selfie_instruction; the pose-estimation
+                    // flow chains a second step with animation_second_selfie_instruction — the
+                    // same assets the legacy v1 selfie screen played.
+                    val isFirst = destination.step == SelfieGuideStep.First
+                    SelfieGuideScreen(
+                        state = SelfieMapper.toGuideState(version = version, step = destination.step),
+                        animationRes = if (isFirst) {
+                            R.raw.animation_first_selfie_instruction
+                        } else {
+                            R.raw.animation_second_selfie_instruction
+                        },
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // "Open camera" advances to the next guide step (pose estimation) or
+                        // straight to the selfie camera.
+                        onContinue = {
+                            navigator.navigateTo(CaptureFlow.selfieAfterGuide(version, destination.step))
                         }
                     )
                 }
