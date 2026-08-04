@@ -11,7 +11,9 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCViewModel
 import ai.amani.sdk.presentation_v2.navigation.AmaniV2NavHost
+import ai.amani.sdk.presentation_v2.navigation.PreKycFlow
 import ai.amani.sdk.presentation_v2.navigation.rememberAmaniV2Navigator
+import ai.amani.sdk.presentation_v2.questionnaire.QuestionnaireRoute
 import ai.amani.sdk.presentation_v2.nfc_scan.NfcIntentHost
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
@@ -131,10 +133,20 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
             val approved = androidx.compose.runtime.saveable.rememberSaveable {
                 androidx.compose.runtime.mutableStateOf(false)
             }
+            // v1 after-KYC routing: a questionnaire configured to run AFTER the KYC steps is
+            // shown once they're all approved, before the final approved screen.
+            val postKycQuestionnaire = androidx.compose.runtime.saveable.rememberSaveable {
+                androidx.compose.runtime.mutableStateOf(false)
+            }
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        HomeKYCEffect.ProfileApproved -> approved.value = true
+                        HomeKYCEffect.ProfileApproved ->
+                            if (PreKycFlow.isQuestionnairePendingAfterKyc()) {
+                                postKycQuestionnaire.value = true
+                            } else {
+                                approved.value = true
+                            }
                         else -> {}
                     }
                 }
@@ -169,6 +181,22 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             rules = CachingHomeKYC.onlyKYCRules
                         ),
                         onContinue = { finishApproved() }
+                    )
+                    return@AmaniV2Theme
+                }
+                if (postKycQuestionnaire.value) {
+                    // Post-KYC questionnaire (v1 after-KYC step): shown standalone here since the
+                    // KYC nav host is done. Completing it advances to the approved screen; back
+                    // exits the SDK (KYC is approved but this step is required to finish).
+                    BackHandler { finish() }
+                    QuestionnaireRoute(
+                        headerTitle = CachingHomeKYC.appConfig?.generalConfigs?.mainTitleText
+                            ?: "Verification",
+                        onBack = { finish() },
+                        onCompleted = {
+                            postKycQuestionnaire.value = false
+                            approved.value = true
+                        }
                     )
                     return@AmaniV2Theme
                 }

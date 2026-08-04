@@ -29,6 +29,14 @@ sealed interface AmaniV2Destination : Parcelable {
     data object DocumentType : AmaniV2Destination
 
     /**
+     * Questionnaire (survey) — V2 counterpart of the v1 QuestionnaireFragment, one of the
+     * "before KYC" steps (identifier `questionnaire`). Questions are fetched from the SDK, so
+     * this destination carries no args; the screen owns its own view model.
+     */
+    @Parcelize
+    data object Questionnaire : AmaniV2Destination
+
+    /**
      * Pre-capture guide — V2 counterpart of the legacy "Upload Front/Back Side" Lottie
      * screens (IDCaptureFront/BackSideFrag played `xx_id_front` / `xx_id_back` before the
      * camera). Redesigned per prototype screens 7 & 10: an animated illustration plus a

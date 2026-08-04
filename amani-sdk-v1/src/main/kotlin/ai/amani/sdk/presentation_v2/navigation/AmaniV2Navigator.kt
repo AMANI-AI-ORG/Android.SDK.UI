@@ -88,10 +88,16 @@ class AmaniV2Navigator internal constructor(
  * Remembers an [AmaniV2Navigator] whose back stack survives configuration changes
  * and process death (the destinations are Parcelable, so they round-trip through
  * the saved instance state).
+ *
+ * The initial stack is seeded by [PreKycFlow.initialBackStack]: normally just the
+ * [startDestination], but when a questionnaire is pending before KYC (v1's before-KYC
+ * routing) it starts on the questionnaire with Home underneath. Decided once here (the
+ * factory runs a single time and is then restored from saved state), so completing the
+ * questionnaire — which pops back to Home — never re-triggers it.
  */
 @Composable
 fun rememberAmaniV2Navigator(
     startDestination: AmaniV2Destination = AmaniV2Destination.HomeKYC
 ): AmaniV2Navigator = rememberSaveable(saver = AmaniV2Navigator.Saver) {
-    AmaniV2Navigator(listOf(startDestination))
+    AmaniV2Navigator(PreKycFlow.initialBackStack(startDestination))
 }

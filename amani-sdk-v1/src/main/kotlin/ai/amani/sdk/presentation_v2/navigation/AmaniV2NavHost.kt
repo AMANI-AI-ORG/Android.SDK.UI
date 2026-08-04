@@ -7,6 +7,7 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCUiState
 import ai.amani.sdk.presentation_v2.preview_screen.PreviewScreen
+import ai.amani.sdk.presentation_v2.questionnaire.QuestionnaireRoute
 import ai.amani.amani_sdk.R
 import ai.amani.sdk.presentation_v2.id_capture.CaptureMapper
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
@@ -157,6 +158,16 @@ fun AmaniV2NavHost(
                 onContinue = { version ->
                     CaptureFlow.directDestinationFor(version)?.let(navigator::navigateTo)
                 }
+            )
+
+            AmaniV2Destination.Questionnaire -> QuestionnaireRoute(
+                // Config-driven header (GeneralConfigs.mainTitleText), same value the home
+                // screen shows; falls back to a generic title upstream.
+                headerTitle = homeContent.headerTitle,
+                onBack = { if (!navigator.popBackStack()) onExit() },
+                // Answers accepted → this pre-KYC leg is done; pop back to Home. (When the full
+                // pre-KYC sequencer lands this can instead advance to the next pending step.)
+                onCompleted = { navigator.popToRoot() }
             )
 
             is AmaniV2Destination.CaptureGuide -> {
