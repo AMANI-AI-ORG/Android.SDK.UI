@@ -93,7 +93,8 @@ internal object HomeKYCMapper {
             secondaryButtonBackground = g.secondaryButtonBackgroundColor,
             secondaryButtonText = g.secondaryButtonTextColor,
             secondaryButtonBorder = g.secondaryButtonBorderColor,
-            loader = g.loaderColor
+            loader = g.loaderColor,
+            buttonRadius = g.buttonRadiusAndroid
         )
     }
 

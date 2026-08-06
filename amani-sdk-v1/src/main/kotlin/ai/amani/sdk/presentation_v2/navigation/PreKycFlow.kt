@@ -18,6 +18,44 @@ import datamanager.model.config.StepConfig
 internal object PreKycFlow {
 
     /**
+     * Identifier steps completed in this session. v1 removes each step from its working list as
+     * it finishes (`getNavDirection`); V2 can't mutate the cached config, so the chain tracks
+     * completions here and skips them when picking the next step. Reset when the nav host is
+     * (re)created via [initialBackStack].
+     */
+    private val completed = mutableSetOf<String>()
+
+    fun reset() = completed.clear()
+
+    fun markCompleted(identifier: String) {
+        completed.add(identifier)
+    }
+
+    /**
+     * The V2 screen for an identifier step, or null when V2 doesn't ship one yet. Steps with no
+     * screen are skipped by the chain (they can't be completed in V2 anyway) — added here as
+     * their screens land (phone_otp / email_otp).
+     */
+    fun destinationFor(identifier: String?): AmaniV2Destination? = when (identifier) {
+        AppConstant.IDENTIFIER_PROFILE_INFO -> AmaniV2Destination.ProfileInfo
+        AppConstant.IDENTIFIER_QUESTIONNAIRE -> AmaniV2Destination.Questionnaire
+        AppConstant.IDENTIFIER_PHONE_OTP -> AmaniV2Destination.PhoneOtp
+        AppConstant.IDENTIFIER_EMAIL_OTP -> AmaniV2Destination.EmailOtp
+        else -> null
+    }
+
+    /** Next not-yet-completed *before*-KYC step with a V2 screen, or null when the chain is done. */
+    fun nextBeforeKycStep(): AmaniV2Destination? = nextStep(pendingBeforeKycSteps())
+
+    /** Next not-yet-completed *after*-KYC step with a V2 screen, or null when the chain is done. */
+    fun nextAfterKycStep(): AmaniV2Destination? = nextStep(pendingAfterKycSteps())
+
+    private fun nextStep(pending: List<StepConfig>): AmaniV2Destination? =
+        pending.firstNotNullOfOrNull { step ->
+            if (step.identifier in completed) null else destinationFor(step.identifier)
+        }
+
+    /**
      * The not-yet-approved [STEPS_BEFORE_KYC_FLOW][AppConstant.STEPS_BEFORE_KYC_FLOW] steps that
      * appear *before* the first KYC step, in config order — the v2 port of v1's before-KYC list.
      */
@@ -61,29 +99,17 @@ internal object PreKycFlow {
         }
     }
 
-    /** Whether a questionnaire step is pending *before* the KYC flow. */
-    fun isQuestionnairePending(): Boolean =
-        pendingBeforeKycSteps().any { it.identifier == AppConstant.IDENTIFIER_QUESTIONNAIRE }
-
     /**
-     * Whether a questionnaire step is pending *after* the KYC flow — checked once every KYC
-     * step is approved, so the questionnaire is shown before the final approved screen (v1's
-     * after-KYC routing).
+     * Initial back stack for the nav host: normally just [root] (Home), but when a before-KYC
+     * identifier step is pending it seeds `[root, firstStep]` so that step opens first (v1
+     * redirects to it from Home) while Home stays underneath. Each step then advances to the
+     * next pending one or pops to Home (see AmaniV2NavHost). Resets the completed-set here so a
+     * fresh nav host starts a fresh chain; decided once at navigator creation.
      */
-    fun isQuestionnairePendingAfterKyc(): Boolean =
-        pendingAfterKycSteps().any { it.identifier == AppConstant.IDENTIFIER_QUESTIONNAIRE }
-
-    /**
-     * Initial back stack for the nav host: normally just [root] (Home), but when a
-     * questionnaire is pending before KYC it seeds `[root, Questionnaire]` so the questionnaire
-     * opens first (v1 redirects to it from Home) while Home stays underneath — so finishing it
-     * (`popToRoot` / back) lands on the KYC overview. Decided once at navigator creation, so it
-     * never re-triggers after the questionnaire is completed.
-     */
-    fun initialBackStack(root: AmaniV2Destination): List<AmaniV2Destination> =
-        if (root == AmaniV2Destination.HomeKYC && isQuestionnairePending()) {
-            listOf(root, AmaniV2Destination.Questionnaire)
-        } else {
-            listOf(root)
-        }
+    fun initialBackStack(root: AmaniV2Destination): List<AmaniV2Destination> {
+        if (root != AmaniV2Destination.HomeKYC) return listOf(root)
+        reset()
+        val first = nextBeforeKycStep() ?: return listOf(root)
+        return listOf(root, first)
+    }
 }

@@ -10,9 +10,13 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCViewModel
+import ai.amani.sdk.presentation_v2.navigation.AmaniV2Destination
 import ai.amani.sdk.presentation_v2.navigation.AmaniV2NavHost
 import ai.amani.sdk.presentation_v2.navigation.PreKycFlow
 import ai.amani.sdk.presentation_v2.navigation.rememberAmaniV2Navigator
+import ai.amani.sdk.presentation_v2.email_otp.EmailOtpRoute
+import ai.amani.sdk.presentation_v2.phone_otp.PhoneOtpRoute
+import ai.amani.sdk.presentation_v2.profile_info.ProfileInfoRoute
 import ai.amani.sdk.presentation_v2.questionnaire.QuestionnaireRoute
 import ai.amani.sdk.presentation_v2.nfc_scan.NfcIntentHost
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
@@ -133,20 +137,19 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
             val approved = androidx.compose.runtime.saveable.rememberSaveable {
                 androidx.compose.runtime.mutableStateOf(false)
             }
-            // v1 after-KYC routing: a questionnaire configured to run AFTER the KYC steps is
-            // shown once they're all approved, before the final approved screen.
-            val postKycQuestionnaire = androidx.compose.runtime.saveable.rememberSaveable {
-                androidx.compose.runtime.mutableStateOf(false)
+            // v1 after-KYC routing: identifier steps configured to run AFTER the KYC steps are
+            // shown once they're all approved, before the final approved screen. Holds the
+            // current post-KYC step (null = none / done).
+            val postKycDest = androidx.compose.runtime.saveable.rememberSaveable {
+                androidx.compose.runtime.mutableStateOf<AmaniV2Destination?>(null)
             }
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        HomeKYCEffect.ProfileApproved ->
-                            if (PreKycFlow.isQuestionnairePendingAfterKyc()) {
-                                postKycQuestionnaire.value = true
-                            } else {
-                                approved.value = true
-                            }
+                        HomeKYCEffect.ProfileApproved -> {
+                            val next = PreKycFlow.nextAfterKycStep()
+                            if (next != null) postKycDest.value = next else approved.value = true
+                        }
                         else -> {}
                     }
                 }
@@ -184,20 +187,39 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                     )
                     return@AmaniV2Theme
                 }
-                if (postKycQuestionnaire.value) {
-                    // Post-KYC questionnaire (v1 after-KYC step): shown standalone here since the
-                    // KYC nav host is done. Completing it advances to the approved screen; back
-                    // exits the SDK (KYC is approved but this step is required to finish).
+                val postKyc = postKycDest.value
+                if (postKyc != null) {
+                    // Post-KYC identifier chain (v1 after-KYC steps): shown standalone here since
+                    // the KYC nav host is done. Each step advances to the next post-KYC step, then
+                    // to the approved screen. Back exits the SDK (this step is required to finish).
                     BackHandler { finish() }
-                    QuestionnaireRoute(
-                        headerTitle = CachingHomeKYC.appConfig?.generalConfigs?.mainTitleText
-                            ?: "Verification",
-                        onBack = { finish() },
-                        onCompleted = {
-                            postKycQuestionnaire.value = false
-                            approved.value = true
-                        }
-                    )
+                    val advancePostKyc: (String) -> Unit = { identifier ->
+                        PreKycFlow.markCompleted(identifier)
+                        val next = PreKycFlow.nextAfterKycStep()
+                        if (next != null) postKycDest.value = next
+                        else { postKycDest.value = null; approved.value = true }
+                    }
+                    when (postKyc) {
+                        AmaniV2Destination.Questionnaire -> QuestionnaireRoute(
+                            headerTitle = CachingHomeKYC.appConfig?.generalConfigs?.mainTitleText
+                                ?: "Verification",
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_QUESTIONNAIRE) }
+                        )
+                        AmaniV2Destination.ProfileInfo -> ProfileInfoRoute(
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_PROFILE_INFO) }
+                        )
+                        AmaniV2Destination.PhoneOtp -> PhoneOtpRoute(
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_PHONE_OTP) }
+                        )
+                        AmaniV2Destination.EmailOtp -> EmailOtpRoute(
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_EMAIL_OTP) }
+                        )
+                        else -> approved.value = true
+                    }
                     return@AmaniV2Theme
                 }
                 when (val current = state) {
@@ -236,7 +258,10 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             resolveRuleById = viewModel::resolveRuleById,
                             // Transient errors (e.g. a failed speech upload) shown in the
                             // host snackbar.
-                            snackbarMessages = viewModel.messages
+                            snackbarMessages = viewModel.messages,
+                            // A before-KYC identifier chain (profile_info / questionnaire) sets its
+                            // own AmaniEvent listener; re-attach HomeKYC's when it returns to Home.
+                            onReturnToHomeFromPreKyc = { viewModel.reattachAmaniEventListener() }
                         )
                     }
 

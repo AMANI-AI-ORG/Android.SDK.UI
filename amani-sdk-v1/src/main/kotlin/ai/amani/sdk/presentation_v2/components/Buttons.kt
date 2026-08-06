@@ -32,18 +32,22 @@ fun PrimaryButton(
     onClick: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
+    val shape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
             .height(AmaniV2Dimens.buttonHeight.scaled()),
-        shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
+        shape = shape,
         // GeneralConfigs.primaryButtonBorderColor; the default is transparent (borderless).
         border = BorderStroke(1.dp, palette.primaryButtonBorder),
         colors = ButtonDefaults.buttonColors(
             containerColor = palette.accent,
-            contentColor = palette.primaryButtonText
+            contentColor = palette.primaryButtonText,
+            // Disabled = same accent, just faded (non-clickable look via opacity).
+            disabledContainerColor = palette.accent.copy(alpha = 0.4f),
+            disabledContentColor = palette.primaryButtonText.copy(alpha = 0.7f)
         )
     ) {
         Row(
@@ -74,7 +78,7 @@ fun SecondaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(AmaniV2Dimens.buttonHeight.scaled()),
-        shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
+        shape = RoundedCornerShape(palette.buttonRadius.dp.scaled()),
         // GeneralConfigs.secondaryButton{BorderColor, BackgroundColor, TextColor}; the
         // defaults reproduce the previous hardcoded look (white fill, hairline border, ink).
         border = BorderStroke(1.dp, palette.secondaryButtonBorder),

@@ -7,7 +7,11 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCUiState
 import ai.amani.sdk.presentation_v2.preview_screen.PreviewScreen
+import ai.amani.sdk.presentation_v2.email_otp.EmailOtpRoute
+import ai.amani.sdk.presentation_v2.phone_otp.PhoneOtpRoute
+import ai.amani.sdk.presentation_v2.profile_info.ProfileInfoRoute
 import ai.amani.sdk.presentation_v2.questionnaire.QuestionnaireRoute
+import ai.amani.sdk.utils.AppConstant
 import ai.amani.amani_sdk.R
 import ai.amani.sdk.presentation_v2.id_capture.CaptureMapper
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
@@ -103,6 +107,10 @@ fun AmaniV2NavHost(
     // Transient user-facing messages to surface in the host snackbar (e.g. a speech-upload
     // failure emitted by the view model once we're back on Home). Optional.
     snackbarMessages: Flow<String>? = null,
+    // Invoked when a before-KYC identifier chain (profile_info / questionnaire / …) finishes and
+    // pops back to Home. Pre-KYC screens set their own AmaniEvent listener (v1 parity), so the
+    // host re-attaches HomeKYC's listener here before the user starts the KYC steps.
+    onReturnToHomeFromPreKyc: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -112,6 +120,20 @@ fun AmaniV2NavHost(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Advance the before-KYC identifier chain (v1's step-by-step `getNavDirection`): mark this
+    // step done, move to the next pending step, or pop to Home (re-attaching Home's listener)
+    // when the chain is complete.
+    fun advancePreKyc(identifier: String) {
+        PreKycFlow.markCompleted(identifier)
+        val next = PreKycFlow.nextBeforeKycStep()
+        if (next != null) {
+            navigator.replaceCurrent(next)
+        } else {
+            onReturnToHomeFromPreKyc()
+            navigator.popToRoot()
+        }
+    }
     // Show any message the host pushes (view-model-emitted errors) in the snackbar.
     LaunchedEffect(snackbarMessages) {
         snackbarMessages?.collect { snackbarHostState.showSnackbar(it) }
@@ -164,10 +186,24 @@ fun AmaniV2NavHost(
                 // Config-driven header (GeneralConfigs.mainTitleText), same value the home
                 // screen shows; falls back to a generic title upstream.
                 headerTitle = homeContent.headerTitle,
-                onBack = { if (!navigator.popBackStack()) onExit() },
-                // Answers accepted → this pre-KYC leg is done; pop back to Home. (When the full
-                // pre-KYC sequencer lands this can instead advance to the next pending step.)
-                onCompleted = { navigator.popToRoot() }
+                // Back on a before-KYC step exits the SDK (v1 ProfileInfoFragment.finishActivity).
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_QUESTIONNAIRE) }
+            )
+
+            AmaniV2Destination.ProfileInfo -> ProfileInfoRoute(
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_PROFILE_INFO) }
+            )
+
+            AmaniV2Destination.PhoneOtp -> PhoneOtpRoute(
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_PHONE_OTP) }
+            )
+
+            AmaniV2Destination.EmailOtp -> EmailOtpRoute(
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_EMAIL_OTP) }
             )
 
             is AmaniV2Destination.CaptureGuide -> {

@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -285,7 +286,7 @@ private fun AnswerField(
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = RoundedCornerShape(AmaniV2Dimens.fieldRadius.scaled()),
+        shape = RoundedCornerShape(palette.buttonRadius.dp.scaled()),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = palette.surface,
             unfocusedContainerColor = palette.surface,
@@ -296,4 +297,35 @@ private fun AnswerField(
             unfocusedTextColor = palette.ink
         )
     )
+}
+
+@Preview(name = "Questionnaire", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewQuestionnaire() {
+    AmaniV2Theme {
+        QuestionnaireScreen(
+            state = QuestionnaireScreenState.Ready(
+                questions = listOf(
+                    QuestionUi(
+                        id = "1", title = "What is your employment status?",
+                        type = QuestionType.SingleChoice,
+                        options = listOf(AnswerOption("a", "Employed"), AnswerOption("b", "Self-employed")),
+                        singleAnswerId = "a"
+                    ),
+                    QuestionUi(
+                        id = "2", title = "Which services do you use?",
+                        type = QuestionType.MultipleChoice,
+                        options = listOf(AnswerOption("x", "Payments"), AnswerOption("y", "Savings")),
+                        selectedAnswerIds = setOf("x")
+                    ),
+                    QuestionUi(id = "3", title = "Your monthly income", type = QuestionType.Number, typedAnswer = "5000"),
+                    QuestionUi(id = "4", title = "Any notes?", type = QuestionType.Text, typedAnswer = "None")
+                ),
+                submitEnabled = true
+            ),
+            headerTitle = "Questionnaire",
+            onBack = {}, onSingleSelect = { _, _ -> }, onMultiToggle = { _, _ -> },
+            onTextChange = { _, _ -> }, onSubmit = {}
+        )
+    }
 }

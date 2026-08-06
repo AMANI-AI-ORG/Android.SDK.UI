@@ -37,6 +37,31 @@ sealed interface AmaniV2Destination : Parcelable {
     data object Questionnaire : AmaniV2Destination
 
     /**
+     * Profile info form (name / surname / birth date) — V2 counterpart of the v1
+     * ProfileInfoFragment, one of the "before/after KYC" steps (identifier `profile_info`).
+     * Config strings + the step are resolved from the shared cache, so this destination carries
+     * no args; the screen owns its own view model.
+     */
+    @Parcelize
+    data object ProfileInfo : AmaniV2Destination
+
+    /**
+     * Phone OTP — V2 counterpart of the v1 PhoneVerify + PhoneCheck fragments as one two-phase
+     * step (identifier `phone_otp`): enter phone, then enter the code. No args; the screen owns
+     * its view model.
+     */
+    @Parcelize
+    data object PhoneOtp : AmaniV2Destination
+
+    /**
+     * Email OTP — V2 counterpart of the v1 EmailVerify + EmailCheck fragments as one two-phase
+     * step (identifier `email_otp`): enter email, then enter the code. No args; the screen owns
+     * its view model.
+     */
+    @Parcelize
+    data object EmailOtp : AmaniV2Destination
+
+    /**
      * Pre-capture guide — V2 counterpart of the legacy "Upload Front/Back Side" Lottie
      * screens (IDCaptureFront/BackSideFrag played `xx_id_front` / `xx_id_back` before the
      * camera). Redesigned per prototype screens 7 & 10: an animated illustration plus a

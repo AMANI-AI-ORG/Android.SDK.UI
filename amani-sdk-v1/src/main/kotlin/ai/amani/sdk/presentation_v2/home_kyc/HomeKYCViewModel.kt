@@ -467,6 +467,14 @@ class HomeKYCViewModel(
      * error and leaves later steps locked. When every KYC step is approved the flow
      * completes via [HomeKYCEffect.ProfileApproved].
      */
+    /**
+     * Re-registers HomeKYC's AmaniEvent listener. The before-KYC identifier screens
+     * (profile_info / phone_otp / …) set their own listener while active (v1 parity), which
+     * overrides this one; the host calls this when the pre-KYC chain returns to Home so KYC-step
+     * verdicts are handled again before the user starts the KYC flow.
+     */
+    fun reattachAmaniEventListener() = listenAmaniEvents()
+
     private fun listenAmaniEvents() {
         Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
