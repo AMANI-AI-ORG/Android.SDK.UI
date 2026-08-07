@@ -109,7 +109,7 @@ fun StepRow(
     // fill and the always-white badge glyph). Falls back to the accent when config is absent.
     val textColor = step.textColor ?: accent
 
-    val rowShape = RoundedCornerShape(14.dp.scaled())
+    val rowShape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
 
     Column(
         modifier = modifier
@@ -140,8 +140,6 @@ fun StepRow(
                     ),
                     // Step text uses the config buttonTextColor (falls back to accent).
                     color = textColor,
-                    // TODO(width): keep the title on one line for now so many-step lists
-                    // don't get tall from wrapping. Revisit if we want full multi-line titles.
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

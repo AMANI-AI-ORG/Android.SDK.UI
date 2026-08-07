@@ -30,8 +30,7 @@ internal object NfcMapper {
             cancelButtonText = (version.cancelButtonText ?: general?.tryAgainText).orFallback("Cancel"),
             continueButtonText = general?.continueText.orFallback("Start scan"),
             mrzCheckTitle = version.nfcConfigureTitle.orFallback("Check your document details"),
-            // TODO: config-driven
-            mrzCheckDescription = "We couldn't read the chip. Confirm these values and try again.",
+            mrzCheckDescription = version.nfcFailedDescription.orFallback("We couldn't read the chip. Confirm these values and try again."),
             birthDateLabel = version.documentDateOfBirth.orFallback("Date of birth"),
             expiryDateLabel = version.documentDateOfExpiry.orFallback("Date of expiry"),
             documentNoLabel = version.documentNoTitle.orFallback("Document number"),

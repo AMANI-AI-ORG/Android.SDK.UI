@@ -107,7 +107,6 @@ internal object CaptureFlow {
             AmaniDocumentTypes.SPEECH ->
                 AmaniV2Destination.SpeechVerify(type)
 
-            // TODO(wiring): NFC-only has no V2 screen yet.
             AmaniDocumentTypes.NFC -> null
 
             else -> null

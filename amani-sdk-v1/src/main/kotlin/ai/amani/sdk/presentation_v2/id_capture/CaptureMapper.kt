@@ -32,37 +32,44 @@ internal object CaptureMapper {
      */
     fun toGuideState(
         version: Version,
-        side: CaptureSide
+        side: CaptureSide,
+        general: GeneralConfigs?
     ): IdCaptureGuideUiState {
         val step = version.stepFor(side)
         val isFront = side == CaptureSide.Front
+        // Config eyebrow label (v2GuideEyebrow) + computed "Step X of 2 ·" prefix for two-sided.
+        val eyebrowLabel = version.v2GuideEyebrow.orFallback("Photo capture")
         val eyebrow = when {
-            !version.isTwoSided() -> "Photo capture"
-            isFront -> "Step 1 of 2 · Photo capture"
-            else -> "Step 2 of 2 · Photo capture"
+            !version.isTwoSided() -> eyebrowLabel
+            isFront -> "Step 1 of 2 · $eyebrowLabel"
+            else -> "Step 2 of 2 · $eyebrowLabel"
         }
         return IdCaptureGuideUiState(
-            headerTitle = step?.captureTitle.orFallback(if (isFront) "Front of ID" else "Back of ID"),
+            headerTitle = step?.captureTitle.orFallback(
+                if (isFront) general?.v2FrontSideText.orFallback("3Front of ID")
+                else general?.v2BackSideText.orFallback("Back of ID")
+            ),
             eyebrow = eyebrow,
-            title = if (isFront) "Photograph the front side" else "Now flip it over",
+            title = if (isFront) version.v2GuideTitle.orFallback("Photograph the front side")
+            else version.v2GuideSecondTitle.orFallback("Now flip it over"),
             description = if (isFront)
-                "Take the photo in a bright area and make sure the document fits fully in the frame."
+                version.v2GuideDescription.orFallback("Take the photo in a bright area and make sure the document fits fully in the frame.")
             else
-                "We'll read the machine-readable zone (MRZ) on the back of your card.",
-            checklistHeader = "Before you shoot",
+                version.v2GuideSecondDescription.orFallback("We'll read the machine-readable zone (MRZ) on the back of your card."),
+            checklistHeader = version.v2GuideChecklistHeader.orFallback("Before you shoot"),
             checklistItems = if (isFront)
                 listOf(
-                    "Bright, even lighting",
-                    "All four corners visible",
-                    "No glare on the photo or text"
+                    version.v2GuideCheck1.orFallback("Bright, even lighting"),
+                    version.v2GuideCheck2.orFallback("All four corners visible"),
+                    version.v2GuideCheck3.orFallback("No glare on the photo or text")
                 )
             else
                 listOf(
-                    "MRZ lines fully readable",
-                    "Barcode not covered by fingers",
-                    "Flat surface, no tilt"
+                    version.v2GuideSecondCheck1.orFallback("MRZ lines fully readable"),
+                    version.v2GuideSecondCheck2.orFallback("Barcode not covered by fingers"),
+                    version.v2GuideSecondCheck3.orFallback("Flat surface, no tilt")
                 ),
-            buttonText = "Open camera"
+            buttonText = general?.v2OpenCameraButtonText.orFallback("Open camera")
         )
     }
 

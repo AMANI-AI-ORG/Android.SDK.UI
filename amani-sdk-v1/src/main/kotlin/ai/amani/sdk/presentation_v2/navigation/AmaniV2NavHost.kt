@@ -217,7 +217,11 @@ fun AmaniV2NavHost(
                     // when the type has no dedicated asset.
                     val isFront = destination.side == CaptureSide.Front
                     IdCaptureGuideScreen(
-                        state = CaptureMapper.toGuideState(version = version, side = destination.side),
+                        state = CaptureMapper.toGuideState(
+                            version = version,
+                            side = destination.side,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
                         animationRes = idGuideAnimationRes(context, version.type, destination.side),
                         badgeIcon = if (isFront) Icons.Outlined.PhotoCamera else Icons.Filled.Autorenew,
                         onBack = { if (!navigator.popBackStack()) onExit() },
@@ -408,7 +412,11 @@ fun AmaniV2NavHost(
                     // same assets the legacy v1 selfie screen played.
                     val isFirst = destination.step == SelfieGuideStep.First
                     SelfieGuideScreen(
-                        state = SelfieMapper.toGuideState(version = version, step = destination.step),
+                        state = SelfieMapper.toGuideState(
+                            version = version,
+                            step = destination.step,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
                         animationRes = if (isFirst) {
                             R.raw.animation_first_selfie_instruction
                         } else {

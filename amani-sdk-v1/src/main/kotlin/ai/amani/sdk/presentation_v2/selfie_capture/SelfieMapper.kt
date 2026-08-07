@@ -21,47 +21,46 @@ internal object SelfieMapper {
     }
 
     /**
-     * Builds the pre-selfie guide state (V2 redesign of the legacy selfie instruction
-     * animations) for the given [step]. The header reuses the per-step
-     * [captureTitle][datamanager.model.config.Step.captureTitle]; the instructional copy is
-     * static for now.
-     *
-     * TODO(copy/config): these guide strings are hardcoded English placeholders. The
-     *  [SelfieGuideStep.First] copy comes straight from the redesign; the
-     *  [SelfieGuideStep.Second] (pose-estimation) copy is a stand-in until design provides it.
-     *  Both should become config-driven (like the other `v2Document…` fields) — colors
-     *  already resolve from config via the theme palette.
+     * Builds the pre-selfie guide state for the given [step]. Config-driven from the selfie
+     * [Version]'s shared `v2Guide…` fields ([SelfieGuideStep.First] → primary, `Second` → pose),
+     * with the built-in redesign copy as fallback. Header/button come from [general].
      */
-    fun toGuideState(version: Version, step: SelfieGuideStep): SelfieGuideUiState {
-        val stepConfig = version.steps?.firstOrNull()
-        val headerTitle = stepConfig?.captureTitle.orFallback("Selfie")
+    fun toGuideState(
+        version: Version,
+        step: SelfieGuideStep,
+        general: GeneralConfigs?
+    ): SelfieGuideUiState {
+        val headerTitle = version.steps?.firstOrNull()?.captureTitle
+            .orFallback(general?.v2SelfieText.orFallback("Selfie"))
+        val button = general?.v2OpenCameraButtonText.orFallback("Open camera")
+        val checklistHeader = version.v2GuideChecklistHeader.orFallback("Before you start")
         return if (step == SelfieGuideStep.First) {
             SelfieGuideUiState(
                 headerTitle = headerTitle,
-                // TODO(copy): from redesign — make config-driven.
-                title = "Let's take your selfie",
-                description = "Look straight at the camera and keep your face centered in the frame.",
-                checklistHeader = "Before you start",
+                title = version.v2GuideTitle.orFallback("Let's take your selfie"),
+                description = version.v2GuideDescription
+                    .orFallback("Look straight at the camera and keep your face centered in the frame."),
+                checklistHeader = checklistHeader,
                 checklistItems = listOf(
-                    "Good, even lighting on your face",
-                    "Remove glasses, hats, or masks",
-                    "Hold the phone at eye level"
+                    version.v2GuideCheck1.orFallback("Good, even lighting on your face"),
+                    version.v2GuideCheck2.orFallback("Remove glasses, hats, or masks"),
+                    version.v2GuideCheck3.orFallback("Hold the phone at eye level")
                 ),
-                buttonText = "Open camera"
+                buttonText = button
             )
         } else {
             SelfieGuideUiState(
                 headerTitle = headerTitle,
-                // TODO(copy): pose-estimation guide copy not in design yet — placeholder.
-                title = "Follow the movements",
-                description = "You'll be asked to turn your head to a few positions. Keep your face inside the frame the whole time.",
-                checklistHeader = "Before you start",
+                title = version.v2GuideSecondTitle.orFallback("Follow the movements"),
+                description = version.v2GuideSecondDescription
+                    .orFallback("You'll be asked to turn your head to a few positions. Keep your face inside the frame the whole time."),
+                checklistHeader = checklistHeader,
                 checklistItems = listOf(
-                    "Stay in a well-lit area",
-                    "Keep your whole face visible",
-                    "Move slowly when prompted"
+                    version.v2GuideSecondCheck1.orFallback("Stay in a well-lit area"),
+                    version.v2GuideSecondCheck2.orFallback("Keep your whole face visible"),
+                    version.v2GuideSecondCheck3.orFallback("Move slowly when prompted")
                 ),
-                buttonText = "Open camera"
+                buttonText = button
             )
         }
     }
