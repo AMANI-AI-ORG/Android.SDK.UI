@@ -123,6 +123,17 @@ class HomeKYCViewModel(
         AppConstant.STATUS_PENDING_REVIEW
     )
 
+    /**
+     * Statuses that satisfy the FINAL approve gate — a KYC step counts as "passing" for
+     * finishing the flow when it is APPROVED *or* PENDING_REVIEW (manual review still pending).
+     * PENDING_REVIEW is treated as done-enough to reach the Approved screen, matching the
+     * lenient step-display / unlock gate ([HomeKYCMapper.DONE_STATUSES] / isUnlocked).
+     */
+    private val FINISH_PASSING_STATUSES = setOf(
+        STATUS_APPROVED,
+        AppConstant.STATUS_PENDING_REVIEW
+    )
+
     init {
         listenAmaniEvents()
     }
@@ -312,7 +323,7 @@ class HomeKYCViewModel(
         refreshReady()
 
         val docList = CachingHomeKYC.onlyKYCRules ?: return
-        if (docList.all { (statusOverrides[it.id] ?: it.status) == STATUS_APPROVED }) {
+        if (docList.all { (statusOverrides[it.id] ?: it.status) in FINISH_PASSING_STATUSES }) {
             sendEffect(HomeKYCEffect.ProfileApproved)
         }
     }
@@ -522,7 +533,7 @@ class HomeKYCViewModel(
                 refreshReady()
 
                 val allApproved = docList.all {
-                    (statusOverrides[it.id] ?: it.status) == STATUS_APPROVED
+                    (statusOverrides[it.id] ?: it.status) in FINISH_PASSING_STATUSES
                 }
                 if (allApproved) sendEffect(HomeKYCEffect.ProfileApproved)
             }
@@ -565,14 +576,17 @@ class HomeKYCViewModel(
         }
     }
 
-    /** True when every KYC-identifier rule is APPROVED. Mirrors v1 `checkKYCStepsAreApproved`. */
+    /**
+     * True when every KYC-identifier rule is APPROVED or PENDING_REVIEW (manual review still
+     * pending counts as done-enough to finish). Mirrors v1 `checkKYCStepsAreApproved`.
+     */
     private fun areAllKycStepsApproved(customerDetail: CustomerDetailResult?): Boolean {
         var total = 0
         var approved = 0
         customerDetail?.rules?.forEach { rule ->
             if (rule.identifier == "kyc" || rule.identifier == "") {
                 total += 1
-                if (rule.status == STATUS_APPROVED) approved += 1
+                if (rule.status in FINISH_PASSING_STATUSES) approved += 1
             }
         }
         return total > 0 && total == approved

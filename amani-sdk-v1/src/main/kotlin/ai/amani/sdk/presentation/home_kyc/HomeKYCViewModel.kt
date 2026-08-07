@@ -264,7 +264,10 @@ open class HomeKYCViewModel(
         customerDetail?.rules?.forEach {
             if (it.identifier == "kyc" || it.identifier == "") {
                 size += 1
-                if (it.status == STATUS_APPROVED) approvedStep += 1
+                // PENDING_REVIEW (manual review still pending) counts as done-enough to finish.
+                if (it.status == STATUS_APPROVED ||
+                    it.status == AppConstant.STATUS_PENDING_REVIEW
+                ) approvedStep += 1
             }
         }
 
@@ -696,8 +699,11 @@ open class HomeKYCViewModel(
                 //Checking the KYC steps approved ot not
                 var approvedSteps = 0
                 kycArrayList.forEach {
-                    // All KYC steps should be approved
-                    if(it == STATUS_APPROVED) approvedSteps += 1
+                    // All KYC steps should be approved — PENDING_REVIEW (manual review still
+                    // pending) counts as done-enough to finish.
+                    if (it == STATUS_APPROVED ||
+                        it == AppConstant.STATUS_PENDING_REVIEW
+                    ) approvedSteps += 1
                 }
 
                 if (approvedSteps >= kycArrayList.size) {
