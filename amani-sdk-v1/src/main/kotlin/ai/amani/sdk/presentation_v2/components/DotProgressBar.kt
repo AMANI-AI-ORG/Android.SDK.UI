@@ -30,7 +30,13 @@ import androidx.compose.ui.unit.dp
  * Height of the dot row at the top of each step column. The connectors share this height so
  * their center line lands exactly on the dots, independent of the (scaled) label beneath.
  */
-private val DotRowHeight = 14.dp
+private val DotRowHeight = 16.dp
+
+/** Filled (completed / current / rejected) dot. */
+private val DotSize = 12.dp
+
+/** Hollow pending dot — smaller so its ring reads as a ring. */
+private val PendingDotSize = 10.dp
 
 enum class StepStatus { Completed, Current, Rejected, Pending }
 
@@ -119,20 +125,20 @@ private fun DotItem(
                 )
             }
             when (step.status) {
-                StepStatus.Completed -> Dot(10.dp, palette.accent)
-                StepStatus.Rejected -> Dot(10.dp, palette.danger)
+                StepStatus.Completed -> Dot(DotSize, palette.accent)
+                StepStatus.Rejected -> Dot(DotSize, palette.danger)
                 // Single solid dot — no inner/outer halo. The dot takes the "inner" color
                 // (the brand accent) directly, so current reads as one clean filled circle.
-                StepStatus.Current -> Dot(10.dp, palette.accent)
+                StepStatus.Current -> Dot(DotSize, palette.accent)
                 StepStatus.Pending -> {
                     val bg = if (onDark) Color.White.copy(alpha = 0.1f) else AmaniV2Colors.DotIdle
                     val border = if (onDark) Color.White.copy(alpha = 0.3f) else AmaniV2Colors.DotIdleBorder
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(PendingDotSize)
                             .clip(CircleShape)
                             .background(bg)
-                            .border(1.5.dp, border, CircleShape)
+                            .border(2.dp, border, CircleShape)
                     )
                 }
             }
@@ -144,14 +150,13 @@ private fun DotItem(
             StepStatus.Pending -> if (onDark) Color.White.copy(alpha = 0.5f) else palette.inkLight
         }
         val weight = if (step.status == StepStatus.Pending) FontWeight.Normal else FontWeight.Medium
-        // Multi-word labels wrap word-by-word (e.g. "Customer Confirmation" → "Customer" /
-        // "Confirmation"), up to 3 lines; anything longer then ellipsizes. Fills the column
-        // width so wrapping has room and the text stays centered under the dot.
+        // Multi-word labels wrap word-by-word, up to 2 lines; longer then ellipsizes. Fills the
+        // column width so wrapping has room and the text stays centered under the dot.
         Text(
             step.label,
             style = AmaniV2Type.label.copy(fontWeight = weight).scaled(),
             color = labelColor,
-            maxLines = 3,
+            maxLines = 2,
             modifier = Modifier.fillMaxWidth(),
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center

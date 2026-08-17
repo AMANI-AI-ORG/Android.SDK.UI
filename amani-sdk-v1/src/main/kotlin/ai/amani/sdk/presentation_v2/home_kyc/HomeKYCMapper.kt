@@ -128,12 +128,6 @@ internal object HomeKYCMapper {
         // (and enables on) exactly this step.
         val activeIndex = activeRuleIndex(rules, config, statusOverrides, processingRuleId)
 
-        // Free selection: when NO step in the flow declares mandatory dependencies, the order
-        // isn't enforced — every actionable step is individually selectable (not locked
-        // behind the one above it), so the user can pick whichever they want and continue.
-        // With mandatory gating configured, the sequential single-active behaviour stays.
-        val freeSelect = !hasMandatoryGating(rules, config)
-
         // Aggregate step counts that drive the home heading + CTA wording. "Done" here is
         // deliberately narrower than [DONE_STATUSES]: a step that is merely uploading /
         // server-processing hasn't been completed by the user yet, so it must not flip the
@@ -168,15 +162,10 @@ internal object HomeKYCMapper {
             // selected by the rule's status with a "processing" override while uploading.
             val stepConfig = config?.stepConfigForSortOrder(rule.sortOrder)
             val style = stepStyle(stepConfig, status, isProcessing)
-            // In free-select mode every unlocked, not-done step is Active (selectable); with
-            // gating only the single first-actionable step is Active and the rest are Locked.
-            // While something is uploading (processingRuleId set) the flow is gated in both
-            // modes, so no extra step becomes selectable mid-upload.
-            val isActive = if (freeSelect && processingRuleId == null) {
+            // Gating is per step (v1 KYCAdapter parity): a step is selectable when its OWN
+            // `mandatoryStepIDs` are satisfied. An upload in flight gates the whole flow.
+            val isActive = processingRuleId == null &&
                 isUnlocked(rule, rules, config, statusOverrides)
-            } else {
-                index == activeIndex
-            }
             val rowStatus = if (isProcessing) StepRowStatus.Processing
             else rowStatus(status, isActive)
             // Primary-button label to show while this step is selected — same prefix logic
@@ -206,10 +195,8 @@ internal object HomeKYCMapper {
                     else -> style.label
                 },
                 status = rowStatus,
-                // Config-driven per-status colors (StepConfig). buttonColor is the saturated
-                // accent (border, inner wash, number-badge fill, trailing icon); buttonTextColor
-                // drives the step's text. The number-badge glyph stays white (set in StepRow).
-                accentColor = style.accentColor,
+                // Config pair for the status: buttonColor + buttonTextColor (see StepRow).
+                fillColor = style.fillColor,
                 textColor = style.textColor,
                 ctaLabel = ctaLabel,
                 error = if (isProcessing) null else errorFor(
@@ -299,11 +286,6 @@ internal object HomeKYCMapper {
      * uploading, and unlocks it once that prerequisite is approved.
      */
     /**
-     * Whether the mandatory-step feature is in play for this flow — true when ANY step
-     * declares a non-empty `mandatoryStepIDs`. When false the flow has no dependency order,
-     * so steps are freely selectable (see the `freeSelect` branch in [toUiState]).
-     */
-    /**
      * CTA verb prefix for a step given its status and the overall progress: "Retake" for a
      * rejected step, "Continue with" once something is done, otherwise "Start with" (all
      * config-driven with fallbacks). Shared by the default primary label and each step's
@@ -314,11 +296,6 @@ internal object HomeKYCMapper {
             status in REJECTED_STATUSES -> g?.v2HomeCtaRetake.orFallback("Retake")
             doneCount > 0 -> g?.v2HomeCtaContinue.orFallback("Continue with")
             else -> g?.v2HomeCtaStart.orFallback("Start with")
-        }
-
-    private fun hasMandatoryGating(rules: List<Rule>, config: ResGetConfig?): Boolean =
-        rules.any { rule ->
-            config?.stepConfigForSortOrder(rule.sortOrder)?.mandatoryStepIDs?.isNotEmpty() == true
         }
 
     private fun isUnlocked(
@@ -381,14 +358,12 @@ internal object HomeKYCMapper {
     /**
      * Config-driven, per-status styling for one step.
      *  - [label]: StepConfig.buttonText for the status (the status subtitle).
-     *  - [accentColor]: StepConfig.buttonColor — the saturated fill; drives the border,
-     *    inner wash, badge fill, and trailing icon.
-     *  - [textColor]: StepConfig.buttonTextColor — drives the step's title/subtitle text.
-     *    (The number-badge glyph itself stays white, set in StepRow.)
+     *  - [fillColor]: StepConfig.buttonColor — the status color (card wash, border, badge).
+     *  - [textColor]: StepConfig.buttonTextColor — the color drawn on that fill.
      */
     private data class StepStyle(
         val label: String?,
-        val accentColor: Color?,
+        val fillColor: Color?,
         val textColor: Color?
     )
 
@@ -420,7 +395,7 @@ internal object HomeKYCMapper {
      * `when (status)` branches: each status maps to its matching buttonText / buttonColor /
      * buttonTextColor, and a step that is currently uploading uses the `processing` fields
      * (v1's `isShowLoader` branch). Returns blanks/nulls when config is missing so the row
-     * falls back to the built-in V2 design.
+     * falls back to the built-in V2 design. Nothing is substituted across statuses.
      */
     private fun stepStyle(stepConfig: StepConfig?, status: String?, isProcessing: Boolean): StepStyle {
         if (stepConfig == null) return StepStyle(null, null, null)
@@ -428,20 +403,20 @@ internal object HomeKYCMapper {
         val bt = stepConfig.buttonText
         val btc = stepConfig.buttonTextColor
         val key = if (isProcessing) AppConstant.STATUS_PROCESSING else status
-        val (labelRaw, accentHex, textHex) = when (key) {
+        val (labelRaw, fillHex, textHex) = when (key) {
             AppConstant.STATUS_APPROVED -> Triple(bt?.approved, bc?.approved, btc?.approved)
             AppConstant.STATUS_REJECTED -> Triple(bt?.rejected, bc?.rejected, btc?.rejected)
             AppConstant.STATUS_AUTOMATICALLY_REJECTED ->
                 Triple(bt?.automaticallyRejected, bc?.automaticallyRejected, btc?.automaticallyRejected)
             AppConstant.STATUS_PENDING_REVIEW -> Triple(bt?.pendingReview, bc?.pendingReview, btc?.pendingReview)
             AppConstant.STATUS_PROCESSING -> Triple(bt?.processing, bc?.processing, btc?.processing)
-            // NOT_UPLOADED and any unknown/null status fall back to the not-uploaded fields,
-            // matching v1 (the default actionable step state).
+            // NOT_UPLOADED and any unknown/null status use the not-uploaded fields, matching v1
+            // (the default actionable step state).
             else -> Triple(bt?.notUploaded, bc?.notUploaded, btc?.notUploaded)
         }
         return StepStyle(
             label = labelRaw?.takeIf { it.isNotBlank() },
-            accentColor = accentHex.toAmaniColorOrNull(),
+            fillColor = fillHex.toAmaniColorOrNull(),
             textColor = textHex.toAmaniColorOrNull()
         )
     }

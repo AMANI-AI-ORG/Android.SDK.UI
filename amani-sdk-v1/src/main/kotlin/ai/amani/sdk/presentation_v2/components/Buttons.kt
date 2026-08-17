@@ -50,6 +50,8 @@ fun PrimaryButton(
             contentColor = palette.primaryButtonText
         )
     }
+    val shape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
+
     Button(
         onClick = onClick,
         enabled = enabled,
