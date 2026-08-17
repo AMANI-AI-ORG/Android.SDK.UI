@@ -30,15 +30,12 @@ internal object AmaniEventBus {
 
     private val subscribers = CopyOnWriteArrayList<Subscriber>()
 
-    @Volatile
-    private var installed = false
-
     /**
      * Registers [subscriber] for every AmaniEvent until [unsubscribe]. Returns the same
      * subscriber so callers can keep the handle for removal.
      */
     fun subscribe(subscriber: Subscriber): Subscriber {
-        install()
+        attach()
         subscribers.addIfAbsent(subscriber)
         return subscriber
     }
@@ -47,10 +44,14 @@ internal object AmaniEventBus {
         subscriber?.let { subscribers.remove(it) }
     }
 
+    /**
+     * (Re)installs the bus listener on the core SDK. Safe to call repeatedly: subscribers are
+     * untouched, only the core-side registration is refreshed. The host calls this after login,
+     * because the core re-creates its event holder there and would otherwise drop the listener
+     * installed before it — leaving every step spinning on a verdict that never arrives.
+     */
     @Synchronized
-    private fun install() {
-        if (installed) return
-        installed = true
+    fun attach() {
         Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
                 subscribers.forEach { it.onError(type, error) }

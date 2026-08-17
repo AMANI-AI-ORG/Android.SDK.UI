@@ -121,12 +121,9 @@ internal object HomeKYCMapper {
     ): HomeKYCUiState {
         val g = config?.generalConfigs
         fun eff(rule: Rule): String? = effectiveStatus(rule, statusOverrides)
-        // The active step is the first one still needing the user (skipping the one that
-        // is currently uploading, which shows its own processing spinner instead, and any
-        // step still locked behind an unmet mandatory dependency). This is the single
-        // source of truth shared with the view model so the home primary button targets
-        // (and enables on) exactly this step.
-        val activeIndex = activeRuleIndex(rules, config, statusOverrides, processingRuleId)
+        // Step whose dot reads as "current": the first one still needing the user and not
+        // locked behind an unmet mandatory dependency.
+        val activeIndex = activeRuleIndex(rules, config, statusOverrides)
 
         // Aggregate step counts that drive the home heading + CTA wording. "Done" here is
         // deliberately narrower than [DONE_STATUSES]: a step that is merely uploading /
@@ -163,9 +160,9 @@ internal object HomeKYCMapper {
             val stepConfig = config?.stepConfigForRule(rule)
             val style = stepStyle(stepConfig, status, isProcessing)
             // Gating is per step (v1 KYCAdapter parity): a step is selectable when its OWN
-            // `mandatoryStepIDs` are satisfied. An upload in flight gates the whole flow.
-            val isActive = processingRuleId == null &&
-                isUnlocked(rule, rules, config, statusOverrides)
+            // `mandatoryStepIDs` are satisfied. An upload elsewhere in the flow does not lock
+            // it — only the uploading step itself is busy.
+            val isActive = isUnlocked(rule, rules, config, statusOverrides)
             val rowStatus = if (isProcessing) StepRowStatus.Processing
             else rowStatus(status, isActive)
             // The step's version config carries the v2 per-document strings (estimated
@@ -277,25 +274,13 @@ internal object HomeKYCMapper {
 
     /**
      * Index of the active step: the first one still needing the user — not done and not
-     * locked behind an unmet mandatory dependency. `-1` when nothing is actionable right
-     * now.
-     *
-     * Crucially, **while any step is uploading / awaiting its verdict ([processingRuleId]
-     * is set) the whole flow is gated**: this returns `-1` so no other step becomes Active
-     * and the home primary button stays disabled. Otherwise a step with no mandatory
-     * dependency (e.g. Selfie sitting below an ID that is still processing) would be picked
-     * as the next active step and re-enable the button before the in-flight step's verdict
-     * arrives. Only once the AmaniEvent verdict clears [processingRuleId] does the scan
-     * resume — and an APPROVED prerequisite then unlocks its dependent step.
+     * locked behind an unmet mandatory dependency. `-1` when nothing is actionable.
      */
     private fun activeRuleIndex(
         rules: List<Rule>,
         config: ResGetConfig?,
-        statusOverrides: Map<String, String>,
-        processingRuleId: String?
+        statusOverrides: Map<String, String>
     ): Int {
-        // A step is in flight: gate everything until its verdict resolves the processing lock.
-        if (processingRuleId != null) return -1
         return rules.indexOfFirst {
             !isDone(effectiveStatus(it, statusOverrides)) &&
                 isUnlocked(it, rules, config, statusOverrides)
