@@ -158,9 +158,9 @@ internal object HomeKYCMapper {
         val steps = rules.mapIndexed { index, rule ->
             val isProcessing = rule.id != null && rule.id == processingRuleId
             val status = eff(rule)
-            // Per-step server styling (v1 KYCAdapter: appConfig.getStepConfig(sortOrder)),
-            // selected by the rule's status with a "processing" override while uploading.
-            val stepConfig = config?.stepConfigForSortOrder(rule.sortOrder)
+            // Per-step server styling, selected by the rule's status with a "processing"
+            // override while uploading.
+            val stepConfig = config?.stepConfigForRule(rule)
             val style = stepStyle(stepConfig, status, isProcessing)
             // Gating is per step (v1 KYCAdapter parity): a step is selectable when its OWN
             // `mandatoryStepIDs` are satisfied. An upload in flight gates the whole flow.
@@ -170,7 +170,7 @@ internal object HomeKYCMapper {
             else rowStatus(status, isActive)
             // The step's version config carries the v2 per-document strings (estimated
             // time, rejection fallback texts).
-            val version = config?.firstVisibleVersionFor(rule.sortOrder)
+            val version = config?.firstVisibleVersionFor(rule)
             VerificationStep(
                 index = index + 1,
                 ruleId = rule.id,
@@ -267,7 +267,7 @@ internal object HomeKYCMapper {
         config: ResGetConfig?,
         statusOverrides: Map<String, String>
     ): Boolean {
-        val mandatoryIds = config?.stepConfigForSortOrder(rule.sortOrder)?.mandatoryStepIDs
+        val mandatoryIds = config?.stepConfigForRule(rule)?.mandatoryStepIDs
         if (mandatoryIds.isNullOrEmpty()) return true
         return mandatoryIds.all { mId ->
             val depStatus = rules.firstOrNull { it.id == mId }?.let { effectiveStatus(it, statusOverrides) }
@@ -331,23 +331,21 @@ internal object HomeKYCMapper {
     )
 
     /**
-     * Resolves the [StepConfig] for [sortOrder] the same way v1's `ResGetConfig.getStepConfig`
-     * does — by 1-based position in the ordered `stepConfigs` list — but null-safe instead of
-     * throwing when the index is out of range.
+     * Resolves the [StepConfig] backing [rule] by id. Deliberately NOT by `sortOrder` position
+     * (v1's `ResGetConfig.getStepConfig`): a profile whose rules start at sortOrder 0 — every
+     * profile with a before-KYC step does — shifted every row onto the previous step's config,
+     * so the first KYC row rendered the profile_info step's texts and colors.
      */
-    private fun ResGetConfig.stepConfigForSortOrder(sortOrder: Int?): StepConfig? {
-        val configs = stepConfigs ?: return null
-        val index = (sortOrder ?: return null) - 1
-        return configs.getOrNull(index)
-    }
+    private fun ResGetConfig.stepConfigForRule(rule: Rule): StepConfig? =
+        stepConfigs?.firstOrNull { it.id != null && it.id == rule.id }
 
     /**
-     * First selectable (non-hidden) [Version] of the step at [sortOrder] — the carrier of
-     * the per-document v2 strings (`v2EstimatedTime`, `v2StepRejection*`). Read-only: unlike
+     * First selectable (non-hidden) [Version] of [rule]'s step — the carrier of the per-document
+     * v2 strings (`v2EstimatedTime`, `v2StepRejection*`). Read-only: unlike
      * CaptureFlow.prepareVersions it stamps nothing onto the version objects.
      */
-    private fun ResGetConfig.firstVisibleVersionFor(sortOrder: Int?): Version? {
-        val documents = stepConfigForSortOrder(sortOrder)?.mDocuments ?: return null
+    private fun ResGetConfig.firstVisibleVersionFor(rule: Rule): Version? {
+        val documents = stepConfigForRule(rule)?.mDocuments ?: return null
         return documents.firstNotNullOfOrNull { document ->
             document?.versions?.firstOrNull { it.isHidden != true }
         }

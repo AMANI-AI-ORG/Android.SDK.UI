@@ -10,10 +10,10 @@ import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.data.repository.signature.SignatureRepoImp
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
+import ai.amani.sdk.presentation_v2.AmaniEventBus
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.extentions.sort
-import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.amani_events.error.AmaniError
@@ -105,6 +105,9 @@ class HomeKYCViewModel(
     private val errorOverrides = mutableMapOf<String, String>()
     /** Rule id currently uploading / awaiting the verdict — renders the row spinner. */
     private var processingRuleId: String? = null
+
+    /** This view model's handle on the shared [AmaniEventBus]; removed in [onCleared]. */
+    private var eventSubscriber: AmaniEventBus.Subscriber? = null
 
     private val REJECTED_STATUSES = setOf(
         AppConstant.STATUS_REJECTED,
@@ -479,24 +482,24 @@ class HomeKYCViewModel(
      * completes via [HomeKYCEffect.ProfileApproved].
      */
     /**
-     * Re-registers HomeKYC's AmaniEvent listener. The before-KYC identifier screens
-     * (profile_info / phone_otp / …) set their own listener while active (v1 parity), which
-     * overrides this one; the host calls this when the pre-KYC chain returns to Home so KYC-step
-     * verdicts are handled again before the user starts the KYC flow.
+     * Kept for the host's pre-KYC return hook. Subscriptions on the shared [AmaniEventBus] are
+     * additive, so Home never loses its events to a screen listener and this is a no-op once
+     * subscribed.
      */
     fun reattachAmaniEventListener() = listenAmaniEvents()
 
     private fun listenAmaniEvents() {
-        Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
-            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
+        if (eventSubscriber != null) return
+        eventSubscriber = AmaniEventBus.subscribe(object : AmaniEventBus.Subscriber {
+            override fun onError(type: String?, errors: ArrayList<AmaniError?>?) {
                 Timber.e("V2 AmaniEvent error type=$type")
             }
 
-            override fun profileStatus(profileStatus: ProfileStatus) {
+            override fun onProfileStatus(profileStatus: ProfileStatus) {
                 Timber.d("V2 AmaniEvent profile status received")
             }
 
-            override fun stepsResult(stepsResult: StepsResult?) {
+            override fun onStepsResult(stepsResult: StepsResult?) {
                 val results = stepsResult?.result ?: return
 
                 // Store the freshest status + rejection message per step as overlays — even
@@ -590,6 +593,12 @@ class HomeKYCViewModel(
             }
         }
         return total > 0 && total == approved
+    }
+
+    override fun onCleared() {
+        AmaniEventBus.unsubscribe(eventSubscriber)
+        eventSubscriber = null
+        super.onCleared()
     }
 
     private fun emitError(errorCode: Int) {

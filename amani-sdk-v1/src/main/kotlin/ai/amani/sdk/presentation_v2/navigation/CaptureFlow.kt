@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation_v2.navigation
 
-import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation.selfie.SelfieType
@@ -10,7 +9,7 @@ import datamanager.model.config.Version
 
 /**
  * Navigation logic for the V2 capture flow, reusing the shared SDK data layer
- * ([CachingHomeKYC], the [getStepConfig] extension) instead of re-implementing it.
+ * ([CachingHomeKYC]) instead of re-implementing it.
  *
  * It mirrors two pieces of v1 behaviour without the Fragment/NavDirections coupling:
  *  - `HomeKYCViewModel.setVersionList` → [prepareVersions]
@@ -35,6 +34,10 @@ internal object CaptureFlow {
     var currentRuleTitle: String? = null
         private set
 
+    /** Step config of the currently prepared rule — the document chooser's string source. */
+    var currentStepConfig: datamanager.model.config.StepConfig? = null
+        private set
+
     /**
      * Builds and caches the version list for [rule] from the step config, stamping each
      * version with its documentId/stepId. Mirrors `HomeKYCViewModel.setVersionList`.
@@ -43,7 +46,11 @@ internal object CaptureFlow {
         currentRuleTitle = rule.title
         val config = CachingHomeKYC.appConfig ?: return emptyList()
         val sortOrder = rule.sortOrder ?: return emptyList()
-        val stepConfig = config.getStepConfig(sortOrder)
+        // Resolved by rule id, not by sortOrder position: sortOrder is 0-based on profiles that
+        // carry a before-KYC step, which shifted the lookup onto the previous step's config.
+        val stepConfig = config.stepConfigs?.firstOrNull { it.id != null && it.id == rule.id }
+            ?: return emptyList()
+        currentStepConfig = stepConfig
         val versions = mutableListOf<Version>()
         stepConfig.mDocuments?.forEach { documentList ->
             documentList?.versions?.forEach { version ->

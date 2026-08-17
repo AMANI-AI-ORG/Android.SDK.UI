@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation_v2.select_document_type
 
-import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.presentation_v2.components.DotStep
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import androidx.compose.material.icons.Icons
@@ -23,11 +22,12 @@ internal object SelectDocumentTypeMapper {
     fun toUiState(
         versions: List<Version>,
         config: ResGetConfig?,
-        ruleTitle: String? = null
+        ruleTitle: String? = null,
+        // documentSelection* strings live on the step config; resolved by rule id upstream
+        // (CaptureFlow) rather than by sortOrder position.
+        stepConfig: datamanager.model.config.StepConfig? = null
     ): SelectDocumentTypeUiState {
         val general = config?.generalConfigs
-        // documentSelection* strings live on the step config; all versions share a stepId.
-        val stepConfig = versions.firstOrNull()?.stepId?.let { config?.getStepConfig(it) }
 
         val options = versions.map { version ->
             DocumentTypeOption(

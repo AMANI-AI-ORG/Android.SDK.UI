@@ -1,12 +1,10 @@
 package ai.amani.sdk.presentation_v2.phone_otp
 
 import ai.amani.sdk.Amani
+import ai.amani.sdk.presentation_v2.AmaniEventBus
 import ai.amani.sdk.extentions.Validator.Companion.isValidPhone
-import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.amani_events.error.AmaniErrorTypes
-import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
-import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.utils.AppConstant
 import androidx.lifecycle.ViewModel
@@ -66,6 +64,8 @@ class PhoneOtpViewModel : ViewModel() {
     val completed: SharedFlow<Unit> = _completed.asSharedFlow()
 
     private var countdownJob: Job? = null
+
+    private var eventSubscriber: AmaniEventBus.Subscriber? = null
 
     init {
         setAmaniEventListener()
@@ -151,18 +151,21 @@ class PhoneOtpViewModel : ViewModel() {
     }
 
     private fun setAmaniEventListener() {
-        Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
-            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
+        eventSubscriber = AmaniEventBus.subscribe(object : AmaniEventBus.Subscriber {
+            override fun onError(type: String?, errors: ArrayList<AmaniError?>?) {
                 if (type == AmaniErrorTypes.CUSTOMER.name) {
                     _state.update {
-                        it.copy(submitting = false, error = error?.firstOrNull()?.errorMessage?.toString())
+                        it.copy(submitting = false, error = errors?.firstOrNull()?.errorMessage?.toString())
                     }
                 }
             }
-
-            override fun profileStatus(profileStatus: ProfileStatus) {}
-            override fun stepsResult(stepsResult: StepsResult?) {}
         })
+    }
+
+    override fun onCleared() {
+        AmaniEventBus.unsubscribe(eventSubscriber)
+        eventSubscriber = null
+        super.onCleared()
     }
 
     private fun String?.orFallback(fallback: String): String =

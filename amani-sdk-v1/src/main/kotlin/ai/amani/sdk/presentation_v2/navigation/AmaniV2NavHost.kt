@@ -525,7 +525,8 @@ private fun DocumentTypeRoute(
             config = CachingHomeKYC.appConfig,
             // Nav title = the KYC step's name ("Identification"), captured when the
             // capture leg was prepared from Home.
-            ruleTitle = CaptureFlow.currentRuleTitle
+            ruleTitle = CaptureFlow.currentRuleTitle,
+            stepConfig = CaptureFlow.currentStepConfig
         )
     }
     SelectDocumentTypeScreen(
