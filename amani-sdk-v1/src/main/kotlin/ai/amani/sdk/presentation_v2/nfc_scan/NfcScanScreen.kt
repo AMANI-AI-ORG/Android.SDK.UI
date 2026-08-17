@@ -20,6 +20,8 @@ import android.content.Intent
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,10 +55,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -258,8 +264,16 @@ private fun ReadyToScanContent(
     onScan: () -> Unit
 ) {
     val palette = AmaniV2Theme.palette
-    // Start stays disabled until the explainer animation has played through once.
+
+    // Start stays visible from the start in its config color, but at 50% opacity and
+    // non-clickable until the animation has played through once; after that it becomes fully
+    // opaque and clickable.
     var animationCompleted by remember { mutableStateOf(false) }
+    val buttonAlpha by animateFloatAsState(
+        targetValue = if (animationCompleted) 1f else 0.5f,
+        animationSpec = tween(durationMillis = 300),
+        label = "nfcButtonAlpha"
+    )
 
     Column(
         modifier = modifier
@@ -271,7 +285,7 @@ private fun ReadyToScanContent(
     ) {
         Spacer(Modifier.height(24.dp))
 
-        // ── Text area (now above the animation) ─────────────────────────────────────────
+        // ── Text area (above the animation) ─────────────────────────────────────────────
         // TEMPORARY static instruction, hardcoded so we don't touch the server config yet.
         // TODO: remove this static text and restore the config value (was `texts.title`) once
         //       the config copy is updated.
@@ -312,16 +326,20 @@ private fun ReadyToScanContent(
         }
 
         Spacer(Modifier.weight(1f))
-        // V2 design animation (nfc_animation_v2.json): the full NFC-read explainer with a
-        // native, per-state caption. Colors stay exactly as authored in the JSON; only its baked
-        // background fill is made transparent. Enables Start when the first loop completes.
+        // V2 design animation (nfc_animation_v2.json): the full NFC-read explainer with a native,
+        // per-state caption. Enables Start once its first play-through completes.
         NfcThemedAnimation(onFirstLoopComplete = { animationCompleted = true })
         Spacer(Modifier.weight(1f))
 
         PrimaryButton(
             text = texts.continueButtonText,
             enabled = animationCompleted,
-            onClick = onScan
+            onClick = onScan,
+            modifier = Modifier.alpha(buttonAlpha),
+            // Keep the config color while disabled (dimmed to 70% by the alpha above), rather
+            // than falling back to Material's greyed disabled color.
+            disabledContainerColor = palette.accent,
+            disabledContentColor = palette.primaryButtonText
         )
         Spacer(Modifier.height(AmaniV2Dimens.screenPadding))
     }
@@ -349,6 +367,14 @@ private object NfcAnimationCopy {
         132 to "dontMove", 164 to "remove", 224 to "retry", 267 to "success"
     )
 }
+
+/**
+ * The nfc_animation_v2 subject sits inside its 800x600 canvas with baked padding on every side,
+ * so at full container width it still shows left/right gaps. Rendering the art scaled by this
+ * factor crops that padding and lets it fill the width almost edge-to-edge. The scale is uniform,
+ * so the art's natural aspect ratio is preserved (vertical overflow is clipped by the container).
+ */
+private const val NFC_ART_FILL_SCALE = 1.25f
 
 /**
  * V2 NFC brand animation: plays `nfc_animation_v2.json` on a loop with its original authored
@@ -407,13 +433,31 @@ private fun NfcThemedAnimation(
     val caption = NfcAnimationCopy.texts[stateKey].orEmpty()
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        LottieAnimation(
-            composition = composition,
-            progress = { progress },
-            dynamicProperties = dynamicProperties,
-            // Scale with the screen: full available width, height following the art's 4:3 ratio.
-            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f)
-        )
+        Box(
+            modifier = Modifier
+                // Self-size to the art's 4:3 ratio at full width.
+                .fillMaxWidth()
+                .aspectRatio(4f / 3f)
+                // The scaled art overflows this box; clip so the cropped side padding (and any
+                // vertical overflow) is cut rather than drawn over the caption.
+                .clipToBounds()
+        ) {
+            LottieAnimation(
+                composition = composition,
+                progress = { progress },
+                dynamicProperties = dynamicProperties,
+                contentScale = ContentScale.Fit,
+                // The art sits inside its 800x600 canvas with baked side padding, so at full
+                // width it still shows left/right gaps. Scale it up uniformly (aspect preserved,
+                // natural height) to crop that padding and fill the width edge-to-edge.
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = NFC_ART_FILL_SCALE
+                        scaleY = NFC_ART_FILL_SCALE
+                    }
+            )
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             caption,
@@ -856,7 +900,10 @@ private fun NfcAnimationStatePreview(
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            NfcThemedAnimation(previewStateKey = stateKey)
+            NfcThemedAnimation(
+                modifier = Modifier.fillMaxSize(),
+                previewStateKey = stateKey
+            )
         }
     }
 }

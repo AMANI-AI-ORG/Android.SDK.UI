@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
@@ -29,9 +30,26 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
     enabled: Boolean = true,
+    // When set, the disabled button keeps these colors instead of Material's greyed defaults —
+    // e.g. to show the config color at reduced opacity (via a caller alpha) while non-clickable.
+    disabledContainerColor: Color? = null,
+    disabledContentColor: Color? = null,
     onClick: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
+    val colors = if (disabledContainerColor != null) {
+        ButtonDefaults.buttonColors(
+            containerColor = palette.accent,
+            contentColor = palette.primaryButtonText,
+            disabledContainerColor = disabledContainerColor,
+            disabledContentColor = disabledContentColor ?: palette.primaryButtonText
+        )
+    } else {
+        ButtonDefaults.buttonColors(
+            containerColor = palette.accent,
+            contentColor = palette.primaryButtonText
+        )
+    }
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -41,10 +59,7 @@ fun PrimaryButton(
         shape = RoundedCornerShape(AmaniV2Dimens.buttonRadius.scaled()),
         // GeneralConfigs.primaryButtonBorderColor; the default is transparent (borderless).
         border = BorderStroke(1.dp, palette.primaryButtonBorder),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = palette.accent,
-            contentColor = palette.primaryButtonText
-        )
+        colors = colors
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
