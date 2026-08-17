@@ -2,6 +2,7 @@ package ai.amani.sample
 
 import AmaniSDKUI
 import ai.amani.sdk.model.KYCResult
+import ai.amani.sdk.model.UIStyle
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Intent
@@ -57,6 +58,7 @@ class MainRegisterActivity : AppCompatActivity() {
             AmaniSDKUI.setSelfieCaptureVideoRecord(true)
             */
 
+            AmaniSDKUI.setUIStyle(UIStyle.V2)
             AmaniSDKUI.setSelfiePoseEstimationV2PreparationVideo(R.raw.pose_video)
 
             hideKeyboard()
@@ -70,8 +72,8 @@ class MainRegisterActivity : AppCompatActivity() {
                 activity = this,
                 resultLauncher = resultLauncher,
                 idNumber = inputIdLabel.text.toString(),
-                authToken = "TestCredentials.TOKEN",
-                language = "tr",
+                authToken = TestCredentials.TOKEN,
+                language = "en",
                 geoLocation = true,
                 birthDate = inputBirthDateLabel.text.toString(),
                 expireDate = inputExpiryDateLabel.text.toString(),

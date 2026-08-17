@@ -134,6 +134,15 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"
     implementation "androidx.lifecycle:lifecycle-runtime-compose:2.8.7"
 
+    // Lottie for Compose (V2). lottie-compose renders inside @Preview (unlike the
+    // view-based LottieAnimationView hosted via AndroidView, which is blank in inspection).
+    // NOTE: this pulls lottie core up from the 3.6.1 that AmaniAi transitively provides to
+    // 6.x for the whole module — the version-based usages in v1 (NfcScanScreen, selfie
+    // instruction animations) resolve to 6.x too. Pinned together to avoid a split.
+    def lottie_version = "6.1.0"
+    implementation "com.airbnb.android:lottie:$lottie_version"
+    implementation "com.airbnb.android:lottie-compose:$lottie_version"
+
     // AmaniSDK impl
     def amani_sdk = "3.21.0"
     api "ai.amani.android:AmaniAi:$amani_sdk"
@@ -173,7 +182,7 @@ afterEvaluate {
 
                 groupId = 'com.github.AMANI-AI-ORG'
                 artifactId = 'Android.SDK.UI'
-                version = '1.42.0alpha14'
+                version = '1.42.0'
             }
         }
     }

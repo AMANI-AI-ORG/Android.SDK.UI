@@ -10,4 +10,9 @@
     <string name="expiry_date">EXPIRE DATE (YYMMDD)</string>
     <string name="birth_date">BIRTH DATE (YYMMDD)</string>
 
+    <string name="entry_title">Amani Verify</string>
+    <string name="entry_subtitle">Select your country, then scan the QR code to start verification.</string>
+    <string name="select_country">Country</string>
+    <string name="scan_qr">SCAN QR CODE</string>
+
 </resources>

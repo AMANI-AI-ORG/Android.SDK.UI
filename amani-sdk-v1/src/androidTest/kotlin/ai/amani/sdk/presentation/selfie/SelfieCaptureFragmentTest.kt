@@ -164,6 +164,7 @@ class SelfieCaptureFragmentTest {
                 any(), any(), any(), any(), any()
             )
         } returns v2
+        every { v2.onUiStateChanged(any()) } returns v2
         every { v2.faceGuideDrawable(any()) } returns v2
         every { v2.ovalViewAnimationDurationMilSec(any()) } returns v2
         every { v2.videoRecord(any()) } returns v2
