@@ -510,8 +510,8 @@ private fun startCaptureFlowForRule(
 /**
  * Document type destination. Maps the prepared step's selectable versions into the
  * stateless [SelectDocumentTypeScreen] (the same server data v1's
- * SelectDocumentTypeFragment renders) and holds the local selection so the user can pick
- * a card and continue. [onContinue] receives the chosen [datamanager.model.config.Version].
+ * SelectDocumentTypeFragment renders). Tapping a card starts that document right away;
+ * [onContinue] receives the chosen [datamanager.model.config.Version].
  */
 @Composable
 private fun DocumentTypeRoute(
@@ -528,17 +528,11 @@ private fun DocumentTypeRoute(
             ruleTitle = CaptureFlow.currentRuleTitle
         )
     }
-    var selectedId by rememberSaveable { mutableStateOf(state.selectedId) }
-
     SelectDocumentTypeScreen(
-        state = state.copy(selectedId = selectedId),
+        state = state,
         modifier = modifier,
         onBack = onBack,
-        onSelect = { selectedId = it.id },
-        onContinue = {
-            val versionType = selectedId ?: return@SelectDocumentTypeScreen
-            CaptureFlow.versionByType(versionType)?.let(onContinue)
-        }
+        onSelect = { option -> CaptureFlow.versionByType(option.id)?.let(onContinue) }
     )
 }
 

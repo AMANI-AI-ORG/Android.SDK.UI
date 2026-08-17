@@ -57,15 +57,7 @@ internal object SelectDocumentTypeMapper {
             title = stepConfig?.documentSelectionTitle.orFallback("Which document will you use?"),
             subtitle = stepConfig?.documentSelectionDescription
                 .orFallback("Choose a government-issued ID. Make sure it's valid and not expired."),
-            options = options,
-            // Preselect the first document (HTML shows the top option already chosen).
-            selectedId = options.firstOrNull()?.id,
-            // CTA names the selected document ("Continue with Global ID Card"); with no
-            // selection it shows the config placeholder and stays disabled.
-            continuePrefix = general?.v2HomeCtaContinue.orFallback("Continue with"),
-            placeholder = (versions.firstOrNull()?.v2DocSelectionPlaceholder)
-                .orFallback("Select an ID type to continue"),
-            continueButtonText = general?.continueText.orFallback("Continue")
+            options = options
         )
     }
 

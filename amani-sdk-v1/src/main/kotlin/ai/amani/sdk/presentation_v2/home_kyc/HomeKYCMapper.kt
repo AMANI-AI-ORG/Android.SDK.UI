@@ -168,11 +168,6 @@ internal object HomeKYCMapper {
                 isUnlocked(rule, rules, config, statusOverrides)
             val rowStatus = if (isProcessing) StepRowStatus.Processing
             else rowStatus(status, isActive)
-            // Primary-button label to show while this step is selected — same prefix logic
-            // as the default CTA below, per step. Only actionable rows carry one.
-            val ctaLabel = if (rowStatus == StepRowStatus.Active || rowStatus == StepRowStatus.Rejected) {
-                "${ctaPrefix(status, doneCount, g)} ${stepConfig?.buttonText?.notUploaded.orEmpty()}".trim()
-            } else null
             // The step's version config carries the v2 per-document strings (estimated
             // time, rejection fallback texts).
             val version = config?.firstVisibleVersionFor(rule.sortOrder)
@@ -198,7 +193,6 @@ internal object HomeKYCMapper {
                 // Config pair for the status: buttonColor + buttonTextColor (see StepRow).
                 fillColor = style.fillColor,
                 textColor = style.textColor,
-                ctaLabel = ctaLabel,
                 error = if (isProcessing) null else errorFor(
                     status = status,
                     // Fresh socket / upload message wins; otherwise fall back to the
@@ -237,31 +231,13 @@ internal object HomeKYCMapper {
             )
         }
 
-        // CTA names the step it will start: "Start with Identification" on a fresh flow,
-        // "Continue with Selfie" mid-flow, "Retake Identification" after a rejection. While
-        // a step is uploading (nothing actionable) the label still names the next step but
-        // the button is disabled. No step at all → plain config continue text.
-        val ctaRule = activeIndex.takeIf { it >= 0 }?.let { rules[it] }
-            ?: rules.firstOrNull { !isDone(eff(it)) && it.id != processingRuleId }
-        val primaryButtonText = if (ctaRule != null) {
-            "${ctaPrefix(eff(ctaRule), doneCount, g)} ${ctaRule.title.orEmpty()}".trim()
-        } else {
-            g?.continueText.orFallback("Continue")
-        }
-
         return HomeKYCUiState(
             // Config-driven: GeneralConfigs.mainTitleText (v1 toolbar title), fallback when blank/null.
             headerTitle = g?.mainTitleText.orFallback("Verification"),
             dots = dots,
             title = title,
             subtitle = subtitle,
-            steps = steps,
-            primaryButtonText = primaryButtonText,
-            // The primary button only advances when there's a step ready for the user. It
-            // is disabled while the active step is uploading / awaiting its verdict (and the
-            // next step is still locked behind it), and re-enables once that step is approved
-            // and the next becomes active.
-            primaryButtonEnabled = activeIndex >= 0
+            steps = steps
         )
     }
 
@@ -285,19 +261,6 @@ internal object HomeKYCMapper {
      * keeps a dependent step Locked while the step it depends on is still processing /
      * uploading, and unlocks it once that prerequisite is approved.
      */
-    /**
-     * CTA verb prefix for a step given its status and the overall progress: "Retake" for a
-     * rejected step, "Continue with" once something is done, otherwise "Start with" (all
-     * config-driven with fallbacks). Shared by the default primary label and each step's
-     * per-selection [VerificationStep.ctaLabel].
-     */
-    private fun ctaPrefix(status: String?, doneCount: Int, g: datamanager.model.config.GeneralConfigs?): String =
-        when {
-            status in REJECTED_STATUSES -> g?.v2HomeCtaRetake.orFallback("Retake")
-            doneCount > 0 -> g?.v2HomeCtaContinue.orFallback("Continue with")
-            else -> g?.v2HomeCtaStart.orFallback("Start with")
-        }
-
     private fun isUnlocked(
         rule: Rule,
         rules: List<Rule>,

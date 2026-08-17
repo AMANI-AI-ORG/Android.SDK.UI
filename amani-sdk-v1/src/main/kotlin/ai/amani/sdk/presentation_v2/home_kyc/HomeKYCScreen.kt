@@ -2,7 +2,6 @@ package ai.amani.sdk.presentation_v2.home_kyc
 
 import ai.amani.sdk.presentation_v2.components.AmaniV2Loader
 import ai.amani.sdk.presentation_v2.components.DotStep
-import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.components.StepRow
 import ai.amani.sdk.presentation_v2.components.StepRowStatus
@@ -28,10 +27,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,11 +44,7 @@ data class HomeKYCUiState(
     // Blank/null means "no large heading" and the screen skips rendering it entirely.
     val title: String?,
     val subtitle: String,
-    val steps: List<VerificationStep>,
-    val primaryButtonText: String,
-    // False disables the primary button: there is no step ready for the user right now
-    // (e.g. the active step is uploading / awaiting its verdict and the next is locked).
-    val primaryButtonEnabled: Boolean = true
+    val steps: List<VerificationStep>
 )
 
 /**
@@ -75,8 +66,7 @@ fun HomeKYCScreen(
     state: HomeKYCScreenState,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    // Start the given step (its backing rule id). Called by the primary button with the
-    // currently-selected step — the user picks a step by tapping a row, then presses this.
+    // Start the given step (its backing rule id). Called when an actionable row is tapped.
     onStartStep: (ruleId: String?) -> Unit = {}
 ) {
     when (state) {
@@ -101,20 +91,9 @@ private fun HomeKYCContent(
     val palette = AmaniV2Theme.palette
     val contentMaxWidth = amaniV2ContentMaxWidth()
 
-    // A step is actionable (selectable + startable) when it's Active or Rejected.
+    // A step is startable when it's Active or Rejected; tapping it opens that step directly.
     fun VerificationStep.actionable() =
         status == StepRowStatus.Active || status == StepRowStatus.Rejected
-
-    // Local selection: which step the primary button will start. Defaults to the first
-    // actionable step; re-seeded whenever the set of actionable steps changes (e.g. a
-    // verdict lands and the next step unlocks). Tapping a row moves the selection.
-    val actionableIds = state.steps.filter { it.actionable() }.mapNotNull { it.ruleId }
-    var selectedRuleId by remember(actionableIds) {
-        mutableStateOf(actionableIds.firstOrNull())
-    }
-    val selectedStep = state.steps.firstOrNull { it.ruleId != null && it.ruleId == selectedRuleId }
-    val buttonText = selectedStep?.ctaLabel ?: state.primaryButtonText
-    val buttonEnabled = selectedRuleId != null && state.primaryButtonEnabled
 
     Column(
         modifier = modifier
@@ -160,35 +139,18 @@ private fun HomeKYCContent(
             Spacer(Modifier.height(28.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 state.steps.forEach { step ->
-                    // Actionable rows (Active/Rejected) are tappable to SELECT that step; the
-                    // bottom button then starts the selected one. Other statuses are inert.
-                    val actionable = step.actionable()
                     StepRow(
                         step = step,
-                        selected = actionable && step.ruleId != null && step.ruleId == selectedRuleId,
-                        onClick = if (actionable) {
-                            { selectedRuleId = step.ruleId }
+                        onClick = if (step.actionable()) {
+                            { onStartStep(step.ruleId) }
                         } else null
                     )
                 }
             }
+            // Clear the system navigation bar so the last row isn't overlapped on devices
+            // that draw a bottom nav bar (gesture / 3-button).
             Spacer(Modifier.height(24.dp))
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = contentMaxWidth)
-                // Clear the system navigation bar so the button isn't overlapped on devices
-                // that draw a bottom nav bar (gesture / 3-button).
-                .navigationBarsPadding()
-                .padding(horizontal = AmaniV2Dimens.screenPadding)
-                .padding(bottom = 20.dp)
-        ) {
-            PrimaryButton(
-                text = buttonText,
-                enabled = buttonEnabled,
-                onClick = { onStartStep(selectedRuleId) }
-            )
+            Spacer(Modifier.navigationBarsPadding())
         }
     }
 }
@@ -208,8 +170,7 @@ internal val SampleHomeKYCStart = HomeKYCUiState(
         VerificationStep(1, "Upload your ID", "Start here · ~30 sec", StepRowStatus.Active),
         VerificationStep(2, "Take a selfie", "~30 sec", StepRowStatus.Locked),
         VerificationStep(3, "Verify address", "~1 min", StepRowStatus.Locked)
-    ),
-    primaryButtonText = "Start with ID"
+    )
 )
 
 internal val SampleHomeKYCMid = HomeKYCUiState(
@@ -225,8 +186,7 @@ internal val SampleHomeKYCMid = HomeKYCUiState(
         VerificationStep(1, "ID uploaded", "Verified", StepRowStatus.Done),
         VerificationStep(2, "Take a selfie", "Up next · ~30 sec", StepRowStatus.Active),
         VerificationStep(3, "Verify address", "~1 min", StepRowStatus.Locked)
-    ),
-    primaryButtonText = "Continue with selfie"
+    )
 )
 
 internal val SampleHomeKYCRejected = HomeKYCUiState(
@@ -248,8 +208,7 @@ internal val SampleHomeKYCRejected = HomeKYCUiState(
         ),
         VerificationStep(2, "Take a selfie", "~30 sec", StepRowStatus.Locked),
         VerificationStep(3, "Verify address", "~1 min", StepRowStatus.Locked)
-    ),
-    primaryButtonText = "Retake ID photo"
+    )
 )
 
 @Preview(name = "HomeKYC — loading", showBackground = true, widthDp = 360, heightDp = 740)
