@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import timber.log.Timber
 
 /**
  * Host activity for the V2 (Jetpack Compose) UI style. Launched by
@@ -100,6 +101,38 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
         returnIntent.putExtra(
             AppConstant.KYC_RESULT,
             ai.amani.sdk.model.KYCResult(profileStatus = ai.amani.sdk.utils.ProfileStatus.APPROVED)
+        )
+        setResult(RESULT_OK, returnIntent)
+        finish()
+    }
+
+    /**
+     * Finishes the flow after the user closed it themselves (back / exit): an empty
+     * `KYCResult` — INCOMPLETE profile status, no error code — exactly what v1 returns from
+     * its back-press handler, so the host can tell "user quit" from "SDK failed".
+     */
+    private fun finishCancelled() {
+        val returnIntent = Intent()
+        returnIntent.putExtra(AppConstant.KYC_RESULT, ai.amani.sdk.model.KYCResult())
+        setResult(RESULT_OK, returnIntent)
+        finish()
+    }
+
+    /**
+     * Finishes the flow reporting WHY it closed: the same `KYCResult` Intent contract v1 uses
+     * on its error/exception exits (HomeKYCFragment `Finish.OnError` / `Finish.OnException`),
+     * so a host that only ever sees the SDK close still gets the error code and, when the
+     * failure carried one, the throwable.
+     */
+    private fun finishWithError(errorCode: Int, exception: Throwable?) {
+        Timber.e("V2 KYC flow failed, errorCode: $errorCode, exception: $exception")
+        val returnIntent = Intent()
+        returnIntent.putExtra(
+            AppConstant.KYC_RESULT,
+            ai.amani.sdk.model.KYCResult(
+                errorCode = errorCode,
+                generalException = exception
+            )
         )
         setResult(RESULT_OK, returnIntent)
         finish()
@@ -230,7 +263,7 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                         AmaniV2NavHost(
                             navigator = navigator,
                             homeContent = current.content,
-                            onExit = { finish() },
+                            onExit = { finishCancelled() },
                             // Capture leg finished (final side confirmed): upload through the
                             // shared SDK layer. The view model marks the matching home step as
                             // processing and listens to AmaniEvents for the verdict.
@@ -265,8 +298,8 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                         )
                     }
 
-                    // TODO(wiring): surface the SDK error code to the caller before exit.
-                    is HomeKYCState.Failed -> finish()
+                    is HomeKYCState.Failed ->
+                        finishWithError(current.errorCode, current.exception)
                 }
             }
         }

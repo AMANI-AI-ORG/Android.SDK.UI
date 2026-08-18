@@ -201,7 +201,6 @@ class EmailVerifyFragment: Fragment() {
         binding.resetPasswordDesc.text = viewModel.version?.steps?.first()?.captureDescription
         binding.otpText.text = viewModel.version?.emailTitle
         binding.emailInput.hint = viewModel.version?.emailHint
-        //TODO change the button text from version
         binding.continueBtn.text = args.data.config.continueText
 
         binding.continueBtn.setBackgroundDrawable(

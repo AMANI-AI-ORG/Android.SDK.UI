@@ -424,7 +424,7 @@ class HomeKYCViewModel(
             onStart = { Timber.d("V2 HomeKYC: fetching customer detail") },
             onError = { throwable ->
                 Timber.e("V2 HomeKYC: customer detail error $throwable")
-                emitError(AmaniUIErrorConstants.CUSTOMER_DETAIL_FETCH_ERROR)
+                emitError(AmaniUIErrorConstants.CUSTOMER_DETAIL_FETCH_ERROR, throwable)
             },
             onComplete = { customerDetail ->
                 CachingHomeKYC.customerDetail = customerDetail
@@ -604,8 +604,8 @@ class HomeKYCViewModel(
         super.onCleared()
     }
 
-    private fun emitError(errorCode: Int) {
-        _state.value = HomeKYCState.Failed(errorCode)
+    private fun emitError(errorCode: Int, exception: Throwable? = null) {
+        _state.value = HomeKYCState.Failed(errorCode, exception)
         sendEffect(HomeKYCEffect.Error(errorCode))
     }
 

@@ -25,5 +25,13 @@ sealed interface HomeKYCState {
         val content: HomeKYCUiState
     ) : HomeKYCState
 
-    data class Failed(val errorCode: Int) : HomeKYCState
+    /**
+     * Terminal failure. [errorCode] is the SDK/HTTP code and [exception] the throwable when
+     * the failure came from one (a customer-detail fetch, say) — both are handed back to the
+     * caller in the exit `KYCResult` so a closed SDK always reports why it closed.
+     */
+    data class Failed(
+        val errorCode: Int,
+        val exception: Throwable? = null
+    ) : HomeKYCState
 }

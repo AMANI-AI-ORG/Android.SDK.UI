@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Height of the dot row at the top of each step column. The connectors share this height so
@@ -153,13 +154,15 @@ private fun DotItem(
             StepStatus.Pending -> if (onDark) Color.White.copy(alpha = 0.5f) else palette.ink.copy(alpha = 0.35f)
         }
         val weight = if (step.status == StepStatus.Current) FontWeight.SemiBold else FontWeight.Medium
-        // Labels wrap to 2 lines and then ellipsize. [LabelGap] keeps neighbouring columns'
-        // labels apart so long titles never run into each other.
+        // Multi-word labels wrap (up to 2 lines); a single word stays on one line and
+        // ellipsizes instead of being broken across lines mid-word. [LabelGap] keeps
+        // neighbouring columns' labels apart so long titles never run into each other.
+        val isSingleWord = step.label.trim().none { it.isWhitespace() }
         Text(
             step.label,
-            style = AmaniV2Type.label.copy(fontWeight = weight).scaled(),
+            style = AmaniV2Type.label.copy(fontWeight = weight, fontSize = 9.sp).scaled(),
             color = labelColor,
-            maxLines = 2,
+            maxLines = if (isSingleWord) 1 else 2,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = LabelGap),

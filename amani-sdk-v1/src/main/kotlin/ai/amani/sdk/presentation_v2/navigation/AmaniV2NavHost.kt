@@ -407,9 +407,10 @@ fun AmaniV2NavHost(
                 if (version == null) {
                     navigator.popToRoot()
                 } else {
-                    // First step plays animation_first_selfie_instruction; the pose-estimation
-                    // flow chains a second step with animation_second_selfie_instruction — the
-                    // same assets the legacy v1 selfie screen played.
+                    // First step plays animation_first_selfie_instruction (same asset v1
+                    // plays); the pose-estimation step uses the V2-only
+                    // animation_pose_estimation_v2 asset — v1's selfie screen keeps
+                    // animation_second_selfie_instruction.
                     val isFirst = destination.step == SelfieGuideStep.First
                     SelfieGuideScreen(
                         state = SelfieMapper.toGuideState(
@@ -420,7 +421,7 @@ fun AmaniV2NavHost(
                         animationRes = if (isFirst) {
                             R.raw.animation_first_selfie_instruction
                         } else {
-                            R.raw.animation_second_selfie_instruction
+                            R.raw.animation_pose_estimation_v2
                         },
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // "Open camera" advances to the next guide step (pose estimation) or
