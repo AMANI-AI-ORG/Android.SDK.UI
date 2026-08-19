@@ -54,6 +54,14 @@ class EmailOtpViewModel : ViewModel() {
     private val version = step?.mDocuments?.firstOrNull()?.versions?.firstOrNull()
     private val general = CachingHomeKYC.appConfig?.generalConfigs
 
+    /** Server copy for a call that failed without its own message. */
+    private val genericError =
+        general?.v2GenericErrorText.orFallback("Something went wrong. Please try again.")
+
+    /** Server copy for a rejected OTP code. */
+    private val invalidOtpError =
+        general?.v2InvalidOtpText.orFallback("The code is invalid. Please try again.")
+
     private val _state = MutableStateFlow(contactState())
     val state: StateFlow<EmailOtpUiState> = _state.asStateFlow()
 
@@ -108,7 +116,7 @@ class EmailOtpViewModel : ViewModel() {
         Amani.sharedInstance().CustomerInfo().setInfo(email = email)
         Amani.sharedInstance().CustomerInfo().upload { uploaded ->
             if (!uploaded) {
-                _state.update { it.copy(submitting = false, error = "Something went wrong. Please try again.") }
+                _state.update { it.copy(submitting = false, error = genericError) }
                 return@upload
             }
             Amani.sharedInstance().CustomerInfo().sendEmailOTP { sent ->
@@ -116,7 +124,7 @@ class EmailOtpViewModel : ViewModel() {
                     _state.value = codeState()
                     startCountdown()
                 } else {
-                    _state.update { it.copy(submitting = false, error = "Something went wrong. Please try again.") }
+                    _state.update { it.copy(submitting = false, error = genericError) }
                 }
             }
         }

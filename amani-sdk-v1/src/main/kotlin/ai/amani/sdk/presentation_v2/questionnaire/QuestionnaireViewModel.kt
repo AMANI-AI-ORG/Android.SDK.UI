@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation_v2.questionnaire
 
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.Amani
 import ai.amani.sdk.data.mapper.QuestionnaireMapper.asSDKSubmitAnswerModel
 import ai.amani.sdk.presentation.otp.questions.SurveyResponse
@@ -38,6 +39,16 @@ class QuestionnaireViewModel : ViewModel() {
 
     private var questions: List<QuestionUi> = emptyList()
 
+    private val general = CachingHomeKYC.appConfig?.generalConfigs
+
+    /** Server copy for a questions fetch that failed without its own message. */
+    private val fetchError = general?.v2QuestionnaireErrorText
+        ?.takeIf { it.isNotBlank() } ?: "Something went wrong!"
+
+    /** Server copy for a failed answer submission. */
+    private val submitError = general?.v2QuestionnaireSubmitErrorText
+        ?.takeIf { it.isNotBlank() } ?: "Could not submit your answers. Please try again."
+
     init {
         fetchQuestions()
     }
@@ -56,8 +67,10 @@ class QuestionnaireViewModel : ViewModel() {
                 }
                 emitReady()
             },
-            onError = {
-                _state.value = QuestionnaireScreenState.Error("Something went wrong!")
+            onError = { error ->
+                _state.value = QuestionnaireScreenState.Error(
+                    error.message?.takeIf { it.isNotBlank() } ?: fetchError
+                )
             }
         )
     }
@@ -110,7 +123,7 @@ class QuestionnaireViewModel : ViewModel() {
             onComplete = { _completed.tryEmit(Unit) },
             onError = { error ->
                 _state.value = QuestionnaireScreenState.Error(
-                    error.message ?: "Could not submit your answers. Please try again."
+                    error.message?.takeIf { it.isNotBlank() } ?: submitError
                 )
             }
         )

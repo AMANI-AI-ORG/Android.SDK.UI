@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation_v2.questionnaire
 
 import ai.amani.sdk.presentation_v2.components.AmaniV2Loader
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
@@ -58,6 +59,9 @@ fun QuestionnaireRoute(
     onCompleted: () -> Unit,
     modifier: Modifier = Modifier,
     submitButtonText: String = "Continue",
+    // v1 parity: the error-state retry button reads GeneralConfigs.tryAgainText.
+    tryAgainText: String = CachingHomeKYC.appConfig?.generalConfigs?.tryAgainText
+        ?.takeIf { it.isNotBlank() } ?: "Try again",
     viewModel: QuestionnaireViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -68,6 +72,7 @@ fun QuestionnaireRoute(
         state = state,
         headerTitle = headerTitle,
         submitButtonText = submitButtonText,
+        tryAgainText = tryAgainText,
         onBack = onBack,
         onSingleSelect = viewModel::onSingleSelect,
         onMultiToggle = viewModel::onMultiToggle,
@@ -94,6 +99,7 @@ fun QuestionnaireScreen(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
     submitButtonText: String = "Continue",
+    tryAgainText: String = "Try again",
     onRetry: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
@@ -121,7 +127,7 @@ fun QuestionnaireScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(state.message, style = AmaniV2Type.body.scaled(), color = palette.inkMuted)
                     Spacer(Modifier.height(16.dp))
-                    PrimaryButton(text = "Try again", onClick = onRetry)
+                    PrimaryButton(text = tryAgainText, onClick = onRetry)
                 }
             }
 

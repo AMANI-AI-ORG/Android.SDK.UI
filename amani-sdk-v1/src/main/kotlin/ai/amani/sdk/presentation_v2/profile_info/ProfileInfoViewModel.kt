@@ -86,18 +86,29 @@ class ProfileInfoViewModel : ViewModel() {
         super.onCleared()
     }
 
+    private val general = CachingHomeKYC.appConfig?.generalConfigs
+
+    /** Server copy for a call that failed without its own message. */
+    private val genericError =
+        general?.v2GenericErrorText.orFallback("Something went wrong. Please try again.")
+
+    /** Server copy for a step the backend rejected. */
+    private val stepRejectedError =
+        general?.v2StepRejectedText.orFallback("This step is rejected.")
+
     private fun initialState(): ProfileInfoUiState {
-        val general = CachingHomeKYC.appConfig?.generalConfigs
         val captureStep = version?.steps?.firstOrNull()
         return ProfileInfoUiState(
             headerTitle = captureStep?.captureTitle.orFallback("Profile"),
             description = version?.steps?.firstOrNull()?.captureDescription.orEmpty(),
-            nameTitle = version?.nameTitle.orEmpty(),
-            nameHint = version?.nameHint.orEmpty(),
-            surnameTitle = version?.surnameTitle.orEmpty(),
-            surnameHint = version?.surnameHint.orEmpty(),
-            birthDateTitle = version?.birthDateTitle.orEmpty(),
-            birthDateHint = version?.birthDateHint.orEmpty(),
+            // v1 ProfileInfoFragment reads the same version labels/hints; a blank config value
+            // would render an unlabelled field, so each falls back to a readable default.
+            nameTitle = version?.nameTitle.orFallback("Name"),
+            nameHint = version?.nameHint.orFallback("Name"),
+            surnameTitle = version?.surnameTitle.orFallback("Surname"),
+            surnameHint = version?.surnameHint.orFallback("Surname"),
+            birthDateTitle = version?.birthDateTitle.orFallback("Date of birth"),
+            birthDateHint = version?.birthDateHint.orFallback("DD.MM.YYYY"),
             continueText = general?.continueText.orFallback("Continue")
         )
     }
@@ -121,7 +132,7 @@ class ProfileInfoViewModel : ViewModel() {
             if (success) {
                 awaitVerdict()
             } else {
-                _state.update { it.copy(submitting = false, error = "Something went wrong. Please try again.") }
+                _state.update { it.copy(submitting = false, error = genericError) }
             }
         }
     }
@@ -157,7 +168,7 @@ class ProfileInfoViewModel : ViewModel() {
     }
 
     private fun failed() {
-        _state.update { it.copy(submitting = false, error = "Something went wrong. Please try again.") }
+        _state.update { it.copy(submitting = false, error = genericError) }
     }
 
     private fun setAmaniEventListener() {
@@ -169,7 +180,7 @@ class ProfileInfoViewModel : ViewModel() {
                             AppConstant.STATUS_APPROVED -> complete()
                             AppConstant.STATUS_REJECTED -> {
                                 verdictFallbackJob?.cancel()
-                                _state.update { it.copy(submitting = false, error = "Profile info step is rejected.") }
+                                _state.update { it.copy(submitting = false, error = stepRejectedError) }
                             }
                         }
                     }

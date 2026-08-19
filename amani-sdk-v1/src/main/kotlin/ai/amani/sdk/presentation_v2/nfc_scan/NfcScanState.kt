@@ -34,7 +34,15 @@ data class NfcTexts(
     val enableNfcHeader: String,
     val enableNfcDescription: String,
     val enableNfcButton: String,
-    val animationColorHex: String?
+    val animationColorHex: String?,
+    /**
+     * Copy for each NFC animation state, keyed by the animation's state markers
+     * (`place`, `detected`, … `success`) — server `nfcV2.animationStates` merged over the
+     * SDK defaults (see [NfcV2AnimationCopy]).
+     */
+    val animationStates: Map<String, String> = NfcV2AnimationCopy.DEFAULTS,
+    /** Line above the animation — server `nfcV2.animationHint`. */
+    val animationHint: String = ""
 )
 
 /**

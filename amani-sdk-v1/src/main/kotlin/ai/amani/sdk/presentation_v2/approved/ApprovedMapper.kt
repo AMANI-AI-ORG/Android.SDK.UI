@@ -5,23 +5,20 @@ import datamanager.model.config.GeneralConfigs
 
 /**
  * Maps the app [GeneralConfigs] (+ the completed KYC rules) into the stateless
- * [ApprovedUiState]. Config-driven where a GeneralConfigs field exists — the same
- * success* fields v1's CongratulationsFragment reads — with fallbacks; the remaining
- * copy has no config source yet and is static.
+ * [ApprovedUiState]. Every string is config-driven — the success* fields v1's
+ * CongratulationsFragment reads, plus the v2-only badge/card titles — each with a fallback.
  */
 internal object ApprovedMapper {
 
     fun toUiState(general: GeneralConfigs?, rules: List<Rule>?): ApprovedUiState =
         ApprovedUiState(
             headerTitle = general?.successTitle.orFallback("Verification"),
-            // TODO: config-driven
-            badgeText = "Approved instantly",
+            badgeText = general?.v2ApprovedBadgeText.orFallback("Approved instantly"),
             title = general?.successHeaderText.orFallback("You're verified"),
             subtitle = general?.successInfo1Text.orFallback(
                 "Your account is ready to use. Welcome aboard."
             ),
-            // TODO: config-driven
-            cardTitle = "All checks passed",
+            cardTitle = general?.v2ApprovedCardTitle.orFallback("All checks passed"),
             cardSubtitle = general?.successInfo2Text.orFallback(
                 "Document, biometric, and chip verified"
             ),

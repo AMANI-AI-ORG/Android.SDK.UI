@@ -17,6 +17,15 @@ import datamanager.model.config.Version
  */
 internal object CaptureMapper {
 
+    /**
+     * Config prefix placed before the eyebrow label on a two-sided document, with `{current}`
+     * and `{total}` filled in (e.g. "Step 1 of 2 · ").
+     */
+    private fun stepPrefix(version: Version, current: Int, total: Int): String =
+        version.v2GuideStepPrefix.orFallback("Step {current} of {total} · ")
+            .replace("{current}", current.toString())
+            .replace("{total}", total.toString())
+
     private fun Version.stepFor(side: CaptureSide) =
         steps?.getOrNull(if (side == CaptureSide.Back) 1 else 0)
 
@@ -37,12 +46,13 @@ internal object CaptureMapper {
     ): IdCaptureGuideUiState {
         val step = version.stepFor(side)
         val isFront = side == CaptureSide.Front
-        // Config eyebrow label (v2GuideEyebrow) + computed "Step X of 2 ·" prefix for two-sided.
+        // Config eyebrow label (v2GuideEyebrow), prefixed on a two-sided document with the
+        // config step prefix (v2GuideStepPrefix, "Step {current} of {total} · ").
         val eyebrowLabel = version.v2GuideEyebrow.orFallback("Photo capture")
-        val eyebrow = when {
-            !version.isTwoSided() -> eyebrowLabel
-            isFront -> "Step 1 of 2 · $eyebrowLabel"
-            else -> "Step 2 of 2 · $eyebrowLabel"
+        val eyebrow = if (version.isTwoSided()) {
+            stepPrefix(version, current = if (isFront) 1 else 2, total = 2) + eyebrowLabel
+        } else {
+            eyebrowLabel
         }
         return IdCaptureGuideUiState(
             headerTitle = step?.captureTitle.orFallback(

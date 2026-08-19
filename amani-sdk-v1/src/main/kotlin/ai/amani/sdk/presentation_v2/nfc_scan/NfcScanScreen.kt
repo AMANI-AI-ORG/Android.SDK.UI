@@ -286,49 +286,21 @@ private fun ReadyToScanContent(
         Spacer(Modifier.height(24.dp))
 
         // ── Text area (above the animation) ─────────────────────────────────────────────
-        // TEMPORARY static instruction, hardcoded so we don't touch the server config yet.
-        // TODO: remove this static text and restore the config value (was `texts.title`) once
-        //       the config copy is updated.
+        // Intro line for the animation (server `nfcV2.animationHint`).
         Text(
-            text = "Follow the instructions in the animation below",
+            text = texts.animationHint,
             style = AmaniV2Type.rowTitle.scaled(),
             color = palette.ink,
             textAlign = TextAlign.Center
         )
 
-        // Secondary copy slots kept but intentionally BLANK for now. A blank string renders
-        // nothing (guarded below), so it reserves no vertical space and the screen lays out
-        // around whatever text is present.
-        // TODO: restore config value — was `texts.title` (screen title).
-        val secondaryTitle = ""
-        // TODO: restore config value — was `texts.descriptions` (instruction lines).
-        val secondaryDescriptions: List<String> = emptyList()
-
-        if (secondaryTitle.isNotBlank()) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                secondaryTitle,
-                style = AmaniV2Type.heading.scaled(),
-                color = palette.ink,
-                textAlign = TextAlign.Center
-            )
-        }
-        secondaryDescriptions.forEach { line ->
-            if (line.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    line,
-                    style = AmaniV2Type.bodySmall.scaled(),
-                    color = palette.inkMuted,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
         Spacer(Modifier.weight(1f))
         // V2 design animation (nfc_animation_v2.json): the full NFC-read explainer with a native,
         // per-state caption. Enables Start once its first play-through completes.
-        NfcThemedAnimation(onFirstLoopComplete = { animationCompleted = true })
+        NfcThemedAnimation(
+            stateTexts = texts.animationStates,
+            onFirstLoopComplete = { animationCompleted = true }
+        )
         Spacer(Modifier.weight(1f))
 
         PrimaryButton(
@@ -346,23 +318,13 @@ private fun ReadyToScanContent(
 }
 
 /**
- * Static, per-state captions for the v2 NFC animation. The baked caption PNGs were stripped
- * from the JSON, so the text is rendered natively and switched on the animation's markers.
- * TODO: move to server config like the rest of [NfcTexts]; hardcoded English for now.
- * Each pair is `startFrame to stateKey` (20 fps timeline, from the JSON's `state:*` markers).
+ * Marker timeline of the v2 NFC animation. The baked caption PNGs were stripped from the JSON,
+ * so the caption is rendered natively and switched on these markers; the copy itself is
+ * server-driven (`nfcV2.animationStates`, see [NfcV2AnimationCopy]).
  */
-private object NfcAnimationCopy {
-    val texts: Map<String, String> = mapOf(
-        "place" to "Place the document behind your phone",
-        "detected" to "Chip located",
-        "hold" to "Hold still",
-        "reading" to "Reading…",
-        "dontMove" to "Don't move your phone",
-        "remove" to "You can take the phone away",
-        "retry" to "Try again and reposition the phone",
-        "success" to "Read complete"
-    )
-    val states: List<Pair<Int, String>> = listOf(
+private object NfcAnimationStates {
+    /** `startFrame to stateKey` on the 20 fps timeline, from the JSON's `state:*` markers. */
+    val frames: List<Pair<Int, String>> = listOf(
         0 to "place", 36 to "detected", 66 to "hold", 96 to "reading",
         132 to "dontMove", 164 to "remove", 224 to "retry", 267 to "success"
     )
@@ -386,6 +348,9 @@ private const val NFC_ART_FILL_SCALE = 1.25f
 @Composable
 private fun NfcThemedAnimation(
     modifier: Modifier = Modifier,
+    // Per-state captions, server-driven (`nfcV2.animationStates`) with the SDK defaults merged
+    // in by [NfcV2AnimationCopy].
+    stateTexts: Map<String, String> = NfcV2AnimationCopy.DEFAULTS,
     // When set, freeze the animation on this state's start frame instead of looping, so each
     // `state:*` window can be inspected as its own @Preview card.
     previewStateKey: String? = null,
@@ -411,7 +376,7 @@ private fun NfcThemedAnimation(
     val totalFrames = composition?.durationFrames ?: 300f
     // Live playhead while running; a frozen per-state frame when a preview pins a state.
     val progress = if (previewStateKey != null) {
-        val frame = NfcAnimationCopy.states.firstOrNull { it.second == previewStateKey }?.first ?: 0
+        val frame = NfcAnimationStates.frames.firstOrNull { it.second == previewStateKey }?.first ?: 0
         if (totalFrames > 0f) frame / totalFrames else 0f
     } else {
         animatable.progress
@@ -428,9 +393,9 @@ private fun NfcThemedAnimation(
     // whose start frame is at/behind the playhead.
     val currentFrame = progress * totalFrames
     val stateKey = previewStateKey
-        ?: NfcAnimationCopy.states.lastOrNull { it.first <= currentFrame }?.second
+        ?: NfcAnimationStates.frames.lastOrNull { it.first <= currentFrame }?.second
         ?: "place"
-    val caption = NfcAnimationCopy.texts[stateKey].orEmpty()
+    val caption = stateTexts[stateKey].orEmpty()
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -477,7 +442,6 @@ private fun NfcThemedAnimation(
 @Composable
 private fun NfcDotLoader(accent: Color, animating: Boolean, modifier: Modifier = Modifier) {
     val dotCount = 5
-    // TODO: config-driven
     val idle = AmaniV2Theme.palette.inkLight.copy(alpha = 0.35f)
     val filled = androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
@@ -877,7 +841,7 @@ private fun NfcDisabledPreview() {
 
 /** Feeds every `state:*` key of the v2 NFC animation so each renders as its own preview card. */
 private class NfcAnimationStateProvider : PreviewParameterProvider<String> {
-    override val values: Sequence<String> = NfcAnimationCopy.states.asSequence().map { it.second }
+    override val values: Sequence<String> = NfcAnimationStates.frames.asSequence().map { it.second }
 }
 
 /**

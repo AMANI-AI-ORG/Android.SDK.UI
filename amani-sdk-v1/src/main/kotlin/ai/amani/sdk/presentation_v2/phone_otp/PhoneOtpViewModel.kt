@@ -57,6 +57,14 @@ class PhoneOtpViewModel : ViewModel() {
     private val version = step?.mDocuments?.firstOrNull()?.versions?.firstOrNull()
     private val general = CachingHomeKYC.appConfig?.generalConfigs
 
+    /** Server copy for a call that failed without its own message. */
+    private val genericError =
+        general?.v2GenericErrorText.orFallback("Something went wrong. Please try again.")
+
+    /** Server copy for a rejected OTP code. */
+    private val invalidOtpError =
+        general?.v2InvalidOtpText.orFallback("The code is invalid. Please try again.")
+
     private val _state = MutableStateFlow(contactState())
     val state: StateFlow<PhoneOtpUiState> = _state.asStateFlow()
 
@@ -111,7 +119,7 @@ class PhoneOtpViewModel : ViewModel() {
         Amani.sharedInstance().CustomerInfo().setInfo(phoneNumber = phone)
         Amani.sharedInstance().CustomerInfo().upload { uploaded ->
             if (!uploaded) {
-                _state.update { it.copy(submitting = false, error = "Something went wrong. Please try again.") }
+                _state.update { it.copy(submitting = false, error = genericError) }
                 return@upload
             }
             Amani.sharedInstance().CustomerInfo().sendPhoneOTP { sent ->
@@ -119,7 +127,7 @@ class PhoneOtpViewModel : ViewModel() {
                     _state.value = codeState()
                     startCountdown()
                 } else {
-                    _state.update { it.copy(submitting = false, error = "Something went wrong. Please try again.") }
+                    _state.update { it.copy(submitting = false, error = genericError) }
                 }
             }
         }
@@ -129,7 +137,7 @@ class PhoneOtpViewModel : ViewModel() {
         _state.update { it.copy(submitting = true, error = null) }
         Amani.sharedInstance().CustomerInfo().submitPhoneOTP(otp = code) { valid ->
             if (valid) _completed.tryEmit(Unit)
-            else _state.update { it.copy(submitting = false, error = "The code is invalid. Please try again.") }
+            else _state.update { it.copy(submitting = false, error = invalidOtpError) }
         }
     }
 

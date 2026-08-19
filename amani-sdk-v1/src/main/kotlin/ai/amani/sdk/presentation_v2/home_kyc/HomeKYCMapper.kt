@@ -11,6 +11,7 @@ import ai.amani.sdk.presentation_v2.theme.amaniV2PaletteFromHex
 import ai.amani.sdk.presentation_v2.theme.toAmaniColorOrNull
 import ai.amani.sdk.utils.AppConstant
 import androidx.compose.ui.graphics.Color
+import datamanager.model.config.GeneralConfigs
 import datamanager.model.config.ResGetConfig
 import datamanager.model.config.StepConfig
 import datamanager.model.config.Version
@@ -58,6 +59,10 @@ internal object HomeKYCMapper {
 
     /** Fallback when the step's version carries no `v2EstimatedTime`. */
     private const val STATIC_STEP_DURATION = "~30 sec"
+
+    /** Config-driven step duration, used when the version carries no `v2EstimatedTime`. */
+    private fun defaultStepDuration(g: GeneralConfigs?): String =
+        g?.v2StepDefaultDuration.orFallback(STATIC_STEP_DURATION)
 
     /**
      * Generic rejection message shown when [STATIC_ERROR_FALLBACK_ENABLED] is on and
@@ -183,7 +188,7 @@ internal object HomeKYCMapper {
                 // rejected. Please try again", …).
                 subtitle = when (rowStatus) {
                     StepRowStatus.Active, StepRowStatus.Locked ->
-                        "$actionLabel · ${version?.v2EstimatedTime.orFallback(STATIC_STEP_DURATION)}"
+                        "$actionLabel · ${version?.v2EstimatedTime.orFallback(defaultStepDuration(g))}"
                     else -> style.label
                 },
                 status = rowStatus,
@@ -199,32 +204,45 @@ internal object HomeKYCMapper {
                         ?: rule.errors?.firstNotNullOfOrNull {
                             it?.errorMessage?.toString()?.takeIf(String::isNotBlank)
                         },
-                    version = version
+                    version = version,
+                    general = g
                 )
             )
         }
 
         // Home heading follows the flow state (design v2.6): rejected wins, then progress
-        // (something already done), then the fresh-start heading. The config strings are
-        // sentence *suffixes* — the step-count prefix is composed here.
+        // (something already done), then the fresh-start heading. A config subtitle carrying
+        // "{count}" is a full sentence and is used verbatim with the number substituted —
+        // the only form that survives translation. Legacy configs stay sentence *suffixes*,
+        // with the English step-count prefix composed here.
         val remaining = rules.size - doneCount
         val (title, subtitle) = when {
             rejectedCount > 0 -> Pair(
                 g?.v2HomeRejectedTitle.orFallback("Verification incomplete"),
-                countWord(rejectedCount) +
-                    (if (rejectedCount == 1) " step needs " else " steps need ") +
-                    g?.v2HomeRejectedSubtitle.orFallback("your attention before we can continue.")
+                subtitleFor(
+                    template = g?.v2HomeRejectedSubtitle,
+                    count = rejectedCount,
+                    legacyPrefix = if (rejectedCount == 1) " step needs " else " steps need ",
+                    legacyFallback = "your attention before we can continue."
+                )
             )
             doneCount > 0 -> Pair(
                 g?.v2HomeProgressTitle.orFallback("You're making progress"),
-                countWord(remaining) +
-                    (if (remaining == 1) " more step " else " more steps ") +
-                    g?.v2HomeProgressSubtitle.orFallback("to finish verification.")
+                subtitleFor(
+                    template = g?.v2HomeProgressSubtitle,
+                    count = remaining,
+                    legacyPrefix = if (remaining == 1) " more step " else " more steps ",
+                    legacyFallback = "to finish verification."
+                )
             )
             else -> Pair(
                 g?.v2HomeInitialTitle.orFallback("Let's get you verified"),
-                countWord(rules.size) + " " +
-                    g?.v2HomeInitialSubtitle.orFallback("quick steps. Should take about 2 minutes.")
+                subtitleFor(
+                    template = g?.v2HomeInitialSubtitle,
+                    count = rules.size,
+                    legacyPrefix = " ",
+                    legacyFallback = "quick steps. Should take about 2 minutes."
+                )
             )
         }
 
@@ -239,7 +257,29 @@ internal object HomeKYCMapper {
     }
 
     /**
-     * Spelled-out step count for the home subtitles ("Four quick steps…", "One step
+     * Home subtitle for [count] steps. A [template] containing `{count}` is a complete,
+     * translatable sentence: the placeholder becomes the numeral and nothing else is added.
+     * Otherwise the legacy shape is kept — spelled-out count + [legacyPrefix] + the config
+     * suffix (or [legacyFallback] when the config has none).
+     */
+    private fun subtitleFor(
+        template: String?,
+        count: Int,
+        legacyPrefix: String,
+        legacyFallback: String
+    ): String {
+        val text = template?.takeIf { it.isNotBlank() }
+        if (text != null && text.contains(COUNT_PLACEHOLDER)) {
+            return text.replace(COUNT_PLACEHOLDER, count.toString())
+        }
+        return countWord(count) + legacyPrefix + (text ?: legacyFallback)
+    }
+
+    /** Placeholder a config subtitle uses to position the step count. */
+    private const val COUNT_PLACEHOLDER = "{count}"
+
+    /**
+     * Spelled-out step count for the LEGACY home subtitles ("Four quick steps…", "One step
      * needs…"). Past ten (unrealistic for a KYC flow) the numeral is used as-is.
      */
     private fun countWord(count: Int): String = when (count) {
@@ -377,7 +417,12 @@ internal object HomeKYCMapper {
      * the cached [Rule.errors] message at the call site. The error *title* had no
      * GeneralConfigs equivalent so it is dropped (null).
      */
-    private fun errorFor(status: String?, overrideMessage: String?, version: Version?): StepError? {
+    private fun errorFor(
+        status: String?,
+        overrideMessage: String?,
+        version: Version?,
+        general: GeneralConfigs?
+    ): StepError? {
         // Approved: resolved, nothing to explain. Processing: the server is re-evaluating;
         // a leftover rejection message would be stale/confusing while it runs.
         if (status == AppConstant.STATUS_APPROVED || status == AppConstant.STATUS_PROCESSING) return null
@@ -392,9 +437,12 @@ internal object HomeKYCMapper {
         // (toggleable). Everything else without a message stays silent.
         if (!STATIC_ERROR_FALLBACK_ENABLED || status !in REJECTED_STATUSES) return null
         return StepError(
-            title = configTitle ?: STATIC_ERROR_FALLBACK.title,
+            title = configTitle
+                ?: general?.v2StepRejectionFallbackTitle?.takeIf { it.isNotBlank() }
+                ?: STATIC_ERROR_FALLBACK.title,
             message = version?.v2StepRejectionDescription?.takeIf { it.isNotBlank() }
-                ?: STATIC_ERROR_FALLBACK.message
+                ?: general?.v2StepRejectionFallbackDescription
+                    .orFallback(STATIC_ERROR_FALLBACK.message)
         )
     }
 

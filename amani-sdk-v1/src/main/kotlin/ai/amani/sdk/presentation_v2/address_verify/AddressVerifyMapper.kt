@@ -18,9 +18,7 @@ internal object AddressVerifyMapper {
             headerTitle = step?.captureTitle.orFallback("Verify address"),
             instruction = (step?.captureDescription ?: version.informationScreenDesc1)
                 .orFallback("Photograph your document, or upload it as a PDF."),
-            // v1 exposes PDF picking via a bare toolbar icon (no config text exists for it).
-            // TODO: config-driven
-            uploadPdfButtonText = "Upload PDF instead",
+            uploadPdfButtonText = general?.v2UploadPdfButtonText.orFallback("Upload PDF instead"),
             tryAgainText = general?.tryAgainText.orFallback("Try again"),
             confirmText = general?.continueText.orFallback("Continue")
         )

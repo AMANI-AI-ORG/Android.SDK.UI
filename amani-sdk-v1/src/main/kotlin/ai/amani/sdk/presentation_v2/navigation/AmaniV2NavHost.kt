@@ -186,6 +186,9 @@ fun AmaniV2NavHost(
                 // Config-driven header (GeneralConfigs.mainTitleText), same value the home
                 // screen shows; falls back to a generic title upstream.
                 headerTitle = homeContent.headerTitle,
+                // v1 QuestionnaireFragment binds the submit button to GeneralConfigs.continueText.
+                submitButtonText = CachingHomeKYC.appConfig?.generalConfigs?.continueText
+                    ?.takeIf { it.isNotBlank() } ?: "Continue",
                 // Back on a before-KYC step exits the SDK (v1 ProfileInfoFragment.finishActivity).
                 onBack = onExit,
                 onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_QUESTIONNAIRE) }
@@ -382,7 +385,11 @@ fun AmaniV2NavHost(
                     // — fail loudly and actionably instead of crashing deeper in.
                     SpeechVerifierAvailability.requirePresent()
                     SpeechVerifyScreen(
-                        headerTitle = homeContent.headerTitle,
+                        // Step's own toolbar title (Step.captureTitle) — the home header is
+                        // only the fallback for a config that carries none.
+                        headerTitle = version.steps?.firstOrNull()?.captureTitle
+                            ?.takeIf { it.isNotBlank() }
+                            ?: homeContent.headerTitle,
                         version = version,
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // Verification passed + video secured: hand the version to the host to
