@@ -25,7 +25,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -294,14 +294,20 @@ private fun ReadyToScanContent(
             textAlign = TextAlign.Center
         )
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(16.dp))
         // V2 design animation (nfc_animation_v2.json): the full NFC-read explainer with a native,
-        // per-state caption. Enables Start once its first play-through completes.
+        // per-state caption. Enables Start once its first play-through completes. Given weight(1f)
+        // so it fills all the vertical space between the hint and the Start button (scaled up
+        // proportionally, see NfcThemedAnimation) instead of floating small between fixed gaps —
+        // the hint above and the button below sit outside the weight, so they keep their size.
         NfcThemedAnimation(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             stateTexts = texts.animationStates,
             onFirstLoopComplete = { animationCompleted = true }
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(16.dp))
 
         PrimaryButton(
             text = texts.continueButtonText,
@@ -332,11 +338,20 @@ private object NfcAnimationStates {
 
 /**
  * The nfc_animation_v2 subject sits inside its 800x600 canvas with baked padding on every side,
- * so at full container width it still shows left/right gaps. Rendering the art scaled by this
- * factor crops that padding and lets it fill the width almost edge-to-edge. The scale is uniform,
- * so the art's natural aspect ratio is preserved (vertical overflow is clipped by the container).
+ * so at full container width it still shows left/right (and top/bottom) gaps. Rendering the art
+ * scaled by this factor crops that padding and lets the subject grow to fill the (now taller,
+ * weight-driven) container both ways. The scale is uniform, so the art's natural aspect ratio is
+ * preserved — the overflow is clipped by the container rather than stretched.
  */
-private const val NFC_ART_FILL_SCALE = 1.25f
+private const val NFC_ART_FILL_SCALE = 1.5f
+
+/**
+ * The nfc_animation_v2 art has baked bottom padding, so the subject's visual end sits above the
+ * animation box's bottom edge. Lift the native caption up by this much so it hugs the subject's
+ * end (~20 dp above it) instead of floating in that empty space below. Tune to taste. The lift is
+ * a draw-time offset only — it does not reduce the layout height, so the Start button stays put.
+ */
+private val NFC_CAPTION_LIFT = 40.dp
 
 /**
  * V2 NFC brand animation: plays `nfc_animation_v2.json` on a loop with its original authored
@@ -400,11 +415,12 @@ private fun NfcThemedAnimation(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                // Self-size to the art's 4:3 ratio at full width.
                 .fillMaxWidth()
-                .aspectRatio(4f / 3f)
-                // The scaled art overflows this box; clip so the cropped side padding (and any
-                // vertical overflow) is cut rather than drawn over the caption.
+                // Fill the vertical space the parent hands down (weight from ReadyToScanContent),
+                // so the animation grows to fill the screen height between the hint and the button.
+                .weight(1f)
+                // The scaled art overflows this box; clip so the cropped side/top/bottom padding
+                // is cut rather than drawn over the caption.
                 .clipToBounds()
         ) {
             LottieAnimation(
@@ -423,12 +439,14 @@ private fun NfcThemedAnimation(
                     }
             )
         }
-        Spacer(Modifier.height(8.dp))
+        // Pull the caption up into the empty space under the art so it sits at the animation's
+        // visual end (~20 dp above it), not far below the box — see [NFC_CAPTION_LIFT].
         Text(
             caption,
             style = AmaniV2Type.rowTitle.scaled(),
             color = palette.ink,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.offset(y = -NFC_CAPTION_LIFT)
         )
     }
 }
