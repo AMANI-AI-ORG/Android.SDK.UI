@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation_v2.speech_verify
 
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.speechverifier.SpeechVerifier
 import ai.amani.speechverifier.model.ContinuationPrompts
 import ai.amani.speechverifier.model.IdentityQuestionSpec
@@ -75,6 +76,19 @@ internal object SpeechVerifierLauncher {
             builder.session(serverURL = serverUrl, token = token)
         } else {
             Timber.e("V2 speech: no session (serverUrl/token missing) — upload will fail")
+        }
+
+        // Voice prompts: reuse the app config the flow ALREADY fetched (CachingHomeKYC) instead of
+        // letting the module make its own config request. The `ST` step is only reachable after the
+        // config is cached, so the URL is available here. voiceAssistant(...) is set explicitly in
+        // both branches so the behaviour never depends on the module's own default.
+        val voiceUrl = CachingHomeKYC.appConfig?.generalConfigs?.ttsVoices?.takeIf { it.isNotBlank() }
+        if (voiceUrl != null) {
+            builder.voiceAssistant(true)
+            builder.voiceUrl(voiceUrl)
+        } else {
+            builder.voiceAssistant(false)
+            Timber.i("V2 speech: no ttsVoices in the app config — voice prompts off")
         }
 
         val sv = version.speechVerification

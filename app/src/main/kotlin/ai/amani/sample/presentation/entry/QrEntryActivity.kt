@@ -62,7 +62,8 @@ class QrEntryActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.events.collect { event ->
                     when (event) {
-                        is QrEntryEvent.StartKyc -> startKyc(event.info, event.language)
+                        is QrEntryEvent.StartKyc ->
+                            startKyc(event.info, event.language, event.uiStyle)
                         is QrEntryEvent.Error ->
                             Toast.makeText(this@QrEntryActivity, event.message, Toast.LENGTH_LONG).show()
                     }
@@ -75,14 +76,18 @@ class QrEntryActivity : AppCompatActivity() {
             RegisterScreen(
                 countries = state.countries,
                 selected = state.selected,
+                uiStyle = state.uiStyle,
                 onCountrySelected = viewModel::onCountrySelected,
+                onUiStyleSelected = viewModel::onUiStyleSelected,
                 onScan = { scanLauncher.launch(Intent(this, QrScanActivity::class.java)) }
             )
         }
     }
 
-    private fun startKyc(info: ProfileUrlInfo, language: String) {
-        AmaniSDKUI.setUIStyle(UIStyle.V2)
+    private fun startKyc(info: ProfileUrlInfo, language: String, uiStyle: UIStyle) {
+        // Always set it: the SDK keeps the style in a process-wide FeatureConfig that is never
+        // reset, so passing the current selection on every launch is what makes the picker stick.
+        AmaniSDKUI.setUIStyle(uiStyle)
         AmaniSDKUI.setSelfiePoseEstimationV2PreparationVideo(R.raw.pose_video)
 
         // Re-init against the server the QR pointed at (it may differ from the App default).

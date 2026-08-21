@@ -1,6 +1,7 @@
 package ai.amani.sample.presentation.entry
 
 import ai.amani.sample.domain.model.Country
+import ai.amani.sdk.model.UIStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,7 +92,9 @@ private fun flagEmoji(code: String): String {
 fun RegisterScreen(
     countries: List<Country>,
     selected: Country,
+    uiStyle: UIStyle,
     onCountrySelected: (Country) -> Unit,
+    onUiStyleSelected: (UIStyle) -> Unit,
     onScan: () -> Unit
 ) {
     Box(
@@ -97,17 +103,27 @@ fun RegisterScreen(
             .background(ScreenBg)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Logo badge (top-left)
-            Box(
+            // Header: logo badge (left) + UI style picker (right)
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(start = 20.dp, top = 20.dp)
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Pink),
-                contentAlignment = Alignment.Center
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("A", color = Color.White, fontSize = 26.sp, fontFamily = rubik500)
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Pink),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("A", color = Color.White, fontSize = 26.sp, fontFamily = rubik500)
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                UiStyleSelector(selected = uiStyle, onSelected = onUiStyleSelected)
             }
 
             Text(
@@ -178,6 +194,91 @@ fun RegisterScreen(
 }
 
 /** Search + scrollable country list; the selected row is highlighted pink with a check. */
+/**
+ * Compact "UI Style" dropdown for the demo: picks which UI the Amani SDK runs (v1 = the XML /
+ * Fragment UI, v2 = the Compose redesign). Styled after the screen's own vocabulary — white pill,
+ * 16.dp radius, Rubik type — and the menu reuses the country row's selected treatment.
+ */
+@Composable
+private fun UiStyleSelector(
+    selected: UIStyle,
+    onSelected: (UIStyle) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(CardBg)
+                .clickable { expanded = true }
+                .padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "UI Style",
+                color = Hint,
+                fontSize = 12.sp,
+                fontFamily = rubik400
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = selected.label(),
+                color = TitleColor,
+                fontSize = 14.sp,
+                fontFamily = rubik500
+            )
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                tint = Subtitle,
+                modifier = Modifier
+                    .padding(start = 2.dp)
+                    .size(18.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(CardBg)
+        ) {
+            UIStyle.entries.forEach { style ->
+                val isSelected = style == selected
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = style.label(),
+                            color = if (isSelected) Pink else RowText,
+                            fontSize = 15.sp,
+                            fontFamily = if (isSelected) rubik500 else rubik400
+                        )
+                    },
+                    trailingIcon = {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = Pink,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelected(style)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun UIStyle.label(): String = when (this) {
+    UIStyle.V1 -> "v1"
+    UIStyle.V2 -> "v2"
+}
+
 @Composable
 private fun CountrySelector(
     items: List<Country>,

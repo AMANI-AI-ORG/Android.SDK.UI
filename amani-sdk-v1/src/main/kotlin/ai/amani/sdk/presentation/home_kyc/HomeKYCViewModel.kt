@@ -36,8 +36,6 @@ import ai.amani.sdk.utils.AmaniUIErrorConstants.CORRUPTED_DOC_LIST
 import ai.amani.sdk.utils.AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
-import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
-import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -182,18 +180,7 @@ open class HomeKYCViewModel(
                 CachingHomeKYC.appConfig = it
                 it.generalConfigs?.let { generalConfig ->
                     generalConfig.ttsVoices?.let {
-                        VoiceAssistantSDKManager.init(
-                            url = it,
-                            callBack = object : AmaniVAInitCallBack {
-                                override fun onFailure(exception: Exception) {
-
-                                }
-
-                                override fun onSuccess(voices: List<TTSVoice>) {
-
-                                }
-                            }
-                        )
+                        VoiceAssistantSDKManager.init(url = it)
                     }
                 }
                 fetchCustomerDetail()

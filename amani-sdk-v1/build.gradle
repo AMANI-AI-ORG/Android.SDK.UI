@@ -152,7 +152,7 @@ dependencies {
     // apps that never use the speech (`ST`) step carry none of its weight 
     // Without it, entering an `ST` step fails with a descriptive runtime error
     // (SpeechVerifierAvailability) instead of silently doing nothing.
-    def speech_verifier = "1.0.0"
+    def speech_verifier = "1.1.0"
     compileOnly "ai.amani.android:amani-speech-verifier:$speech_verifier"
 
     // Nav graph. Pinned to the 2.8.x line on purpose: navigation 2.9.x transitively
@@ -169,7 +169,12 @@ dependencies {
     implementation 'com.hbb20:ccp:2.5.3' // CountryCodePicker library
     implementation 'net.yslibrary.keyboardvisibilityevent:keyboardvisibilityevent:3.0.0-RC3'
 
-    implementation 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.1.0'
+    // Optional Voice Assistant (TTS) — compileOnly ON PURPOSE, same contract as the
+    // speech-verification module above: the UI SDK compiles against its API but does NOT
+    // bundle it, so apps that never want voice prompts carry none of its weight. Without it
+    // every voice call is a silent no-op (see VoiceAssistantSDKManager's presence guard).
+    // The consuming app adds it as a real runtime dependency to enable voice.
+    compileOnly 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.1.0'
 
     implementation 'com.github.bumptech.glide:glide:5.0.7'
 }

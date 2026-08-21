@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation.nfc
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentNfcScanBinding
+import ai.amani.sdk.data.manager.UiVoiceKey
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.alertDialog
 import ai.amani.sdk.extentions.hide
@@ -11,8 +12,6 @@ import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.otp.profile_info.DatePickerHandler
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.utils.AmaniDocumentTypes
-import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
-import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
@@ -69,23 +68,7 @@ class NFCScanFragment : Fragment() {
         setCustomUI()
         observeLiveEvent()
 
-        VoiceAssistantSDKManager.play(
-            context = requireContext(),
-            key = AmaniVAVoiceKeys.VOICE_NFC,
-            callBack = object : AmaniVAPlayerCallBack {
-                override fun onPlay() {
-
-                }
-
-                override fun onStop() {
-
-                }
-
-                override fun onFailure(exception: Exception) {
-
-                }
-            }
-        )
+        VoiceAssistantSDKManager.play(requireContext(), UiVoiceKey.VOICE_NFC)
     }
 
     override fun onResume() {

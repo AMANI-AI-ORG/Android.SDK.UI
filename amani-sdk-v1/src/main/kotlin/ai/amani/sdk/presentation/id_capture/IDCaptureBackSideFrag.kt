@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation.id_capture
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentIdCaptureBackBinding
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.UiVoiceKey
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.gone
 import ai.amani.sdk.extentions.navigateSafely
@@ -16,8 +17,6 @@ import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.BitmapUtils
-import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
-import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.animation.Animator
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -59,23 +58,7 @@ class IDCaptureBackSideFrag : Fragment() {
 
         listenAnimation()
 
-        VoiceAssistantSDKManager.play(
-            context = requireContext(),
-            key = AmaniVAVoiceKeys.VOICE_ID1,
-            callBack = object : AmaniVAPlayerCallBack {
-                override fun onPlay() {
-
-                }
-
-                override fun onStop() {
-
-                }
-
-                override fun onFailure(exception: Exception) {
-
-                }
-            }
-        )
+        VoiceAssistantSDKManager.play(requireContext(), UiVoiceKey.VOICE_ID1)
 
     }
 
