@@ -93,7 +93,7 @@ dependencies {
 
     // Optional speech-verification module. The UI SDK depends on it as compileOnly
     // which means the consuming APP must add it as a real runtime
-    implementation 'ai.amani.android:amani-speech-verifier:1.1.0'
+    implementation 'ai.amani.android:amani-speech-verifier:1.1.1'
 
     // Optional Voice Assistant (TTS). Both the UI SDK and the speech-verification module
     // depend on it as compileOnly, so the APP supplies it at runtime to enable voice prompts.

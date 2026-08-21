@@ -122,24 +122,36 @@ internal object SpeechVerifierLauncher {
         // Rounded bottom-sheet top corners, matching the Core SDK sample (28dp).
         builder.bottomSheetCornerRadius(SPEECH_VERIFIER_CORNER_RADIUS_DP)
 
-        // Identity-question prompts (config → module's ContinuationPrompts; blanks keep defaults).
-        version.speechVerifierIdentityPrompts?.let { p ->
-            val d = ContinuationPrompts()
-            builder.continuationPrompts(
-                ContinuationPrompts(
-                    instruction = d.instruction,
-                    idNumber = p.idNumber.ifBlank { d.idNumber },
-                    motherName = p.motherName.ifBlank { d.motherName },
-                    fatherName = p.fatherName.ifBlank { d.fatherName },
-                    documentNumber = p.documentNumber.ifBlank { d.documentNumber }
-                )
-            )
-        }
-
-        // On-camera texts (blank → module default via null). The instruction falls back to the
-        // step's captureDescription so a config that only fills the generic step texts still
-        // drives the on-screen line.
+        // Instruction fallback shared by BOTH phases: a config that only fills the generic step
+        // texts still drives the on-screen line.
         val stepInstruction = version.steps?.firstOrNull()?.captureDescription?.orNull()
+
+        // Identity-question prompts (config → module's ContinuationPrompts; blanks keep defaults).
+        //
+        // Set UNCONDITIONALLY, not inside a `speechVerifierIdentityPrompts?.let`: the identity
+        // phase has its OWN instruction line (the module reads continuationPrompts.instruction
+        // there, not uiTexts.instruction), so a config that fills only the generic step texts must
+        // still be able to drive it. Guarding the whole call left every field — including that
+        // instruction — frozen at the module's Turkish defaults.
+        val p = version.speechVerifierIdentityPrompts
+        val d = ContinuationPrompts()
+        builder.continuationPrompts(
+            ContinuationPrompts(
+                // Identity instruction: its OWN config field first (the identity phase has a
+                // separate line from the spoken phase), then the generic step texts / the step's
+                // captureDescription — so it is never stranded on the module's Turkish default.
+                instruction = p?.instruction?.orNull()
+                    ?: version.speechVerifierUiTexts?.instruction?.orNull()
+                    ?: stepInstruction
+                    ?: d.instruction,
+                idNumber = p?.idNumber?.orNull() ?: d.idNumber,
+                motherName = p?.motherName?.orNull() ?: d.motherName,
+                fatherName = p?.fatherName?.orNull() ?: d.fatherName,
+                documentNumber = p?.documentNumber?.orNull() ?: d.documentNumber
+            )
+        )
+
+        // On-camera texts (blank → module default via null).
         version.speechVerifierUiTexts?.let { t ->
             builder.userInterfaceTexts(
                 instruction = t.instruction.orNull() ?: stepInstruction,

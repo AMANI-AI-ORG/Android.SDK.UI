@@ -144,7 +144,7 @@ dependencies {
     implementation "com.airbnb.android:lottie-compose:$lottie_version"
 
     // AmaniSDK impl
-    def amani_sdk = "3.21.2"
+    def amani_sdk = "3.21.3"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Optional speech-verification module — compileOnly ON PURPOSE: the UI SDK compiles
@@ -152,7 +152,7 @@ dependencies {
     // apps that never use the speech (`ST`) step carry none of its weight 
     // Without it, entering an `ST` step fails with a descriptive runtime error
     // (SpeechVerifierAvailability) instead of silently doing nothing.
-    def speech_verifier = "1.1.0"
+    def speech_verifier = "1.1.1"
     compileOnly "ai.amani.android:amani-speech-verifier:$speech_verifier"
 
     // Nav graph. Pinned to the 2.8.x line on purpose: navigation 2.9.x transitively
