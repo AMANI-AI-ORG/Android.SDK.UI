@@ -45,6 +45,8 @@ data class AmaniV2Palette(
     val secondaryButtonBorder: Color = AmaniV2Colors.Border,
     /** Spinner/loader color (GeneralConfigs.loaderColor). */
     val loader: Color = AmaniV2Colors.Pink,
+    /** General button radius of Android */
+    val buttonRadius: Int = 20
 )
 
 /**
@@ -72,6 +74,7 @@ fun amaniV2PaletteFromHex(
     secondaryButtonText: String? = null,
     secondaryButtonBorder: String? = null,
     loader: String? = null,
+    buttonRadius: Int? = null
 ): AmaniV2Palette {
     val d = AmaniV2Palette()
     return d.copy(
@@ -99,6 +102,7 @@ fun amaniV2PaletteFromHex(
         // Loader falls back to the config accent so the spinner stays on-brand even when
         // loaderColor is absent.
         loader = loader.toAmaniColorOrNull() ?: accent.toAmaniColorOrNull() ?: d.loader,
+        buttonRadius = buttonRadius ?: d.buttonRadius
     )
 }
 

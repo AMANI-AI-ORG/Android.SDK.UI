@@ -36,8 +36,6 @@ import ai.amani.sdk.utils.AmaniUIErrorConstants.CORRUPTED_DOC_LIST
 import ai.amani.sdk.utils.AmaniUIErrorConstants.REMOTE_CONFIG_FETCH_ERROR
 import ai.amani.sdk.utils.AppConstant
 import ai.amani.sdk.utils.AppConstant.STATUS_APPROVED
-import ai.amani.voice_assistant.callback.AmaniVAInitCallBack
-import ai.amani.voice_assistant.model.TTSVoice
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -182,18 +180,7 @@ open class HomeKYCViewModel(
                 CachingHomeKYC.appConfig = it
                 it.generalConfigs?.let { generalConfig ->
                     generalConfig.ttsVoices?.let {
-                        VoiceAssistantSDKManager.init(
-                            url = it,
-                            callBack = object : AmaniVAInitCallBack {
-                                override fun onFailure(exception: Exception) {
-
-                                }
-
-                                override fun onSuccess(voices: List<TTSVoice>) {
-
-                                }
-                            }
-                        )
+                        VoiceAssistantSDKManager.init(url = it)
                     }
                 }
                 fetchCustomerDetail()
@@ -264,7 +251,10 @@ open class HomeKYCViewModel(
         customerDetail?.rules?.forEach {
             if (it.identifier == "kyc" || it.identifier == "") {
                 size += 1
-                if (it.status == STATUS_APPROVED) approvedStep += 1
+                // PENDING_REVIEW (manual review still pending) counts as done-enough to finish.
+                if (it.status == STATUS_APPROVED ||
+                    it.status == AppConstant.STATUS_PENDING_REVIEW
+                ) approvedStep += 1
             }
         }
 
@@ -696,8 +686,11 @@ open class HomeKYCViewModel(
                 //Checking the KYC steps approved ot not
                 var approvedSteps = 0
                 kycArrayList.forEach {
-                    // All KYC steps should be approved
-                    if(it == STATUS_APPROVED) approvedSteps += 1
+                    // All KYC steps should be approved — PENDING_REVIEW (manual review still
+                    // pending) counts as done-enough to finish.
+                    if (it == STATUS_APPROVED ||
+                        it == AppConstant.STATUS_PENDING_REVIEW
+                    ) approvedSteps += 1
                 }
 
                 if (approvedSteps >= kycArrayList.size) {

@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation_v2.speech_verify
 
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.speechverifier.SpeechVerifier
 import ai.amani.speechverifier.model.ContinuationPrompts
 import ai.amani.speechverifier.model.IdentityQuestionSpec
@@ -16,6 +17,7 @@ import android.graphics.Color
 import androidx.fragment.app.Fragment
 import datamanager.model.config.Version
 import timber.log.Timber
+import androidx.core.graphics.toColorInt
 
 /**
  * The ONE place that hard-links the optional `ai.amani.speechverifier.*` API. Because the
@@ -32,6 +34,20 @@ internal object SpeechVerifierLauncher {
 
     /** Top corner radius (dp) of the bottom-sheet panel */
     private const val SPEECH_VERIFIER_CORNER_RADIUS_DP = 28f
+
+    /**
+     * Last-resort similarity threshold, used only when neither the server config
+     * (`defaultMatchThresholdPercent`) nor [SpeechVerifierOptions.matchThresholdPercent] gives
+     * a value in 1..100. Matches the module's own per-item default.
+     */
+    private const val DEFAULT_MATCH_THRESHOLD_PERCENT = 80
+
+    /**
+     * Recording kept after an identity answer matches, so the last digit/word is captured.
+     * Used when the config question carries no `successCaptureDelayMs`; matches the module's
+     * own default.
+     */
+    private const val IDENTITY_SUCCESS_CAPTURE_DELAY_MS = 1000L
 
     /**
      * Builds the speech-verification [Fragment] driven by the server [version] config
@@ -62,17 +78,31 @@ internal object SpeechVerifierLauncher {
             Timber.e("V2 speech: no session (serverUrl/token missing) — upload will fail")
         }
 
+        // Voice prompts: reuse the app config the flow ALREADY fetched (CachingHomeKYC) instead of
+        // letting the module make its own config request. The `ST` step is only reachable after the
+        // config is cached, so the URL is available here. voiceAssistant(...) is set explicitly in
+        // both branches so the behaviour never depends on the module's own default.
+        val voiceUrl = CachingHomeKYC.appConfig?.generalConfigs?.ttsVoices?.takeIf { it.isNotBlank() }
+        if (voiceUrl != null) {
+            builder.voiceAssistant(true)
+            builder.voiceUrl(voiceUrl)
+        } else {
+            builder.voiceAssistant(false)
+            Timber.i("V2 speech: no ttsVoices in the app config — voice prompts off")
+        }
+
         val sv = version.speechVerification
+
+        // Flow-level similarity threshold: server config wins, else the integrator override.
+        // The module builder has no global setter, so this is resolved per item in buildSteps().
+        val defaultThreshold = sv?.defaultMatchThresholdPercent?.takeIf { it in 1..100 }
+            ?: SpeechVerifierOptions.matchThresholdPercent.takeIf { it in 1..100 }
+            ?: DEFAULT_MATCH_THRESHOLD_PERCENT
 
         // Ordered flow from config: each config step maps to exactly one VerificationStep of
         // the matching type (SPOKEN_TEXT → spoken only, IDENTITY_QUESTION → identity only).
         // Falls back to a single spoken passphrase when the config has no steps.
-        builder.verificationSteps(buildSteps(sv))
-
-        // Default similarity threshold (per-item overrides are carried on each phrase/question).
-        val defaultThreshold = sv?.defaultMatchThresholdPercent
-            ?.takeIf { it in 1..100 }
-            ?: SpeechVerifierOptions.matchThresholdPercent.takeIf { it in 1..100 }
+        builder.verificationSteps(buildSteps(sv, defaultThreshold))
 
         sv?.exemptWords?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
             ?.let { builder.verificationExemptWords(it) }
@@ -92,24 +122,39 @@ internal object SpeechVerifierLauncher {
         // Rounded bottom-sheet top corners, matching the Core SDK sample (28dp).
         builder.bottomSheetCornerRadius(SPEECH_VERIFIER_CORNER_RADIUS_DP)
 
+        // Instruction fallback shared by BOTH phases: a config that only fills the generic step
+        // texts still drives the on-screen line.
+        val stepInstruction = version.steps?.firstOrNull()?.captureDescription?.orNull()
+
         // Identity-question prompts (config → module's ContinuationPrompts; blanks keep defaults).
-        version.speechVerifierIdentityPrompts?.let { p ->
-            val d = ContinuationPrompts()
-            builder.continuationPrompts(
-                ContinuationPrompts(
-                    instruction = d.instruction,
-                    idNumber = p.idNumber.ifBlank { d.idNumber },
-                    motherName = p.motherName.ifBlank { d.motherName },
-                    fatherName = p.fatherName.ifBlank { d.fatherName },
-                    documentNumber = p.documentNumber.ifBlank { d.documentNumber }
-                )
+        //
+        // Set UNCONDITIONALLY, not inside a `speechVerifierIdentityPrompts?.let`: the identity
+        // phase has its OWN instruction line (the module reads continuationPrompts.instruction
+        // there, not uiTexts.instruction), so a config that fills only the generic step texts must
+        // still be able to drive it. Guarding the whole call left every field — including that
+        // instruction — frozen at the module's Turkish defaults.
+        val p = version.speechVerifierIdentityPrompts
+        val d = ContinuationPrompts()
+        builder.continuationPrompts(
+            ContinuationPrompts(
+                // Identity instruction: its OWN config field first (the identity phase has a
+                // separate line from the spoken phase), then the generic step texts / the step's
+                // captureDescription — so it is never stranded on the module's Turkish default.
+                instruction = p?.instruction?.orNull()
+                    ?: version.speechVerifierUiTexts?.instruction?.orNull()
+                    ?: stepInstruction
+                    ?: d.instruction,
+                idNumber = p?.idNumber?.orNull() ?: d.idNumber,
+                motherName = p?.motherName?.orNull() ?: d.motherName,
+                fatherName = p?.fatherName?.orNull() ?: d.fatherName,
+                documentNumber = p?.documentNumber?.orNull() ?: d.documentNumber
             )
-        }
+        )
 
         // On-camera texts (blank → module default via null).
         version.speechVerifierUiTexts?.let { t ->
             builder.userInterfaceTexts(
-                instruction = t.instruction.orNull(),
+                instruction = t.instruction.orNull() ?: stepInstruction,
                 listening = t.listening.orNull(),
                 verifying = t.verifying.orNull(),
                 verified = t.verified.orNull(),
@@ -117,6 +162,11 @@ internal object SpeechVerifierLauncher {
                 recognizerNotAvailable = t.recognizerNotAvailable.orNull(),
                 retry = t.retry.orNull()
             )
+        }
+
+        // No speechVerifierUiTexts block at all: still honour the step's captureDescription.
+        if (version.speechVerifierUiTexts == null && stepInstruction != null) {
+            builder.userInterfaceTexts(instruction = stepInstruction)
         }
 
         // Colors (hex → color int; unparseable/blank → module default via null). These are raw
@@ -155,12 +205,16 @@ internal object SpeechVerifierLauncher {
 
     /**
      * Maps the config steps into the module's ordered flow. A `SPOKEN_TEXT` step contributes
-     * ONLY spoken passphrases; an `IDENTITY_QUESTION` step ONLY identity questions. Per-item
-     * threshold wins over the step threshold (null → the flow default). Unknown step/question
-     * types and empty steps are skipped; an entirely empty result falls back to one passphrase.
+     * ONLY spoken passphrases; an `IDENTITY_QUESTION` step ONLY identity questions.
+     *
+     * Threshold resolution, most specific first: the item's own `matchThresholdPercent`, then
+     * the step's, then [defaultThreshold] (config `defaultMatchThresholdPercent` → integrator
+     * override → [DEFAULT_MATCH_THRESHOLD_PERCENT]). Unknown step/question types and empty
+     * steps are skipped; an entirely empty result falls back to one passphrase.
      */
     private fun buildSteps(
-        sv: datamanager.model.config.SpeechVerification?
+        sv: datamanager.model.config.SpeechVerification?,
+        defaultThreshold: Int
     ): List<VerificationStep> {
         val steps = sv?.steps.orEmpty().mapNotNull { step ->
             when (step.type.trim().uppercase()) {
@@ -170,7 +224,9 @@ internal object SpeechVerifierLauncher {
                         .map {
                             SpokenPhrase(
                                 text = it.text,
-                                thresholdPercent = step.matchThresholdPercent ?: 80,
+                                thresholdPercent = it.matchThresholdPercent.orThreshold(
+                                    step.matchThresholdPercent, defaultThreshold
+                                ),
                                 successCaptureDelayMs = it.successCaptureDelayMs  // per-phrase
                             )
                         }
@@ -182,8 +238,12 @@ internal object SpeechVerifierLauncher {
                             ?.let {
                                 IdentityQuestionSpec(
                                     type = it,
-                                    thresholdPercent = step.matchThresholdPercent ?: 80,
-                                    successCaptureDelayMs = q.successCaptureDelayMs ?: 0 // per-question
+                                    thresholdPercent = q.matchThresholdPercent.orThreshold(
+                                        step.matchThresholdPercent, defaultThreshold
+                                    ),
+                                    // per-question; null keeps the module's own capture delay
+                                    successCaptureDelayMs = q.successCaptureDelayMs
+                                        ?: IDENTITY_SUCCESS_CAPTURE_DELAY_MS
                                 )
                             }
                     }
@@ -197,9 +257,15 @@ internal object SpeechVerifierLauncher {
         // No usable config → fall back to the integrator passphrases (or one default phrase).
         val phrases = SpeechVerifierOptions.passphrases.filter { it.isNotBlank() }
             .ifEmpty { listOf("Onaylıyorum") }
-            .map { SpokenPhrase(it) }
+            .map { SpokenPhrase(text = it, thresholdPercent = defaultThreshold) }
         return listOf(VerificationStep.SpokenText(phrases))
     }
+
+    /** Item threshold → step threshold → flow default; out-of-range values are ignored. */
+    private fun Int?.orThreshold(stepThreshold: Int?, defaultThreshold: Int): Int =
+        this?.takeIf { it in 1..100 }
+            ?: stepThreshold?.takeIf { it in 1..100 }
+            ?: defaultThreshold
 
     /**
      * Uploads the recorded video of the just-completed session (call after [onSuccess]) and
@@ -225,5 +291,5 @@ internal object SpeechVerifierLauncher {
     private fun String?.orNull(): String? = this?.takeIf { it.isNotBlank() }
 
     private fun String?.toColorIntOrNull(): Int? =
-        this?.takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }
+        this?.takeIf { it.isNotBlank() }?.let { runCatching { it.toColorInt() }.getOrNull() }
 }

@@ -10,8 +10,14 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCViewModel
+import ai.amani.sdk.presentation_v2.navigation.AmaniV2Destination
 import ai.amani.sdk.presentation_v2.navigation.AmaniV2NavHost
+import ai.amani.sdk.presentation_v2.navigation.PreKycFlow
 import ai.amani.sdk.presentation_v2.navigation.rememberAmaniV2Navigator
+import ai.amani.sdk.presentation_v2.email_otp.EmailOtpRoute
+import ai.amani.sdk.presentation_v2.phone_otp.PhoneOtpRoute
+import ai.amani.sdk.presentation_v2.profile_info.ProfileInfoRoute
+import ai.amani.sdk.presentation_v2.questionnaire.QuestionnaireRoute
 import ai.amani.sdk.presentation_v2.nfc_scan.NfcIntentHost
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
@@ -30,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import timber.log.Timber
 
 /**
  * Host activity for the V2 (Jetpack Compose) UI style. Launched by
@@ -99,6 +106,38 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
         finish()
     }
 
+    /**
+     * Finishes the flow after the user closed it themselves (back / exit): an empty
+     * `KYCResult` — INCOMPLETE profile status, no error code — exactly what v1 returns from
+     * its back-press handler, so the host can tell "user quit" from "SDK failed".
+     */
+    private fun finishCancelled() {
+        val returnIntent = Intent()
+        returnIntent.putExtra(AppConstant.KYC_RESULT, ai.amani.sdk.model.KYCResult())
+        setResult(RESULT_OK, returnIntent)
+        finish()
+    }
+
+    /**
+     * Finishes the flow reporting WHY it closed: the same `KYCResult` Intent contract v1 uses
+     * on its error/exception exits (HomeKYCFragment `Finish.OnError` / `Finish.OnException`),
+     * so a host that only ever sees the SDK close still gets the error code and, when the
+     * failure carried one, the throwable.
+     */
+    private fun finishWithError(errorCode: Int, exception: Throwable?) {
+        Timber.e("V2 KYC flow failed, errorCode: $errorCode, exception: $exception")
+        val returnIntent = Intent()
+        returnIntent.putExtra(
+            AppConstant.KYC_RESULT,
+            ai.amani.sdk.model.KYCResult(
+                errorCode = errorCode,
+                generalException = exception
+            )
+        )
+        setResult(RESULT_OK, returnIntent)
+        finish()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -131,10 +170,19 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
             val approved = androidx.compose.runtime.saveable.rememberSaveable {
                 androidx.compose.runtime.mutableStateOf(false)
             }
+            // v1 after-KYC routing: identifier steps configured to run AFTER the KYC steps are
+            // shown once they're all approved, before the final approved screen. Holds the
+            // current post-KYC step (null = none / done).
+            val postKycDest = androidx.compose.runtime.saveable.rememberSaveable {
+                androidx.compose.runtime.mutableStateOf<AmaniV2Destination?>(null)
+            }
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        HomeKYCEffect.ProfileApproved -> approved.value = true
+                        HomeKYCEffect.ProfileApproved -> {
+                            val next = PreKycFlow.nextAfterKycStep()
+                            if (next != null) postKycDest.value = next else approved.value = true
+                        }
                         else -> {}
                     }
                 }
@@ -172,6 +220,41 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                     )
                     return@AmaniV2Theme
                 }
+                val postKyc = postKycDest.value
+                if (postKyc != null) {
+                    // Post-KYC identifier chain (v1 after-KYC steps): shown standalone here since
+                    // the KYC nav host is done. Each step advances to the next post-KYC step, then
+                    // to the approved screen. Back exits the SDK (this step is required to finish).
+                    BackHandler { finish() }
+                    val advancePostKyc: (String) -> Unit = { identifier ->
+                        PreKycFlow.markCompleted(identifier)
+                        val next = PreKycFlow.nextAfterKycStep()
+                        if (next != null) postKycDest.value = next
+                        else { postKycDest.value = null; approved.value = true }
+                    }
+                    when (postKyc) {
+                        AmaniV2Destination.Questionnaire -> QuestionnaireRoute(
+                            headerTitle = CachingHomeKYC.appConfig?.generalConfigs?.mainTitleText
+                                ?: "Verification",
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_QUESTIONNAIRE) }
+                        )
+                        AmaniV2Destination.ProfileInfo -> ProfileInfoRoute(
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_PROFILE_INFO) }
+                        )
+                        AmaniV2Destination.PhoneOtp -> PhoneOtpRoute(
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_PHONE_OTP) }
+                        )
+                        AmaniV2Destination.EmailOtp -> EmailOtpRoute(
+                            onBack = { finish() },
+                            onCompleted = { advancePostKyc(AppConstant.IDENTIFIER_EMAIL_OTP) }
+                        )
+                        else -> approved.value = true
+                    }
+                    return@AmaniV2Theme
+                }
                 when (val current = state) {
                     HomeKYCState.Loading -> HomeKYCScreen(state = HomeKYCScreenState.Loading)
 
@@ -180,7 +263,7 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                         AmaniV2NavHost(
                             navigator = navigator,
                             homeContent = current.content,
-                            onExit = { finish() },
+                            onExit = { finishCancelled() },
                             // Capture leg finished (final side confirmed): upload through the
                             // shared SDK layer. The view model marks the matching home step as
                             // processing and listens to AmaniEvents for the verdict.
@@ -208,12 +291,15 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             resolveRuleById = viewModel::resolveRuleById,
                             // Transient errors (e.g. a failed speech upload) shown in the
                             // host snackbar.
-                            snackbarMessages = viewModel.messages
+                            snackbarMessages = viewModel.messages,
+                            // A before-KYC identifier chain (profile_info / questionnaire) sets its
+                            // own AmaniEvent listener; re-attach HomeKYC's when it returns to Home.
+                            onReturnToHomeFromPreKyc = { viewModel.reattachAmaniEventListener() }
                         )
                     }
 
-                    // TODO(wiring): surface the SDK error code to the caller before exit.
-                    is HomeKYCState.Failed -> finish()
+                    is HomeKYCState.Failed ->
+                        finishWithError(current.errorCode, current.exception)
                 }
             }
         }

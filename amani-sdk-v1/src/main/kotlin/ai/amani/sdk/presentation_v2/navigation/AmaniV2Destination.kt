@@ -29,6 +29,53 @@ sealed interface AmaniV2Destination : Parcelable {
     data object DocumentType : AmaniV2Destination
 
     /**
+     * Questionnaire (survey) — V2 counterpart of the v1 QuestionnaireFragment, one of the
+     * "before KYC" steps (identifier `questionnaire`). Questions are fetched from the SDK, so
+     * this destination carries no args; the screen owns its own view model.
+     */
+    @Parcelize
+    data object Questionnaire : AmaniV2Destination
+
+    /**
+     * Profile info form (name / surname / birth date) — V2 counterpart of the v1
+     * ProfileInfoFragment, one of the "before/after KYC" steps (identifier `profile_info`).
+     * Config strings + the step are resolved from the shared cache, so this destination carries
+     * no args; the screen owns its own view model.
+     */
+    @Parcelize
+    data object ProfileInfo : AmaniV2Destination
+
+    /**
+     * Phone OTP — V2 counterpart of the v1 PhoneVerify + PhoneCheck fragments as one two-phase
+     * step (identifier `phone_otp`): enter phone, then enter the code. No args; the screen owns
+     * its view model.
+     */
+    @Parcelize
+    data object PhoneOtp : AmaniV2Destination
+
+    /**
+     * Email OTP — V2 counterpart of the v1 EmailVerify + EmailCheck fragments as one two-phase
+     * step (identifier `email_otp`): enter email, then enter the code. No args; the screen owns
+     * its view model.
+     */
+    @Parcelize
+    data object EmailOtp : AmaniV2Destination
+
+    /**
+     * Pre-capture guide — V2 counterpart of the legacy "Upload Front/Back Side" Lottie
+     * screens (IDCaptureFront/BackSideFrag played `xx_id_front` / `xx_id_back` before the
+     * camera). Redesigned per prototype screens 7 & 10: an animated illustration plus a
+     * quality checklist, shown *before* [Capture] for each side so the user knows how to
+     * frame the document. "Open camera" advances to [Capture] for the same [side];
+     * [versionType] keys the chosen [datamanager.model.config.Version].
+     */
+    @Parcelize
+    data class CaptureGuide(
+        val versionType: String,
+        val side: CaptureSide
+    ) : AmaniV2Destination
+
+    /**
      * Document capture — V2 counterpart of IDCaptureFront/BackSideFrag. [side] selects
      * which face is captured; [versionType] keys the chosen [datamanager.model.config.Version].
      */
@@ -50,6 +97,24 @@ sealed interface AmaniV2Destination : Parcelable {
     data class CaptureConfirm(
         val versionType: String,
         val side: CaptureSide
+    ) : AmaniV2Destination
+
+    /**
+     * Pre-selfie guide — V2 counterpart of the legacy selfie instruction animations
+     * (SelfieCaptureFragment played `animation_first_selfie_instruction` /
+     * `animation_second_selfie_instruction` before mounting the camera). Which animation(s)
+     * appear follows v1's per-type logic (see [CaptureFlow]):
+     *  - Auto / Manual → one guide ([SelfieGuideStep.First]) → camera
+     *  - Pose estimation → two guides ([SelfieGuideStep.First] then [SelfieGuideStep.Second]) → camera
+     *  - Pose estimation V2 → no guide (straight to [SelfieCapture])
+     *
+     * "Open camera" advances to the next [SelfieGuideStep] or to [SelfieCapture].
+     * [versionType] keys the chosen [datamanager.model.config.Version].
+     */
+    @Parcelize
+    data class SelfieGuide(
+        val versionType: String,
+        val step: SelfieGuideStep
     ) : AmaniV2Destination
 
     /**
@@ -131,3 +196,11 @@ sealed interface AmaniV2Destination : Parcelable {
 /** Which face of a document is being captured. */
 @Parcelize
 enum class CaptureSide : Parcelable { Front, Back }
+
+/**
+ * Which pre-selfie instruction animation a [AmaniV2Destination.SelfieGuide] shows —
+ * [First] = `animation_first_selfie_instruction`, [Second] = the follow-up
+ * `animation_second_selfie_instruction` used only for the pose-estimation flow (v1).
+ */
+@Parcelize
+enum class SelfieGuideStep : Parcelable { First, Second }

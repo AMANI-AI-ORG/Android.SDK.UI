@@ -113,10 +113,12 @@ private fun SpeechVerifierHost(
             factory = { ctx -> FragmentContainerView(ctx).apply { id = containerId } }
         )
         if (isPreparing) {
+            // Spinner ONLY — deliberately no background. The module already runs its camera
+            // preview behind its own full-screen dim during preparation, so painting an opaque
+            // surface here hid the camera and produced a plain light screen (V1 shows just a
+            // centered spinner over the live preview; this keeps both flows identical).
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(AmaniV2Theme.palette.background),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = AmaniV2Theme.palette.loader)

@@ -134,8 +134,17 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"
     implementation "androidx.lifecycle:lifecycle-runtime-compose:2.8.7"
 
+    // Lottie for Compose (V2). lottie-compose renders inside @Preview (unlike the
+    // view-based LottieAnimationView hosted via AndroidView, which is blank in inspection).
+    // NOTE: this pulls lottie core up from the 3.6.1 that AmaniAi transitively provides to
+    // 6.x for the whole module — the version-based usages in v1 (NfcScanScreen, selfie
+    // instruction animations) resolve to 6.x too. Pinned together to avoid a split.
+    def lottie_version = "6.1.0"
+    implementation "com.airbnb.android:lottie:$lottie_version"
+    implementation "com.airbnb.android:lottie-compose:$lottie_version"
+
     // AmaniSDK impl
-    def amani_sdk = "3.21.0"
+    def amani_sdk = "3.21.3"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Optional speech-verification module — compileOnly ON PURPOSE: the UI SDK compiles
@@ -143,7 +152,7 @@ dependencies {
     // apps that never use the speech (`ST`) step carry none of its weight 
     // Without it, entering an `ST` step fails with a descriptive runtime error
     // (SpeechVerifierAvailability) instead of silently doing nothing.
-    def speech_verifier = "1.0.0"
+    def speech_verifier = "1.1.1"
     compileOnly "ai.amani.android:amani-speech-verifier:$speech_verifier"
 
     // Nav graph. Pinned to the 2.8.x line on purpose: navigation 2.9.x transitively
@@ -160,7 +169,12 @@ dependencies {
     implementation 'com.hbb20:ccp:2.5.3' // CountryCodePicker library
     implementation 'net.yslibrary.keyboardvisibilityevent:keyboardvisibilityevent:3.0.0-RC3'
 
-    implementation 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.1.0'
+    // Optional Voice Assistant (TTS) — compileOnly ON PURPOSE, same contract as the
+    // speech-verification module above: the UI SDK compiles against its API but does NOT
+    // bundle it, so apps that never want voice prompts carry none of its weight. Without it
+    // every voice call is a silent no-op (see VoiceAssistantSDKManager's presence guard).
+    // The consuming app adds it as a real runtime dependency to enable voice.
+    compileOnly 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.1.0'
 
     implementation 'com.github.bumptech.glide:glide:5.0.7'
 }

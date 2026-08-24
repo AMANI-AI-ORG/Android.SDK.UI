@@ -14,10 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,12 +25,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Height of the dot row at the top of each step column. The connectors share this height so
  * their center line lands exactly on the dots, independent of the (scaled) label beneath.
  */
-private val DotRowHeight = 14.dp
+private val DotRowHeight = 16.dp
+
+/** Filled (completed / current / rejected) dot. */
+private val DotSize = 12.dp
+
+/** Gap between a dot and the connector line on either side. */
+private val ConnectorGap = 2.dp
+
+/** Thickness of the connector line. */
+private val ConnectorHeight = 2.dp
+
+/** Horizontal breathing room between two neighbouring column labels. */
+private val LabelGap = 4.dp
 
 enum class StepStatus { Completed, Current, Rejected, Pending }
 
@@ -53,39 +63,31 @@ fun DotProgressBar(
     onDark: Boolean = false
 ) {
     val palette = AmaniV2Theme.palette
+    fun connectorColor(completed: Boolean): Color = when {
+        completed -> palette.accent
+        onDark -> Color.White.copy(alpha = 0.2f)
+        else -> AmaniV2Colors.ConnectorIdle
+    }
+
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            // Trim side padding so the weight(1f) label columns get more width.
-            .padding(horizontal = 4.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
+        // Each step owns a weight(1f) column with its dot centered and the connector drawn as
+        // two half-lines *behind* the dot (left half + right half). Because the columns are
+        // adjacent, the right half of one column meets the left half of the next exactly under
+        // the dots — so the line runs continuously from dot to dot (iOS parity), instead of the
+        // old short segment that left a gap before each dot. A segment is "completed"-colored
+        // when the step to its LEFT is completed (matching the previous per-connector logic).
         steps.forEachIndexed { idx, step ->
-            DotItem(step = step, onDark = onDark, modifier = Modifier.weight(1f))
-            if (idx < steps.lastIndex) {
-                val filled = step.status == StepStatus.Completed
-                val lineColor = when {
-                    filled -> palette.accent
-                    onDark -> Color.White.copy(alpha = 0.2f)
-                    else -> AmaniV2Colors.ConnectorIdle
-                }
-                // The connector occupies the same height as the dot row and centers the line
-                // within it, so it sits between the dots — never over the labels below.
-                Box(
-                    modifier = Modifier
-                        .width(14.dp.scaled())
-                        .height(DotRowHeight),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.5.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(lineColor)
-                    )
-                }
-            }
+            DotItem(
+                step = step,
+                onDark = onDark,
+                // No line to the left of the first dot / right of the last dot.
+                leftColor = if (idx == 0) null else connectorColor(steps[idx - 1].status == StepStatus.Completed),
+                rightColor = if (idx == steps.lastIndex) null else connectorColor(step.status == StepStatus.Completed),
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
@@ -94,6 +96,8 @@ fun DotProgressBar(
 private fun DotItem(
     step: DotStep,
     onDark: Boolean,
+    leftColor: Color?,
+    rightColor: Color?,
     modifier: Modifier = Modifier
 ) {
     val palette = AmaniV2Theme.palette
@@ -103,45 +107,65 @@ private fun DotItem(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
-            modifier = Modifier.height(DotRowHeight),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(DotRowHeight),
             contentAlignment = Alignment.Center
         ) {
-            when (step.status) {
-                StepStatus.Completed -> Dot(10.dp, palette.accent)
-                StepStatus.Rejected -> Dot(10.dp, palette.danger)
-                StepStatus.Current -> Dot(
-                    size = 10.dp,
-                    color = palette.accent,
-                    haloColor = if (onDark) palette.accent.copy(alpha = 0.3f) else palette.accentSoft
+            // Connector line: left half + right half, each stopping [ConnectorGap] short of the
+            // dot so the line meets the neighbouring column's half without touching the circles.
+            Row(
+                modifier = Modifier.matchParentSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = DotSize / 2 + ConnectorGap)
+                        .height(ConnectorHeight)
+                        .background(leftColor ?: Color.Transparent)
                 )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = DotSize / 2 + ConnectorGap)
+                        .height(ConnectorHeight)
+                        .background(rightColor ?: Color.Transparent)
+                )
+            }
+            when (step.status) {
+                StepStatus.Completed, StepStatus.Current -> Dot(DotSize, palette.accent)
+                StepStatus.Rejected -> Dot(DotSize, palette.danger)
                 StepStatus.Pending -> {
-                    val bg = if (onDark) Color.White.copy(alpha = 0.1f) else AmaniV2Colors.DotIdle
-                    val border = if (onDark) Color.White.copy(alpha = 0.3f) else AmaniV2Colors.DotIdleBorder
+                    val border = if (onDark) Color.White.copy(alpha = 0.3f) else palette.ink.copy(alpha = 0.3f)
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(DotSize)
                             .clip(CircleShape)
-                            .background(bg)
                             .border(1.5.dp, border, CircleShape)
                     )
                 }
             }
         }
         val labelColor = when (step.status) {
-            StepStatus.Completed -> if (onDark) Color.White.copy(alpha = 0.85f) else palette.ink
+            StepStatus.Completed -> if (onDark) Color.White.copy(alpha = 0.85f) else palette.ink.copy(alpha = 0.7f)
             StepStatus.Current -> if (onDark) Color.White else palette.accent
             StepStatus.Rejected -> palette.danger
-            StepStatus.Pending -> if (onDark) Color.White.copy(alpha = 0.5f) else palette.inkLight
+            StepStatus.Pending -> if (onDark) Color.White.copy(alpha = 0.5f) else palette.ink.copy(alpha = 0.35f)
         }
-        val weight = if (step.status == StepStatus.Pending) FontWeight.Normal else FontWeight.Medium
-        // TODO(width): keep each step label on one line so many-step bars don't overflow
-        // downward. Long labels are truncated with an ellipsis for now.
+        val weight = if (step.status == StepStatus.Current) FontWeight.SemiBold else FontWeight.Medium
+        // Multi-word labels wrap (up to 2 lines); a single word stays on one line and
+        // ellipsizes instead of being broken across lines mid-word. [LabelGap] keeps
+        // neighbouring columns' labels apart so long titles never run into each other.
+        val isSingleWord = step.label.trim().none { it.isWhitespace() }
         Text(
             step.label,
-            style = AmaniV2Type.label.copy(fontWeight = weight).scaled(),
+            style = AmaniV2Type.label.copy(fontWeight = weight, fontSize = 9.sp).scaled(),
             color = labelColor,
-            maxLines = 1,
-            modifier = Modifier.wrapContentWidth(),
+            maxLines = if (isSingleWord) 1 else 2,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = LabelGap),
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
         )

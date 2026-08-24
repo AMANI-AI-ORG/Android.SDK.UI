@@ -10,10 +10,10 @@ import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.data.repository.signature.SignatureRepoImp
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
+import ai.amani.sdk.presentation_v2.AmaniEventBus
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.extentions.sort
-import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.RegisterConfig
 import ai.amani.sdk.model.amani_events.error.AmaniError
@@ -106,6 +106,9 @@ class HomeKYCViewModel(
     /** Rule id currently uploading / awaiting the verdict — renders the row spinner. */
     private var processingRuleId: String? = null
 
+    /** This view model's handle on the shared [AmaniEventBus]; removed in [onCleared]. */
+    private var eventSubscriber: AmaniEventBus.Subscriber? = null
+
     private val REJECTED_STATUSES = setOf(
         AppConstant.STATUS_REJECTED,
         AppConstant.STATUS_AUTOMATICALLY_REJECTED
@@ -120,6 +123,17 @@ class HomeKYCViewModel(
     private val ERROR_BEARING_STATUSES = setOf(
         AppConstant.STATUS_REJECTED,
         AppConstant.STATUS_AUTOMATICALLY_REJECTED,
+        AppConstant.STATUS_PENDING_REVIEW
+    )
+
+    /**
+     * Statuses that satisfy the FINAL approve gate — a KYC step counts as "passing" for
+     * finishing the flow when it is APPROVED *or* PENDING_REVIEW (manual review still pending).
+     * PENDING_REVIEW is treated as done-enough to reach the Approved screen, matching the
+     * lenient step-display / unlock gate ([HomeKYCMapper.DONE_STATUSES] / isUnlocked).
+     */
+    private val FINISH_PASSING_STATUSES = setOf(
+        STATUS_APPROVED,
         AppConstant.STATUS_PENDING_REVIEW
     )
 
@@ -312,7 +326,7 @@ class HomeKYCViewModel(
         refreshReady()
 
         val docList = CachingHomeKYC.onlyKYCRules ?: return
-        if (docList.all { (statusOverrides[it.id] ?: it.status) == STATUS_APPROVED }) {
+        if (docList.all { (statusOverrides[it.id] ?: it.status) in FINISH_PASSING_STATUSES }) {
             sendEffect(HomeKYCEffect.ProfileApproved)
         }
     }
@@ -375,6 +389,9 @@ class HomeKYCViewModel(
             onStart = { _state.value = HomeKYCState.Loading },
             onCompleted = { result ->
                 if (result.isSuccess) {
+                    // The core re-creates its AmaniEvent holder during login, so re-install the
+                    // shared bus listener before any step verdict can arrive.
+                    AmaniEventBus.attach()
                     fetchAppConfig()
                 } else {
                     val code = result.error ?: 0
@@ -407,7 +424,7 @@ class HomeKYCViewModel(
             onStart = { Timber.d("V2 HomeKYC: fetching customer detail") },
             onError = { throwable ->
                 Timber.e("V2 HomeKYC: customer detail error $throwable")
-                emitError(AmaniUIErrorConstants.CUSTOMER_DETAIL_FETCH_ERROR)
+                emitError(AmaniUIErrorConstants.CUSTOMER_DETAIL_FETCH_ERROR, throwable)
             },
             onComplete = { customerDetail ->
                 CachingHomeKYC.customerDetail = customerDetail
@@ -467,17 +484,25 @@ class HomeKYCViewModel(
      * error and leaves later steps locked. When every KYC step is approved the flow
      * completes via [HomeKYCEffect.ProfileApproved].
      */
+    /**
+     * Kept for the host's pre-KYC return hook. Subscriptions on the shared [AmaniEventBus] are
+     * additive, so Home never loses its events to a screen listener and this is a no-op once
+     * subscribed.
+     */
+    fun reattachAmaniEventListener() = listenAmaniEvents()
+
     private fun listenAmaniEvents() {
-        Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
-            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
+        if (eventSubscriber != null) return
+        eventSubscriber = AmaniEventBus.subscribe(object : AmaniEventBus.Subscriber {
+            override fun onError(type: String?, errors: ArrayList<AmaniError?>?) {
                 Timber.e("V2 AmaniEvent error type=$type")
             }
 
-            override fun profileStatus(profileStatus: ProfileStatus) {
+            override fun onProfileStatus(profileStatus: ProfileStatus) {
                 Timber.d("V2 AmaniEvent profile status received")
             }
 
-            override fun stepsResult(stepsResult: StepsResult?) {
+            override fun onStepsResult(stepsResult: StepsResult?) {
                 val results = stepsResult?.result ?: return
 
                 // Store the freshest status + rejection message per step as overlays — even
@@ -514,7 +539,7 @@ class HomeKYCViewModel(
                 refreshReady()
 
                 val allApproved = docList.all {
-                    (statusOverrides[it.id] ?: it.status) == STATUS_APPROVED
+                    (statusOverrides[it.id] ?: it.status) in FINISH_PASSING_STATUSES
                 }
                 if (allApproved) sendEffect(HomeKYCEffect.ProfileApproved)
             }
@@ -557,21 +582,30 @@ class HomeKYCViewModel(
         }
     }
 
-    /** True when every KYC-identifier rule is APPROVED. Mirrors v1 `checkKYCStepsAreApproved`. */
+    /**
+     * True when every KYC-identifier rule is APPROVED or PENDING_REVIEW (manual review still
+     * pending counts as done-enough to finish). Mirrors v1 `checkKYCStepsAreApproved`.
+     */
     private fun areAllKycStepsApproved(customerDetail: CustomerDetailResult?): Boolean {
         var total = 0
         var approved = 0
         customerDetail?.rules?.forEach { rule ->
             if (rule.identifier == "kyc" || rule.identifier == "") {
                 total += 1
-                if (rule.status == STATUS_APPROVED) approved += 1
+                if (rule.status in FINISH_PASSING_STATUSES) approved += 1
             }
         }
         return total > 0 && total == approved
     }
 
-    private fun emitError(errorCode: Int) {
-        _state.value = HomeKYCState.Failed(errorCode)
+    override fun onCleared() {
+        AmaniEventBus.unsubscribe(eventSubscriber)
+        eventSubscriber = null
+        super.onCleared()
+    }
+
+    private fun emitError(errorCode: Int, exception: Throwable? = null) {
+        _state.value = HomeKYCState.Failed(errorCode, exception)
         sendEffect(HomeKYCEffect.Error(errorCode))
     }
 

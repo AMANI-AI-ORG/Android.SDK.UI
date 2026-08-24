@@ -20,6 +20,8 @@ internal object NfcMapper {
             listOf("Place the top back of your phone on the chip side of your ID and hold it still.")
         }
 
+        val animationStates = NfcV2AnimationCopy.statesFor(version)
+
         return NfcTexts(
             headerTitle = version.nfcTitle.orFallback("NFC"),
             title = version.nfcPleaseHold.orFallback("Hold your ID to your phone"),
@@ -30,8 +32,7 @@ internal object NfcMapper {
             cancelButtonText = (version.cancelButtonText ?: general?.tryAgainText).orFallback("Cancel"),
             continueButtonText = general?.continueText.orFallback("Start scan"),
             mrzCheckTitle = version.nfcConfigureTitle.orFallback("Check your document details"),
-            // TODO: config-driven
-            mrzCheckDescription = "We couldn't read the chip. Confirm these values and try again.",
+            mrzCheckDescription = version.nfcFailedDescription.orFallback("We couldn't read the chip. Confirm these values and try again."),
             birthDateLabel = version.documentDateOfBirth.orFallback("Date of birth"),
             expiryDateLabel = version.documentDateOfExpiry.orFallback("Date of expiry"),
             documentNoLabel = version.documentNoTitle.orFallback("Document number"),
@@ -40,14 +41,17 @@ internal object NfcMapper {
             modalScanningTitle = version.nfcDialogTitle.orFallback("Scanning…"),
             modalScanningDescription = version.nfcDialogDescription.orFallback("Keep the document steady."),
             modalFailedText = version.nfcFailed.orFallback("Couldn't read the chip. Try again."),
-            // TODO: config-driven
-            modalDoneText = "Chip verified",
+            // Same "read complete" copy the animation ends on (nfcV2.animationStates.success).
+            modalDoneText = animationStates["success"].orFallback("Chip verified"),
             enableNfcHeader = version.enableNfcHeader.orFallback("Turn on NFC"),
             enableNfcDescription = version.enableNfcDescription.orFallback(
                 "NFC is off. Turn it on to scan your document's chip."
             ),
             enableNfcButton = general?.tryAgainText.orFallback("Open settings"),
-            animationColorHex = version.nfcAnimationColor.nonBlank()
+            animationColorHex = version.nfcAnimationColor.nonBlank(),
+            animationStates = animationStates,
+            animationHint = version.nfcV2?.animationHint
+                .orFallback("Follow the instructions in the animation below")
         )
     }
 

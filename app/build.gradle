@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'kotlin-kapt'
     id 'kotlin-parcelize'
 }
@@ -57,7 +58,7 @@ android {
 
     buildFeatures {
         buildConfig = true
-        buildConfig = true
+        compose = true
     }
 
     //Split apk
@@ -92,7 +93,32 @@ dependencies {
 
     // Optional speech-verification module. The UI SDK depends on it as compileOnly
     // which means the consuming APP must add it as a real runtime
-    implementation 'ai.amani.android:amani-speech-verifier:1.0.0'
+    implementation 'ai.amani.android:amani-speech-verifier:1.1.1'
+
+    // Optional Voice Assistant (TTS). Both the UI SDK and the speech-verification module
+    // depend on it as compileOnly, so the APP supplies it at runtime to enable voice prompts.
+    implementation 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.1.0'
+
+    // QR scanning for the entry screen (ports the verify app's ZXing flow).
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+
+    // Jetpack Compose (entry + QR screens are Compose, matching the verify app UI).
+    def composeBom = platform('androidx.compose:compose-bom:2024.09.03')
+    implementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.activity:activity-compose:1.9.2'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    // MVVM: ViewModel + lifecycle-aware state collection + coroutines.
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'

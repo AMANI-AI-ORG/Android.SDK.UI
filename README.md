@@ -325,6 +325,26 @@ AmaniSDKUI.setSpeechVerificationPassphrases(listOf("I approve", "I confirm"))
 AmaniSDKUI.setSpeechVerificationTimeoutMillis(60_000)
 ```
 
+## Voice Assistant (TTS) — optional
+
+The UI SDK can speak short prompts on its screens (ID capture, selfie, NFC, result) and in the
+`ST` step. Like the speech-verification module, the Voice Assistant SDK is **`compileOnly`**: it is
+**not bundled**, so apps that don't want voice add nothing and carry none of its weight — every
+voice call is then a silent no-op and the KYC flow is unaffected.
+
+To enable voice prompts, add it as a runtime dependency:
+
+```groovy
+// Project build.gradle → allprojects { repositories { … } }
+maven { url = 'https://jitpack.io' }
+
+// Module (app) build.gradle
+implementation 'ai.amani:Android.SDK.AmaniVoiceAssistant:1.1.0'
+```
+
+The prompt audio itself comes from your remote configuration (`ttsVoices`), so the Amani team must
+also have voices configured for your profile — no code change is needed to supply the URL.
+
 ## Required Permissions
 
 You must have the folowing keys in your application's manifest file:

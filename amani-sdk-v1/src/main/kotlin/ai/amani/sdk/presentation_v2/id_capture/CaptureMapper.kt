@@ -17,8 +17,71 @@ import datamanager.model.config.Version
  */
 internal object CaptureMapper {
 
+    /**
+     * Config prefix placed before the eyebrow label on a two-sided document, with `{current}`
+     * and `{total}` filled in (e.g. "Step 1 of 2 · ").
+     */
+    private fun stepPrefix(version: Version, current: Int, total: Int): String =
+        version.v2GuideStepPrefix.orFallback("Step {current} of {total} · ")
+            .replace("{current}", current.toString())
+            .replace("{total}", total.toString())
+
     private fun Version.stepFor(side: CaptureSide) =
         steps?.getOrNull(if (side == CaptureSide.Back) 1 else 0)
+
+    private fun Version.isTwoSided() = (steps?.size ?: 0) > 1
+
+    /**
+     * Builds the pre-capture guide state (prototype screens 7 & 10) for the given [side].
+     * The v2 counterpart of the legacy "Upload Front/Back Side" Lottie screens: the header
+     * reuses the per-step [captureTitle][datamanager.model.config.Step.captureTitle] (so it
+     * matches the capture screen that follows), while the instructional copy is static design
+     * text. The "Step X of 2" eyebrow only appears for two-sided documents; a single-sided
+     * document shows a plain "Photo capture" eyebrow (there is no back guide for it).
+     */
+    fun toGuideState(
+        version: Version,
+        side: CaptureSide,
+        general: GeneralConfigs?
+    ): IdCaptureGuideUiState {
+        val step = version.stepFor(side)
+        val isFront = side == CaptureSide.Front
+        // Config eyebrow label (v2GuideEyebrow), prefixed on a two-sided document with the
+        // config step prefix (v2GuideStepPrefix, "Step {current} of {total} · ").
+        val eyebrowLabel = version.v2GuideEyebrow.orFallback("Photo capture")
+        val eyebrow = if (version.isTwoSided()) {
+            stepPrefix(version, current = if (isFront) 1 else 2, total = 2) + eyebrowLabel
+        } else {
+            eyebrowLabel
+        }
+        return IdCaptureGuideUiState(
+            headerTitle = step?.captureTitle.orFallback(
+                if (isFront) general?.v2FrontSideText.orFallback("3Front of ID")
+                else general?.v2BackSideText.orFallback("Back of ID")
+            ),
+            eyebrow = eyebrow,
+            title = if (isFront) version.v2GuideTitle.orFallback("Photograph the front side")
+            else version.v2GuideSecondTitle.orFallback("Now flip it over"),
+            description = if (isFront)
+                version.v2GuideDescription.orFallback("Take the photo in a bright area and make sure the document fits fully in the frame.")
+            else
+                version.v2GuideSecondDescription.orFallback("We'll read the machine-readable zone (MRZ) on the back of your card."),
+            checklistHeader = version.v2GuideChecklistHeader.orFallback("Before you shoot"),
+            checklistItems = if (isFront)
+                listOf(
+                    version.v2GuideCheck1.orFallback("Bright, even lighting"),
+                    version.v2GuideCheck2.orFallback("All four corners visible"),
+                    version.v2GuideCheck3.orFallback("No glare on the photo or text")
+                )
+            else
+                listOf(
+                    version.v2GuideSecondCheck1.orFallback("MRZ lines fully readable"),
+                    version.v2GuideSecondCheck2.orFallback("Barcode not covered by fingers"),
+                    version.v2GuideSecondCheck3.orFallback("Flat surface, no tilt")
+                ),
+            buttonText = general?.v2OpenCameraButtonText.orFallback("Open camera")
+        )
+    }
 
     fun toIdCaptureState(
         version: Version,

@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation_v2.select_document_type
 
-import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.presentation_v2.components.DotStep
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import androidx.compose.material.icons.Icons
@@ -23,11 +22,12 @@ internal object SelectDocumentTypeMapper {
     fun toUiState(
         versions: List<Version>,
         config: ResGetConfig?,
-        ruleTitle: String? = null
+        ruleTitle: String? = null,
+        // documentSelection* strings live on the step config; resolved by rule id upstream
+        // (CaptureFlow) rather than by sortOrder position.
+        stepConfig: datamanager.model.config.StepConfig? = null
     ): SelectDocumentTypeUiState {
         val general = config?.generalConfigs
-        // documentSelection* strings live on the step config; all versions share a stepId.
-        val stepConfig = versions.firstOrNull()?.stepId?.let { config?.getStepConfig(it) }
 
         val options = versions.map { version ->
             DocumentTypeOption(
@@ -57,15 +57,7 @@ internal object SelectDocumentTypeMapper {
             title = stepConfig?.documentSelectionTitle.orFallback("Which document will you use?"),
             subtitle = stepConfig?.documentSelectionDescription
                 .orFallback("Choose a government-issued ID. Make sure it's valid and not expired."),
-            options = options,
-            // Preselect the first document (HTML shows the top option already chosen).
-            selectedId = options.firstOrNull()?.id,
-            // CTA names the selected document ("Continue with Global ID Card"); with no
-            // selection it shows the config placeholder and stays disabled.
-            continuePrefix = general?.v2HomeCtaContinue.orFallback("Continue with"),
-            placeholder = (versions.firstOrNull()?.v2DocSelectionPlaceholder)
-                .orFallback("Select an ID type to continue"),
-            continueButtonText = general?.continueText.orFallback("Continue")
+            options = options
         )
     }
 

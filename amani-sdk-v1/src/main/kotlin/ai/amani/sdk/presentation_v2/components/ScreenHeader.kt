@@ -23,8 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -59,12 +61,26 @@ fun ScreenHeader(
         ) {
             HeaderIconButton(
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
+                // The back button keeps the fixed radius; every other button follows config.
+                cornerRadius = AmaniV2Dimens.iconButtonRadius,
+                // Mirrors iOS makeNavButton: the arrow is topBarFontColor and the button
+                // background is that SAME color at 30% opacity (a soft self-tinted chip),
+                // rather than a separate surface color.
+                containerColor = palette.topBarFont.copy(alpha = 0.3f),
                 contentColor = palette.topBarFont,
                 onClick = onBack
             )
             Text(title, style = AmaniV2Type.header.scaled(), color = palette.topBarFont)
             Spacer(Modifier.size(AmaniV2Dimens.iconButtonSize.scaled()))
         }
+        // Full-bleed hairline divider under the toolbar (iOS parity): separates the header
+        // from the content / step bar below and spans edge-to-edge (unlike the padded rows).
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(palette.border)
+        )
         if (steps != null) {
             // The step progress zone sits below the toolbar on the app background
             // (GeneralConfigs.appBackground) — deliberately NOT topBarBackground, so the
@@ -83,19 +99,28 @@ fun ScreenHeader(
     }
 }
 
-/** Soft rounded icon button used in headers. */
+/**
+ * Soft rounded icon button used in headers. Its corner radius follows the config
+ * `buttonRadiusAndroid` like every other button; the back button opts out via [cornerRadius]
+ * and keeps the fixed [AmaniV2Dimens.iconButtonRadius].
+ */
 @Composable
 fun HeaderIconButton(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     containerColor: Color = AmaniV2Theme.palette.backgroundWarm,
     contentColor: Color = AmaniV2Theme.palette.ink,
+    cornerRadius: Dp = AmaniV2Theme.palette.buttonRadius.dp,
     onClick: () -> Unit = {}
 ) {
+    // Clip to the rounded shape BEFORE .clickable so the press ripple is bounded by the
+    // corner radius too — otherwise the ripple draws as a square over the rounded background.
+    val shape = RoundedCornerShape(cornerRadius.scaled())
     Box(
         modifier = modifier
             .size(AmaniV2Dimens.iconButtonSize.scaled())
-            .background(containerColor, RoundedCornerShape(AmaniV2Dimens.iconButtonRadius.scaled()))
+            .clip(shape)
+            .background(containerColor)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

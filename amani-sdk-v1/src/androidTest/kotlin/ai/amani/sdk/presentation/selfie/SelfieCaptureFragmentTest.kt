@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation.selfie
 
 import ai.amani.amani_sdk.R
+import ai.amani.sdk.data.manager.UiVoiceKey
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.interfaces.IFragmentCallBack
 import ai.amani.sdk.modules.selfie.auto_capture.AutoSelfieCapture
@@ -9,7 +10,6 @@ import ai.amani.sdk.modules.selfie.pose_estimation.SelfiePoseEstimation
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.PoseEstimationObserver
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.FeatureConfig
-import ai.amani.voice_assistant.AmaniVoiceAssistant
 import android.graphics.Bitmap
 import android.view.View
 import io.mockk.slot
@@ -48,7 +48,7 @@ import org.junit.runner.RunWith
  * test never reaches the AmaniSDK core, native camera code, or the voice
  * assistant network calls:
  *
- *  - [AmaniVoiceAssistant] is mocked so `play(...)` is a no-op.
+ *  - [VoiceAssistantSDKManager] is spied; `play(...)` is a no-op without init().
  *  - [Selfie], [AutoSelfieCapture] and [SelfiePoseEstimation] are Kotlin
  *    `object`s; we [mockkObject] them and stub the entire builder chains so
  *    `build()` / `start()` return `null`.  In the fragment that triggers the
@@ -105,12 +105,8 @@ class SelfieCaptureFragmentTest {
 
     @Before
     fun setUp() {
-        // ── Voice assistant: no-op ──────────────────────────────────────────
-        mockkObject(AmaniVoiceAssistant)
-        every { AmaniVoiceAssistant.play(any(), any<String>(), any()) } answers {
-            // Intentionally empty — no disk/network call during tests.
-        }
-
+        // ── Voice assistant: the manager is spied below; with no init() the real play() is
+        // already a no-op, and the optional voice SDK is never touched. ─────
         // ── SelfiePoseEstimation v1 / v2 builders ──────────────────────────
         mockkObject(SelfiePoseEstimation)
 
@@ -1022,7 +1018,7 @@ class SelfieCaptureFragmentTest {
     fun voiceAssistant_isPlayedWithVoiceSE0KeyOnViewCreated() {
         withFragment(selfieType = 3) { _ ->
             verify(atLeast = 1) {
-                AmaniVoiceAssistant.play(any(), "VOICE_SE0", any())
+                VoiceAssistantSDKManager.play(any(), UiVoiceKey.VOICE_SE0)
             }
         }
     }

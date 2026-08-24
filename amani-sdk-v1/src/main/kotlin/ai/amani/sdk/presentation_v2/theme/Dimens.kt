@@ -13,7 +13,8 @@ object AmaniV2Dimens {
     val fieldRadius = 12.dp
     val iconButtonRadius = 12.dp
 
-    val buttonHeight = 58.dp
+    // Base height; scaled per window size class at call sites via .scaled().
+    val buttonHeight = 54.dp
     val iconButtonSize = 36.dp
 
     val gapXs = 6.dp

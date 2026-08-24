@@ -2,7 +2,6 @@ package ai.amani.sdk.presentation_v2.select_document_type
 
 import ai.amani.sdk.presentation_v2.components.DotStep
 import ai.amani.sdk.presentation_v2.components.Pill
-import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.components.StepStatus
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.DirectionsCar
@@ -41,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,8 +54,8 @@ data class DocumentTypeOption(
     val title: String,
     val subtitle: String,
     val icon: ImageVector,
-    // Chips shown on the *selected* card (design v2.6). Null NFC label = the document has
-    // no NFC path, chip hidden. Config-driven: Version.v2NfcChipLabel / v2EstimatedTime.
+    // Chips shown on every card. Null NFC label = the document has no NFC path, chip
+    // hidden. Config-driven: Version.v2NfcChipLabel / v2EstimatedTime.
     val nfcChipLabel: String? = null,
     val estimatedTime: String? = null
 )
@@ -68,13 +67,7 @@ data class SelectDocumentTypeUiState(
     val eyebrow: String,
     val title: String,
     val subtitle: String,
-    val options: List<DocumentTypeOption>,
-    val selectedId: String?,
-    // CTA composition (design v2.6): with a selection the button reads
-    // "<continuePrefix> <selected title>"; without one it shows [placeholder] disabled.
-    val continuePrefix: String = "Continue with",
-    val placeholder: String = "Select an ID type to continue",
-    val continueButtonText: String
+    val options: List<DocumentTypeOption>
 )
 
 /**
@@ -86,8 +79,8 @@ fun SelectDocumentTypeScreen(
     state: SelectDocumentTypeUiState,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onSelect: (DocumentTypeOption) -> Unit = {},
-    onContinue: () -> Unit = {}
+    // Tapping a card starts that document type right away — there is no separate confirm step.
+    onSelect: (DocumentTypeOption) -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
     val contentMaxWidth = amaniV2ContentMaxWidth()
@@ -124,30 +117,12 @@ fun SelectDocumentTypeScreen(
                 state.options.forEach { option ->
                     DocumentOptionCard(
                         option = option,
-                        selected = option.id == state.selectedId,
                         onClick = { onSelect(option) }
                     )
                 }
             }
             Spacer(Modifier.height(24.dp))
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = contentMaxWidth)
-                // Clear the system navigation bar so the button isn't overlapped.
-                .navigationBarsPadding()
-                .padding(horizontal = AmaniV2Dimens.screenPadding)
-                .padding(bottom = 20.dp)
-        ) {
-            // CTA names the selected document; without a selection it shows the config
-            // placeholder ("Select an ID type to continue") and stays disabled.
-            val selected = state.options.firstOrNull { it.id == state.selectedId }
-            PrimaryButton(
-                text = selected?.let { "${state.continuePrefix} ${it.title}" } ?: state.placeholder,
-                enabled = selected != null,
-                onClick = onContinue
-            )
+            Spacer(Modifier.navigationBarsPadding())
         }
     }
 }
@@ -155,20 +130,22 @@ fun SelectDocumentTypeScreen(
 @Composable
 private fun DocumentOptionCard(
     option: DocumentTypeOption,
-    selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = AmaniV2Theme.palette
-    val containerColor = if (selected) palette.accentSofter else palette.surface
-    val borderColor = if (selected) palette.accent else palette.border
-    val borderWidth = if (selected) 1.5.dp else 0.5.dp
+    val containerColor = palette.surface
+    val borderColor = palette.border
+    val borderWidth = 0.5.dp
     val cardShape = RoundedCornerShape(AmaniV2Dimens.cardRadius.scaled())
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(containerColor, cardShape)
+            // Clip to the card shape BEFORE .clickable so the press ripple is bounded by the
+            // corner radius (otherwise it draws as a square over the rounded card).
+            .clip(cardShape)
+            .background(containerColor)
             .border(borderWidth, borderColor, cardShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp.scaled(), vertical = 14.dp.scaled())
@@ -182,9 +159,7 @@ private fun DocumentOptionCard(
                 modifier = Modifier
                     .size(44.dp.scaled())
                     .background(
-                        // Selected card → accent fill (white icon); unselected → soft accent
-                        // tint (accent-colored icon).
-                        if (selected) palette.accent else palette.accentSoft,
+                        palette.accentSoft,
                         RoundedCornerShape(AmaniV2Dimens.iconButtonRadius.scaled())
                     ),
                 contentAlignment = Alignment.Center
@@ -192,7 +167,7 @@ private fun DocumentOptionCard(
                 Icon(
                     option.icon,
                     contentDescription = null,
-                    tint = if (selected) palette.surface else palette.accent,
+                    tint = palette.accent,
                     modifier = Modifier.size(22.dp.scaled())
                 )
             }
@@ -211,26 +186,16 @@ private fun DocumentOptionCard(
                     )
                 }
             }
-            if (selected) {
-                Icon(
-                    Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = palette.accent,
-                    modifier = Modifier.size(22.dp.scaled())
-                )
-            } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = palette.inkLight,
-                    modifier = Modifier.size(22.dp.scaled())
-                )
-            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = palette.accent,
+                modifier = Modifier.size(22.dp.scaled())
+            )
         }
-        // Chips only expand on the selected card (design v2.6): the accent NFC pitch
-        // ("Fastest with NFC") when the document supports it, plus the outlined estimated
-        // duration ("~30 sec").
-        if (selected && (option.nfcChipLabel != null || option.estimatedTime != null)) {
+        // Every card shows its details: the accent NFC pitch ("Fastest with NFC") when the
+        // document supports it, plus the outlined estimated duration ("~30 sec").
+        if (option.nfcChipLabel != null || option.estimatedTime != null) {
             Row(
                 modifier = Modifier.padding(top = 12.dp.scaled()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp.scaled())
@@ -295,19 +260,11 @@ internal val SampleSelectDocumentType = SelectDocumentTypeUiState(
             subtitle = "Photo side",
             icon = Icons.Outlined.CreditCard
         )
-    ),
-    selectedId = "id_card",
-    continueButtonText = "Continue"
+    )
 )
 
-@Preview(name = "SelectDocumentType — selected", showBackground = true, widthDp = 360, heightDp = 740)
+@Preview(name = "SelectDocumentType", showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
-private fun PreviewSelectDocumentTypeSelected() {
+private fun PreviewSelectDocumentType() {
     AmaniV2Theme { SelectDocumentTypeScreen(state = SampleSelectDocumentType) }
-}
-
-@Preview(name = "SelectDocumentType — none", showBackground = true, widthDp = 360, heightDp = 740)
-@Composable
-private fun PreviewSelectDocumentTypeNone() {
-    AmaniV2Theme { SelectDocumentTypeScreen(state = SampleSelectDocumentType.copy(selectedId = null)) }
 }

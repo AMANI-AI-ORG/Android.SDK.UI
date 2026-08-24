@@ -3,6 +3,7 @@ package ai.amani.sdk.presentation.selfie
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentSelfieCaptureBinding
 import ai.amani.sdk.Amani
+import ai.amani.sdk.data.manager.UiVoiceKey
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.*
 import ai.amani.sdk.interfaces.IFragmentCallBack
@@ -12,9 +13,6 @@ import ai.amani.sdk.modules.selfie.pose_estimation.observable.PoseEstimationObse
 import ai.amani.sdk.modules.selfie.pose_estimation.v2.model.PoseEstimationV2UiState
 import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.utils.BitmapUtils
-import ai.amani.voice_assistant.AmaniVoiceAssistant
-import ai.amani.voice_assistant.callback.AmaniVAPlayerCallBack
-import ai.amani.voice_assistant.model.AmaniVAVoiceKeys
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -66,17 +64,7 @@ class SelfieCaptureFragment: Fragment() {
 
         observeUiState()
 
-        AmaniVoiceAssistant.play(requireContext(), "VOICE_SE0", callBack = object : AmaniVAPlayerCallBack{
-            override fun onFailure(exception: Exception) {
-
-            }
-
-            override fun onPlay() {
-            }
-
-            override fun onStop() {
-            }
-        })
+        VoiceAssistantSDKManager.play(requireContext(), UiVoiceKey.VOICE_SE0)
     }
 
     /** Navigates the Manual Selfie Fragment*/
@@ -182,20 +170,7 @@ class SelfieCaptureFragment: Fragment() {
             .onUiStateChanged { state ->
                 when (state) {
                     PoseEstimationV2UiState.PREPARATION_STARTED -> {
-                        VoiceAssistantSDKManager.play(
-                            context = requireContext(),
-                            key = AmaniVAVoiceKeys.VOICE_SE1,
-                            callBack = object : AmaniVAPlayerCallBack {
-                                override fun onFailure(exception: Exception) {
-                                }
-
-                                override fun onPlay() {
-                                }
-
-                                override fun onStop() {
-                                }
-                            }
-                        )
+                        VoiceAssistantSDKManager.play(requireContext(), UiVoiceKey.VOICE_SE1)
                     }
 
                     PoseEstimationV2UiState.PREPARATION_CONFIRMED -> {

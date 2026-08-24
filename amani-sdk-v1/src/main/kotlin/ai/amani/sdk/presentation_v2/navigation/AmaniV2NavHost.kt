@@ -7,14 +7,23 @@ import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCUiState
 import ai.amani.sdk.presentation_v2.preview_screen.PreviewScreen
+import ai.amani.sdk.presentation_v2.email_otp.EmailOtpRoute
+import ai.amani.sdk.presentation_v2.phone_otp.PhoneOtpRoute
+import ai.amani.sdk.presentation_v2.profile_info.ProfileInfoRoute
+import ai.amani.sdk.presentation_v2.questionnaire.QuestionnaireRoute
+import ai.amani.sdk.utils.AppConstant
+import ai.amani.amani_sdk.R
 import ai.amani.sdk.presentation_v2.id_capture.CaptureMapper
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureBackScreen
 import ai.amani.sdk.presentation_v2.id_capture.IdCaptureFrontScreen
+import ai.amani.sdk.presentation_v2.id_capture.IdCaptureGuideScreen
+import ai.amani.sdk.presentation_v2.id_capture.idGuideAnimationRes
 import ai.amani.sdk.presentation_v2.nfc_scan.NfcScanScreen
 import ai.amani.sdk.presentation_v2.nfc_scan.deviceHasNfcHardware
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeScreen
 import ai.amani.sdk.presentation_v2.select_document_type.SelectDocumentTypeMapper
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieCaptureScreen
+import ai.amani.sdk.presentation_v2.selfie_capture.SelfieGuideScreen
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieMapper
 import ai.amani.sdk.presentation_v2.signature.SignatureMapper
 import ai.amani.sdk.presentation_v2.signature.SignatureScreen
@@ -34,6 +43,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -95,6 +107,10 @@ fun AmaniV2NavHost(
     // Transient user-facing messages to surface in the host snackbar (e.g. a speech-upload
     // failure emitted by the view model once we're back on Home). Optional.
     snackbarMessages: Flow<String>? = null,
+    // Invoked when a before-KYC identifier chain (profile_info / questionnaire / …) finishes and
+    // pops back to Home. Pre-KYC screens set their own AmaniEvent listener (v1 parity), so the
+    // host re-attaches HomeKYC's listener here before the user starts the KYC steps.
+    onReturnToHomeFromPreKyc: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -104,6 +120,20 @@ fun AmaniV2NavHost(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Advance the before-KYC identifier chain (v1's step-by-step `getNavDirection`): mark this
+    // step done, move to the next pending step, or pop to Home (re-attaching Home's listener)
+    // when the chain is complete.
+    fun advancePreKyc(identifier: String) {
+        PreKycFlow.markCompleted(identifier)
+        val next = PreKycFlow.nextBeforeKycStep()
+        if (next != null) {
+            navigator.replaceCurrent(next)
+        } else {
+            onReturnToHomeFromPreKyc()
+            navigator.popToRoot()
+        }
+    }
     // Show any message the host pushes (view-model-emitted errors) in the snackbar.
     LaunchedEffect(snackbarMessages) {
         snackbarMessages?.collect { snackbarHostState.showSnackbar(it) }
@@ -151,6 +181,65 @@ fun AmaniV2NavHost(
                     CaptureFlow.directDestinationFor(version)?.let(navigator::navigateTo)
                 }
             )
+
+            AmaniV2Destination.Questionnaire -> QuestionnaireRoute(
+                // Config-driven header (GeneralConfigs.mainTitleText), same value the home
+                // screen shows; falls back to a generic title upstream.
+                headerTitle = homeContent.headerTitle,
+                // v1 QuestionnaireFragment binds the submit button to GeneralConfigs.continueText.
+                submitButtonText = CachingHomeKYC.appConfig?.generalConfigs?.continueText
+                    ?.takeIf { it.isNotBlank() } ?: "Continue",
+                // Back on a before-KYC step exits the SDK (v1 ProfileInfoFragment.finishActivity).
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_QUESTIONNAIRE) }
+            )
+
+            AmaniV2Destination.ProfileInfo -> ProfileInfoRoute(
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_PROFILE_INFO) }
+            )
+
+            AmaniV2Destination.PhoneOtp -> PhoneOtpRoute(
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_PHONE_OTP) }
+            )
+
+            AmaniV2Destination.EmailOtp -> EmailOtpRoute(
+                onBack = onExit,
+                onCompleted = { advancePreKyc(AppConstant.IDENTIFIER_EMAIL_OTP) }
+            )
+
+            is AmaniV2Destination.CaptureGuide -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    // Stale arg (e.g. config reload) — fall back to the root rather than crash.
+                    navigator.popToRoot()
+                } else {
+                    // Animation is resolved per document type + side (e.g. tur_id_0_front,
+                    // tur_dl_0_back), mirroring iOS; it falls back to the generic xx_id_{side}
+                    // when the type has no dedicated asset.
+                    val isFront = destination.side == CaptureSide.Front
+                    IdCaptureGuideScreen(
+                        state = CaptureMapper.toGuideState(
+                            version = version,
+                            side = destination.side,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
+                        animationRes = idGuideAnimationRes(context, version.type, destination.side),
+                        badgeIcon = if (isFront) Icons.Outlined.PhotoCamera else Icons.Filled.Autorenew,
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // "Open camera" advances to the actual capture for the same side.
+                        onContinue = {
+                            navigator.navigateTo(
+                                AmaniV2Destination.Capture(
+                                    versionType = destination.versionType,
+                                    side = destination.side
+                                )
+                            )
+                        }
+                    )
+                }
+            }
 
             is AmaniV2Destination.Capture -> {
                 val version = CaptureFlow.versionByType(destination.versionType)
@@ -296,7 +385,11 @@ fun AmaniV2NavHost(
                     // — fail loudly and actionably instead of crashing deeper in.
                     SpeechVerifierAvailability.requirePresent()
                     SpeechVerifyScreen(
-                        headerTitle = homeContent.headerTitle,
+                        // Step's own toolbar title (Step.captureTitle) — the home header is
+                        // only the fallback for a config that carries none.
+                        headerTitle = version.steps?.firstOrNull()?.captureTitle
+                            ?.takeIf { it.isNotBlank() }
+                            ?: homeContent.headerTitle,
                         version = version,
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // Verification passed + video secured: hand the version to the host to
@@ -311,6 +404,37 @@ fun AmaniV2NavHost(
                         onError = { message ->
                             navigator.popToRoot()
                             scope.launch { snackbarHostState.showSnackbar(message) }
+                        }
+                    )
+                }
+            }
+
+            is AmaniV2Destination.SelfieGuide -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    // First step plays animation_first_selfie_instruction (same asset v1
+                    // plays); the pose-estimation step uses the V2-only
+                    // animation_pose_estimation_v2 asset — v1's selfie screen keeps
+                    // animation_second_selfie_instruction.
+                    val isFirst = destination.step == SelfieGuideStep.First
+                    SelfieGuideScreen(
+                        state = SelfieMapper.toGuideState(
+                            version = version,
+                            step = destination.step,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
+                        animationRes = if (isFirst) {
+                            R.raw.animation_first_selfie_instruction
+                        } else {
+                            R.raw.animation_pose_estimation_v2
+                        },
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // "Open camera" advances to the next guide step (pose estimation) or
+                        // straight to the selfie camera.
+                        onContinue = {
+                            navigator.navigateTo(CaptureFlow.selfieAfterGuide(version, destination.step))
                         }
                     )
                 }
@@ -394,8 +518,8 @@ private fun startCaptureFlowForRule(
 /**
  * Document type destination. Maps the prepared step's selectable versions into the
  * stateless [SelectDocumentTypeScreen] (the same server data v1's
- * SelectDocumentTypeFragment renders) and holds the local selection so the user can pick
- * a card and continue. [onContinue] receives the chosen [datamanager.model.config.Version].
+ * SelectDocumentTypeFragment renders). Tapping a card starts that document right away;
+ * [onContinue] receives the chosen [datamanager.model.config.Version].
  */
 @Composable
 private fun DocumentTypeRoute(
@@ -409,20 +533,15 @@ private fun DocumentTypeRoute(
             config = CachingHomeKYC.appConfig,
             // Nav title = the KYC step's name ("Identification"), captured when the
             // capture leg was prepared from Home.
-            ruleTitle = CaptureFlow.currentRuleTitle
+            ruleTitle = CaptureFlow.currentRuleTitle,
+            stepConfig = CaptureFlow.currentStepConfig
         )
     }
-    var selectedId by rememberSaveable { mutableStateOf(state.selectedId) }
-
     SelectDocumentTypeScreen(
-        state = state.copy(selectedId = selectedId),
+        state = state,
         modifier = modifier,
         onBack = onBack,
-        onSelect = { selectedId = it.id },
-        onContinue = {
-            val versionType = selectedId ?: return@SelectDocumentTypeScreen
-            CaptureFlow.versionByType(versionType)?.let(onContinue)
-        }
+        onSelect = { option -> CaptureFlow.versionByType(option.id)?.let(onContinue) }
     )
 }
 
