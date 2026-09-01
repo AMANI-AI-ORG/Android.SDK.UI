@@ -470,6 +470,9 @@ open class HomeKYCViewModel(
                     AmaniDocumentTypes.SPEECH -> {
                         route.invoke(ScreenRoutes.SpeechVerifierScreen)
                     }
+                    else -> {
+                        route.invoke(ScreenRoutes.PhysicalContractScreen)
+                    }
                 }
             } else {
                 when (documentID) {
@@ -490,7 +493,7 @@ open class HomeKYCViewModel(
                         }
                     }
 
-                    AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
+                    else -> {
                         route.invoke(ScreenRoutes.PhysicalContractScreen)
                     }
                 }

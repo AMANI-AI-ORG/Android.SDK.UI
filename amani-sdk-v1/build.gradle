@@ -144,7 +144,7 @@ dependencies {
     implementation "com.airbnb.android:lottie-compose:$lottie_version"
 
     // AmaniSDK impl
-    def amani_sdk = "3.21.3"
+    def amani_sdk = "3.21.4"
     api "ai.amani.android:AmaniAi:$amani_sdk"
 
     // Optional speech-verification module — compileOnly ON PURPOSE: the UI SDK compiles

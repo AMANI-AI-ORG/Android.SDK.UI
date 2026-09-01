@@ -23,20 +23,15 @@ import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierAvailability
 import ai.amani.sdk.presentation.common.NavigationCommands
 import ai.amani.sdk.presentation.home_kyc.adapter.KYCAdapter
-import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.AppConstant
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -450,7 +445,14 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                     ScreenRoutes.PhysicalContractScreen -> {
 
-                        pdfPickerLauncher?.launch("application/pdf")
+                        findNavController().navigateSafely(
+                            directions = HomeKYCFragmentDirections
+                                .actionHomeKYCFragmentToPhysicalContractFragment(
+                            dataModel = ConfigModel(
+                                version = viewModel.getVersion(),
+                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs
+                            )
+                        ))
                     }
 
                     ScreenRoutes.SpeechVerifierScreen -> {
@@ -490,44 +492,6 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
             }
         }
         mAdapter?.setFlags(flags)
-    }
-
-    private var pdfPickerLauncher: ActivityResultLauncher<String>? = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            if (it.scheme == "content") {
-                safeContext { context ->
-                    context.contentResolver.query(
-                        it,
-                        null,
-                        null,
-                        null,
-                        null)?.use {
-                        val pdfData =
-                            requireActivity().contentResolver.openInputStream(uri)?.readBytes()
-                        if (pdfData == null) {
-                            Toast.makeText(context, "PDF could not take",
-                                Toast.LENGTH_LONG).show()
-                            return@safeContext
-                        } else {
-                            val listOfUri = arrayListOf(uri)
-
-                            viewModel.uploadDocument(
-                                activity = requireActivity(),
-                                genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri),
-                                onCompleted = { documentUploadResult ->
-                                    logUploadResult(
-                                        documentUploadResult,
-                                        AmaniDocumentTypes.PHYSICAL_CONTRACT
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private fun showTermsAndConditionsDialog(docList: ArrayList<Rule>) {
