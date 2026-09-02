@@ -68,8 +68,10 @@ class NFCViewModelInstrumentedTest {
     // scanNFC — Failure paths
     // =========================================================================
 
+    /** A reported error message must not shortcut past Failure — that state is what drives the
+     *  error display in the scanning modal. */
     @Test
-    fun scanNFC_repositoryFailsWithError_stateBecomesShowMRZCheck() {
+    fun scanNFC_repositoryFailsWithError_stateBecomesFailure() {
         every {
             mockRepository.scan(
                 tag = any(), context = any(), birthDate = any(),
@@ -80,7 +82,7 @@ class NFCViewModelInstrumentedTest {
 
         runOnMain { viewModel.scanNFC(FakeNfcIntentFactory.tagDiscoveredIntent(), context) }
 
-        assertEquals(NFCScanState.ShowMRZCheck, viewModel.nfcScanState.value)
+        assertEquals(NFCScanState.Failure, viewModel.nfcScanState.value)
     }
 
     @Test

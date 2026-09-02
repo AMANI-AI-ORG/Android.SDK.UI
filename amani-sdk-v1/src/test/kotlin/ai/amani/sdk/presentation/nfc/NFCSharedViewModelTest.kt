@@ -298,8 +298,10 @@ class NFCSharedViewModelTest {
         assertEquals(NFCScanState.Success, viewModel.nfcScanState.value)
     }
 
+    /** A reported error message must not shortcut past Failure: the observer needs that state
+     *  to show the error in the scanning modal before it moves on to the MRZ check. */
     @Test
-    fun `scanNFC on failure with non-null error and attempt below max emits ShowMRZCheck`() {
+    fun `scanNFC on failure with non-null error and attempt below max emits Failure`() {
         val mockIntent = buildMockIntentWithTag()
 
         every {
@@ -315,7 +317,7 @@ class NFCSharedViewModelTest {
 
         viewModel.scanNFC(mockIntent, mockk(relaxed = true))
 
-        assertEquals(NFCScanState.ShowMRZCheck, viewModel.nfcScanState.value)
+        assertEquals(NFCScanState.Failure, viewModel.nfcScanState.value)
     }
 
     @Test

@@ -96,9 +96,11 @@ class NFCSharedViewModel constructor(private val nfcRepository: NFCRepositoryImp
                 if (currentAttempt >= maxAttempt) {
                     currentAttempt = 0
                     _nfcScanState.value = NFCScanState.OutOfMaxAttempt
-                } else if (it != null) {
-                    _nfcScanState.value = NFCScanState.ShowMRZCheck
                 } else {
+                    // Every sub-max failure goes through Failure, regardless of whether the
+                    // Core SDK reported an error message: the observer shows the error state in
+                    // the scanning modal and only then moves on to ShowMRZCheck. Emitting
+                    // ShowMRZCheck straight from here skipped that modal entirely.
                     _nfcScanState.value = NFCScanState.Failure
                 }
             }

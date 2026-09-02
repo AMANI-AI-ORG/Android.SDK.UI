@@ -357,6 +357,10 @@ class NFCScanFragment : Fragment() {
 
                 is NFCScanState.ShowMRZCheck -> {
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                        // The Failure branch already closed the modal before handing over to
+                        // this state; dismiss defensively so any other route into it cannot
+                        // leave the scanning sheet on top of the MRZ form.
+                        if (isModalShowing) dismissNFCScanningModal()
                         viewModel.set(null)
                         binding.infoLayout.hide()
                         binding.infoContinueBtn.hide()
