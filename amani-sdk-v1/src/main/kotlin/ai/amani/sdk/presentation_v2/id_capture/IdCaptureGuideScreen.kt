@@ -7,10 +7,11 @@ import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.navigation.CaptureSide
+import ai.amani.sdk.utils.AmaniDocumentTypes
+import ai.amani.sdk.utils.DocumentGuideAnimation
+import ai.amani.sdk.utils.DocumentSide
 import ai.amani.sdk.presentation_v2.theme.amaniV2ContentMaxWidth
 import ai.amani.sdk.presentation_v2.theme.scaled
-import android.content.Context
-import android.widget.ImageView
 import androidx.annotation.RawRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,9 +44,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.ui.viewinterop.AndroidView
-import com.airbnb.lottie.LottieAnimationView
-import com.airbnb.lottie.LottieDrawable
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 
 /**
  * State backing [IdCaptureGuideScreen] — the pre-capture guide (prototype screens 7 & 10),
@@ -63,22 +66,16 @@ data class IdCaptureGuideUiState(
 )
 
 /**
- * Resolves the pre-capture guide Lottie animation for a document by its type + side, mirroring
- * when the document has no type-specific animation. So the guide shows the right document
- * illustration per identity type
+ * The guide illustration for this capture, delegated to [DocumentGuideAnimation] — the single
+ * resolver shared with the v1 Fragment flow. Kept here as a thin bridge so Compose callers can
+ * pass their own [CaptureSide] instead of mapping it at every call site.
  */
 @RawRes
-fun idGuideAnimationRes(context: Context, versionType: String?, side: CaptureSide): Int {
-    val sideSuffix = if (side == CaptureSide.Back) "back" else "front"
-    val type = versionType?.trim()?.lowercase()
-    if (!type.isNullOrEmpty()) {
-        // getIdentifier is the Android equivalent of iOS's LottieAnimation.named(name): resolve
-        // the raw resource whose name matches the document type + side at runtime.
-        val id = context.resources.getIdentifier("${type}_$sideSuffix", "raw", context.packageName)
-        if (id != 0) return id
-    }
-    return if (side == CaptureSide.Back) R.raw.xx_id_back else R.raw.xx_id_front
-}
+fun idGuideAnimationRes(side: CaptureSide, documentId: String?): Int =
+    DocumentGuideAnimation.resFor(
+        side = if (side == CaptureSide.Back) DocumentSide.Back else DocumentSide.Front,
+        documentId = documentId
+    )
 
 /**
  * Pre-capture guide screen shown *before* the camera for each document side. Mirrors the
@@ -163,29 +160,24 @@ private fun GuideIllustration(
     modifier: Modifier = Modifier
 ) {
     val palette = AmaniV2Theme.palette
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(animationRes))
     Box(modifier = modifier.height(220.dp.scaled()), contentAlignment = Alignment.Center) {
+        // lottie-compose, not an AndroidView: it also draws inside `@Preview`, so the guide
+        // previews show the real document illustration instead of a placeholder. A static
+        // preview renders a single frame, and frame 0 has the document still off-screen — so
+        // in inspection we pin the end frame, where it sits inside the phone. Interactive
+        // Preview ignores this branch and plays the loop.
         if (LocalInspectionMode.current) {
-            // No Lottie in inspection: a soft framed card with the badge glyph.
-            Box(
-                modifier = Modifier
-                    .size(150.dp.scaled(), 200.dp.scaled())
-                    .background(palette.accentSofter, RoundedCornerShape(24.dp))
-                    .border(1.dp, palette.accentSoft, RoundedCornerShape(24.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(badgeIcon, contentDescription = null, tint = palette.accent, modifier = Modifier.size(40.dp))
-            }
+            LottieAnimation(
+                composition = composition,
+                progress = { 1f },
+                modifier = Modifier.fillMaxSize()
+            )
         } else {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    LottieAnimationView(ctx).apply {
-                        setAnimation(animationRes)
-                        repeatCount = LottieDrawable.INFINITE
-                        scaleType = ImageView.ScaleType.FIT_CENTER
-                        playAnimation()
-                    }
-                }
+            LottieAnimation(
+                composition = composition,
+                iterations = LottieConstants.IterateForever,
+                modifier = Modifier.fillMaxSize()
             )
         }
         // Accent badge — camera on the front guide, flip on the back (design screens 7 & 10).
@@ -263,7 +255,7 @@ private fun PreviewIdCaptureGuideFront() {
                 ),
                 buttonText = "Open camera"
             ),
-            animationRes = R.raw.xx_id_front,
+            animationRes = idGuideAnimationRes(CaptureSide.Front, AmaniDocumentTypes.IDENTIFICATION),
             onContinue = {}
         )
     }
@@ -287,7 +279,110 @@ private fun PreviewIdCaptureGuideBack() {
                 ),
                 buttonText = "Open camera"
             ),
-            animationRes = R.raw.xx_id_back,
+            animationRes = idGuideAnimationRes(CaptureSide.Back, AmaniDocumentTypes.IDENTIFICATION),
+            onContinue = {},
+            badgeIcon = Icons.Filled.Autorenew
+        )
+    }
+}
+
+/**
+ * The same guide screen for the other document types, so each generic illustration can be
+ * checked in place: the passport data page (deeper 1.42 booklet page) and the driving licence
+ * front/back. The animation comes from [idGuideAnimationRes], exactly as at runtime.
+ */
+@Preview(name = "IdCaptureGuide — passport front", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewIdCaptureGuidePassportFront() {
+    AmaniV2Theme {
+        IdCaptureGuideScreen(
+            state = IdCaptureGuideUiState(
+                headerTitle = "Passport",
+                eyebrow = "Step 1 of 1 · Photo capture",
+                title = "Photograph the data page",
+                description = "Open the passport at the page with your photo and lay it flat.",
+                checklistHeader = "Before you shoot",
+                checklistItems = listOf(
+                    "Whole page inside the frame",
+                    "Both MRZ lines readable",
+                    "No glare from the laminate"
+                ),
+                buttonText = "Open camera"
+            ),
+            animationRes = idGuideAnimationRes(CaptureSide.Front, AmaniDocumentTypes.PASSPORT),
+            onContinue = {}
+        )
+    }
+}
+
+@Preview(name = "IdCaptureGuide — passport back", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewIdCaptureGuidePassportBack() {
+    AmaniV2Theme {
+        IdCaptureGuideScreen(
+            state = IdCaptureGuideUiState(
+                headerTitle = "Passport",
+                eyebrow = "Step 2 of 2 · Photo capture",
+                title = "Now the facing page",
+                description = "Keep the booklet flat so the whole page stays in focus.",
+                checklistHeader = "Before you shoot",
+                checklistItems = listOf(
+                    "Page fully inside the frame",
+                    "No shadow across the spine",
+                    "Flat surface, no tilt"
+                ),
+                buttonText = "Open camera"
+            ),
+            animationRes = idGuideAnimationRes(CaptureSide.Back, AmaniDocumentTypes.PASSPORT),
+            onContinue = {},
+            badgeIcon = Icons.Filled.Autorenew
+        )
+    }
+}
+
+@Preview(name = "IdCaptureGuide — licence front", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewIdCaptureGuideLicenceFront() {
+    AmaniV2Theme {
+        IdCaptureGuideScreen(
+            state = IdCaptureGuideUiState(
+                headerTitle = "Front of licence",
+                eyebrow = "Step 1 of 2 · Photo capture",
+                title = "Photograph the front side",
+                description = "Take the photo in a bright area and make sure the licence fits fully in the frame.",
+                checklistHeader = "Before you shoot",
+                checklistItems = listOf(
+                    "Bright, even lighting",
+                    "All four corners visible",
+                    "No glare on the photo or text"
+                ),
+                buttonText = "Open camera"
+            ),
+            animationRes = idGuideAnimationRes(CaptureSide.Front, AmaniDocumentTypes.DRIVING_LICENSE),
+            onContinue = {}
+        )
+    }
+}
+
+@Preview(name = "IdCaptureGuide — licence back", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewIdCaptureGuideLicenceBack() {
+    AmaniV2Theme {
+        IdCaptureGuideScreen(
+            state = IdCaptureGuideUiState(
+                headerTitle = "Back of licence",
+                eyebrow = "Step 2 of 2 · Photo capture",
+                title = "Now flip it over",
+                description = "We'll read the vehicle categories and the barcode on the back.",
+                checklistHeader = "Before you shoot",
+                checklistItems = listOf(
+                    "Category table readable",
+                    "Barcode not covered by fingers",
+                    "Flat surface, no tilt"
+                ),
+                buttonText = "Open camera"
+            ),
+            animationRes = idGuideAnimationRes(CaptureSide.Back, AmaniDocumentTypes.DRIVING_LICENSE),
             onContinue = {},
             badgeIcon = Icons.Filled.Autorenew
         )

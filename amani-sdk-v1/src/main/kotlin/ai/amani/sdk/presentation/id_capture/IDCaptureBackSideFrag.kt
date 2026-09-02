@@ -16,6 +16,8 @@ import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.PreviewScreenModel
 import ai.amani.sdk.presentation.AmaniMainActivity
+import ai.amani.sdk.utils.DocumentGuideAnimation
+import ai.amani.sdk.utils.DocumentSide
 import ai.amani.sdk.utils.BitmapUtils
 import android.animation.Animator
 import android.graphics.Bitmap
@@ -65,7 +67,14 @@ class IDCaptureBackSideFrag : Fragment() {
     private fun playAnimation() {
         try {
             binding.idBackAnimation.let {
-                it.setAnimation(R.raw.xx_id_back)
+                // Play the document-specific illustration (e.g. `tur_id_0_back`) when the
+                // config's version type has one bundled, else the generic ID animation.
+                it.setAnimation(
+                    DocumentGuideAnimation.resFor(
+                        DocumentSide.Back,
+                        args.dataModel.version?.documentId
+                    )
+                )
                 it.playAnimation()
                 it.show()
             }

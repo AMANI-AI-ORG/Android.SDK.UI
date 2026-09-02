@@ -225,7 +225,7 @@ fun AmaniV2NavHost(
                             side = destination.side,
                             general = CachingHomeKYC.appConfig?.generalConfigs
                         ),
-                        animationRes = idGuideAnimationRes(context, version.type, destination.side),
+                        animationRes = idGuideAnimationRes(destination.side, version.documentId),
                         badgeIcon = if (isFront) Icons.Outlined.PhotoCamera else Icons.Filled.Autorenew,
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // "Open camera" advances to the actual capture for the same side.
