@@ -329,8 +329,15 @@ internal object HomeKYCMapper {
 
     private fun isDone(status: String?): Boolean = status in DONE_STATUSES
 
+    /**
+     * Dot state for one step. A dot reads as Completed — the only FILLED state — strictly
+     * when the step is APPROVED. [DONE_STATUSES] is deliberately not reused here: a step that
+     * is merely uploading (PROCESSING) or awaiting a reviewer (PENDING_REVIEW) is not approved
+     * yet, so its dot stays empty until the verdict lands. Row/gating logic keeps using
+     * [DONE_STATUSES] and is unaffected.
+     */
     private fun dotStatus(status: String?, isActive: Boolean): StepStatus = when {
-        status in DONE_STATUSES -> StepStatus.Completed
+        status == AppConstant.STATUS_APPROVED -> StepStatus.Completed
         status in REJECTED_STATUSES -> StepStatus.Rejected
         isActive -> StepStatus.Current
         else -> StepStatus.Pending

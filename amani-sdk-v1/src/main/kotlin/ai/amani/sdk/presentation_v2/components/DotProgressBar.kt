@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,8 +34,14 @@ import androidx.compose.ui.unit.sp
  */
 private val DotRowHeight = 16.dp
 
-/** Filled (completed / current / rejected) dot. */
+/** Diameter of every dot, filled or empty. */
 private val DotSize = 12.dp
+
+/** Ring thickness of an empty (not-yet-approved) dot. */
+private val RingWidth = 1.5.dp
+
+/** Ring thickness of the current step, slightly heavier so it still reads as "you are here". */
+private val CurrentRingWidth = 2.dp
 
 /** Gap between a dot and the connector line on either side. */
 private val ConnectorGap = 2.dp
@@ -133,18 +140,18 @@ private fun DotItem(
                         .background(rightColor ?: Color.Transparent)
                 )
             }
+            // Only a COMPLETED (approved) step is filled. Every other status — including the
+            // current step and a rejection — draws the empty ring, so a filled dot always
+            // means "this step is done" and never "this step is where you are".
             when (step.status) {
-                StepStatus.Completed, StepStatus.Current -> Dot(DotSize, palette.accent)
-                StepStatus.Rejected -> Dot(DotSize, palette.danger)
-                StepStatus.Pending -> {
-                    val border = if (onDark) Color.White.copy(alpha = 0.3f) else palette.ink.copy(alpha = 0.3f)
-                    Box(
-                        modifier = Modifier
-                            .size(DotSize)
-                            .clip(CircleShape)
-                            .border(1.5.dp, border, CircleShape)
-                    )
-                }
+                StepStatus.Completed -> Dot(DotSize, palette.accent)
+                StepStatus.Current -> RingDot(DotSize, palette.accent, CurrentRingWidth)
+                StepStatus.Rejected -> RingDot(DotSize, palette.danger, RingWidth)
+                StepStatus.Pending -> RingDot(
+                    size = DotSize,
+                    color = if (onDark) Color.White.copy(alpha = 0.3f) else palette.ink.copy(alpha = 0.3f),
+                    width = RingWidth
+                )
             }
         }
         val labelColor = when (step.status) {
@@ -172,6 +179,17 @@ private fun DotItem(
     }
 }
 
+/** Empty dot: [color]-tinted outline, transparent center. */
+@Composable
+private fun RingDot(size: androidx.compose.ui.unit.Dp, color: Color, width: androidx.compose.ui.unit.Dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .border(width, color, CircleShape)
+    )
+}
+
 @Composable
 private fun Dot(size: androidx.compose.ui.unit.Dp, color: Color, haloColor: Color? = null) {
     Box(contentAlignment = Alignment.Center) {
@@ -191,3 +209,77 @@ private fun Dot(size: androidx.compose.ui.unit.Dp, color: Color, haloColor: Colo
         )
     }
 }
+
+// region Previews
+
+/** Two-step flow (ID + Selfie) in every dot state the stepper can render. */
+private val PreviewIdSelfieFresh = listOf(
+    DotStep("ID", StepStatus.Current),
+    DotStep("Selfie", StepStatus.Pending)
+)
+
+private val PreviewIdSelfieUploading = listOf(
+    // PROCESSING / PENDING_REVIEW map to Current-or-Pending, never Completed: the dot
+    // stays empty until the step is APPROVED.
+    DotStep("ID", StepStatus.Pending),
+    DotStep("Selfie", StepStatus.Current)
+)
+
+private val PreviewIdSelfieIdApproved = listOf(
+    DotStep("ID", StepStatus.Completed),
+    DotStep("Selfie", StepStatus.Current)
+)
+
+private val PreviewIdSelfieAllApproved = listOf(
+    DotStep("ID", StepStatus.Completed),
+    DotStep("Selfie", StepStatus.Completed)
+)
+
+private val PreviewIdSelfieRejected = listOf(
+    DotStep("ID", StepStatus.Rejected),
+    DotStep("Selfie", StepStatus.Pending)
+)
+
+@Composable
+private fun PreviewDotRow(label: String, steps: List<DotStep>, onDark: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            label,
+            style = AmaniV2Type.label,
+            color = if (onDark) Color.White else AmaniV2Theme.palette.ink
+        )
+        DotProgressBar(steps = steps, onDark = onDark)
+    }
+}
+
+@Composable
+private fun PreviewDotStates(onDark: Boolean) {
+    AmaniV2Theme {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (onDark) Color(0xFF101317) else AmaniV2Theme.palette.background)
+        ) {
+            PreviewDotRow("Fresh flow — ID current", PreviewIdSelfieFresh, onDark)
+            PreviewDotRow("ID processing / pending review", PreviewIdSelfieUploading, onDark)
+            PreviewDotRow("ID approved — Selfie current", PreviewIdSelfieIdApproved, onDark)
+            PreviewDotRow("Both approved", PreviewIdSelfieAllApproved, onDark)
+            PreviewDotRow("ID rejected", PreviewIdSelfieRejected, onDark)
+        }
+    }
+}
+
+@Preview(name = "DotProgressBar — light", showBackground = true, widthDp = 360)
+@Composable
+private fun PreviewDotProgressBarLight() = PreviewDotStates(onDark = false)
+
+@Preview(name = "DotProgressBar — on dark", showBackground = true, widthDp = 360)
+@Composable
+private fun PreviewDotProgressBarOnDark() = PreviewDotStates(onDark = true)
+
+// endregion
