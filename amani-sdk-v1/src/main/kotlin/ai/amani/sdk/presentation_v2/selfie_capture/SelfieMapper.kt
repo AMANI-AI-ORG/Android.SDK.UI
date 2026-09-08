@@ -83,7 +83,9 @@ internal object SelfieMapper {
                     "Make sure your face is clear and well illuminated."
                 )
             ),
-            confirmButtonText = (step?.confirm ?: general?.confirmText).orFallback("Looks good"),
+            // Customer-wide label from GeneralConfigs; the step's own `confirm` string is not
+            // consulted, so a missing or empty config falls straight through to the default.
+            confirmButtonText = general?.confirmText.orFallback("Looks good"),
             retakeButtonText = general?.tryAgainText.orFallback("Retake selfie"),
             bitmap = bitmap,
             qualityChecks = listOfNotNull(
