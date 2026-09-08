@@ -148,7 +148,6 @@ class SelfieCaptureFragment: Fragment() {
         videoRecord: Boolean?
     ) {
         val prep = args.dataModel.version?.poseEstimationV2Preparation
-        val prepVideo = args.dataModel.featureConfig.selfiePoseEstimationV2PreparationVideo
 
         val builder = Amani.sharedInstance().SelfiePoseEstimation()
             .BuilderV2()
@@ -184,18 +183,14 @@ class SelfieCaptureFragment: Fragment() {
             .ovalViewAnimationDurationMilSec(500)
             .observe(observable)
 
-        if (prep != null && prepVideo != null) {
-            builder.showPreparationScreen(
-                context = requireContext(),
-                video = prepVideo,
-                message = prep.message,
-                buttonText = prep.buttonText,
-                buttonTextColor = prep.buttonTextColor,
-                buttonBackgroundColor = prep.buttonBackgroundColor,
-                buttonRadiusDp = 28f,
-                overlayColor = prep.overlayColor
-            )
-        }
+        // Core SDK 3.21.5: the preparation video is gone and every piece of pose-V2 artwork
+        // is host-supplied. The UI SDK ships it and applies the same wiring the V2 (Compose)
+        // selfie screen uses, so both flows show one guide.
+        SelfiePoseEstimationV2Setup.apply(
+            builder = builder,
+            preparation = prep,
+            featureConfig = args.dataModel.featureConfig
+        )
 
         val selfieFragment = builder.build(requireContext())
         selfieFragment?.let {

@@ -86,6 +86,11 @@ class SelfieCaptureFragmentTest {
     private var capturedV1VideoRecord: Boolean? = null
     private lateinit var v1RequestedPoseSlot: io.mockk.CapturingSlot<Int>
 
+    /** Pose-estimation V2 guide artwork actually handed to the Core SDK builder. */
+    private lateinit var v2PreparationAnimationSlot: io.mockk.CapturingSlot<Int>
+    private lateinit var v2ProcessingAnimationSlot: io.mockk.CapturingSlot<Int>
+    private lateinit var v2FaceGuideSlot: io.mockk.CapturingSlot<Int>
+
     /** V1Builder / V2Builder mocks — exposed so tests can verify directly
      *  without re-invoking the factory inside a verify block (which would
      *  otherwise be counted as an additional Builder() call). */
@@ -161,23 +166,30 @@ class SelfieCaptureFragmentTest {
             )
         } returns v2
         every { v2.onUiStateChanged(any()) } returns v2
-        every { v2.faceGuideDrawable(any()) } returns v2
         every { v2.ovalViewAnimationDurationMilSec(any()) } returns v2
         every { v2.videoRecord(any()) } returns v2
         every { v2.observe(capture(poseEstimationV2ObserverSlot)) } returns v2
-        // Hex-string overload of showPreparationScreen
+        // Core SDK 3.21.5 guide artwork: one call per screen. The processing call carries the
+        // centre hint animation + the face-straight icon (the old `faceGuideDrawable`).
+        v2ProcessingAnimationSlot = slot()
+        v2FaceGuideSlot = slot()
+        v2PreparationAnimationSlot = slot()
         every {
-            v2.showPreparationScreen(
-                any(), any(), any(), any(),
-                any<String>(), any<String>(), any(), any<String>()
-            )
+            v2.processingAnimation(capture(v2ProcessingAnimationSlot), capture(v2FaceGuideSlot), any())
         } returns v2
-        // Int (resource id) overload of showPreparationScreen
+        // Hex-color overload of preparationAnimation (the UI SDK passes the config colors).
         every {
-            v2.showPreparationScreen(
-                any(), any(), any(), any(),
-                any<Int>(), any<Int>(), any(), any<Int>()
-            )
+            v2.preparationAnimation(capture(v2PreparationAnimationSlot), any<String>(), any())
+        } returns v2
+        // Color-resource overload, stubbed so an accidental switch doesn't throw.
+        every { v2.preparationAnimation(any(), any<Int>(), any()) } returns v2
+        // Hex-string preparation screen (the remote config delivers ARGB strings)
+        every {
+            v2.showPreparationScreenWithHexColors(any(), any(), any(), any(), any(), any())
+        } returns v2
+        // Color-resource preparation screen overload
+        every {
+            v2.showPreparationScreen(any(), any(), any(), any(), any(), any())
         } returns v2
         every { v2.onException(any()) } returns v2
         every { v2.build(any()) } returns benignBaseFragment
@@ -793,58 +805,94 @@ class SelfieCaptureFragmentTest {
     // =========================================================================
 
     /**
-     * When neither the version's [PoseEstimationV2Preparation] nor the
-     * [FeatureConfig.selfiePoseEstimationV2PreparationVideo] is set, the
-     * fragment MUST NOT call `showPreparationScreen` on the v2 builder.
+     * The preparation screen stays server-gated: with no [PoseEstimationV2Preparation] on the
+     * version the fragment MUST NOT request it — neither the screen nor its animation.
      */
     @Test
     fun selfieTypeMinusTwo_noPrepConfig_doesNotCallShowPreparationScreen() {
         withFragment(
             selfieType = -2,
-            includePoseEstimationV2Preparation = false,
-            featureConfig = FeatureConfig(selfiePoseEstimationV2PreparationVideo = null)
+            includePoseEstimationV2Preparation = false
         ) { _ ->
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
             verify(exactly = 0) {
-                v2Builder.showPreparationScreen(
-                    any(), any(), any(), any(),
-                    any<String>(), any<String>(), any(), any<String>()
-                )
+                v2Builder.showPreparationScreenWithHexColors(any(), any(), any(), any(), any(), any())
             }
             verify(exactly = 0) {
-                v2Builder.showPreparationScreen(
-                    any(), any(), any(), any(),
-                    any<Int>(), any<Int>(), any(), any<Int>()
-                )
+                v2Builder.showPreparationScreen(any(), any(), any(), any(), any(), any())
+            }
+            verify(exactly = 0) {
+                v2Builder.preparationAnimation(any(), any<String>(), any())
             }
         }
     }
 
     /**
-     * When BOTH the prep config and the prep video are present, the fragment
-     * MUST call `showPreparationScreen` (hex-string overload, since the
-     * remote config delivers ARGB strings).
+     * With the prep config present the fragment MUST request the preparation screen (hex-string
+     * overload — the remote config delivers ARGB strings) AND give it an animation: Core SDK
+     * 3.21.5 skips the screen when no animation is supplied.
      */
     @Test
-    fun selfieTypeMinusTwo_withPrepConfigAndVideo_callsShowPreparationScreen() {
+    fun selfieTypeMinusTwo_withPrepConfig_callsShowPreparationScreenWithAnimation() {
         withFragment(
             selfieType = -2,
-            includePoseEstimationV2Preparation = true,
-            featureConfig = FeatureConfig(
-                // R.raw.animation_first_selfie_instruction is shipped in the SDK
-                // module — any valid raw id will do as a placeholder.
-                selfiePoseEstimationV2PreparationVideo = R.raw.animation_first_selfie_instruction
-            )
+            includePoseEstimationV2Preparation = true
         ) { _ ->
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
             verify(atLeast = 1) {
-                v2Builder.showPreparationScreen(
-                    any(), any(), any(), any(),
-                    any<String>(), any<String>(), any(), any<String>()
-                )
+                v2Builder.showPreparationScreenWithHexColors(any(), any(), any(), any(), any(), any())
             }
+            assertEquals(
+                R.raw.animation_pose_head_rotation,
+                v2PreparationAnimationSlot.captured
+            )
+        }
+    }
+
+    /**
+     * The capture-screen guide is NOT server-gated: the centre rotation hint and the
+     * face-straight icon are always configured, defaulting to the artwork this SDK bundles.
+     * Without this call Core SDK 3.21.5 would fall back to its bare spinning arrow and show
+     * no icon at all.
+     */
+    @Test
+    fun selfieTypeMinusTwo_alwaysConfiguresProcessingAnimation() {
+        withFragment(selfieType = -2, includePoseEstimationV2Preparation = false) { _ ->
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+            verify(atLeast = 1) { v2Builder.processingAnimation(any(), any(), any()) }
+            assertEquals(R.raw.animation_pose_head_rotation, v2ProcessingAnimationSlot.captured)
+            assertEquals(R.drawable.ic_pose_head_straight, v2FaceGuideSlot.captured)
+        }
+    }
+
+    /**
+     * A host app's [FeatureConfig] artwork wins over the bundled defaults, on both screens.
+     */
+    @Test
+    fun selfieTypeMinusTwo_featureConfigArtworkOverridesBundledDefaults() {
+        withFragment(
+            selfieType = -2,
+            includePoseEstimationV2Preparation = true,
+            featureConfig = FeatureConfig(
+                // Any raw/drawable shipped in this module works as a stand-in for app artwork.
+                selfiePoseEstimationV2PreparationAnimation = R.raw.animation_first_selfie_instruction,
+                selfiePoseEstimationV2ProcessingAnimation = R.raw.animation_second_selfie_instruction,
+                selfiePoseEstimationV2FaceGuideDrawable = R.drawable.ic_pose_head_straight
+            )
+        ) { _ ->
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+            assertEquals(
+                R.raw.animation_first_selfie_instruction,
+                v2PreparationAnimationSlot.captured
+            )
+            assertEquals(
+                R.raw.animation_second_selfie_instruction,
+                v2ProcessingAnimationSlot.captured
+            )
         }
     }
 

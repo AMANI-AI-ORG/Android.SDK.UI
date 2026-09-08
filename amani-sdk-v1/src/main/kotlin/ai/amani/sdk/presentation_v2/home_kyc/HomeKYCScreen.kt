@@ -234,3 +234,46 @@ private fun PreviewHomeKYCMid() {
 private fun PreviewHomeKYCRejected() {
     AmaniV2Theme { HomeKYCScreen(state = HomeKYCScreenState.Ready(SampleHomeKYCRejected)) }
 }
+
+// endregion
+
+// region Config-driven previews (mock ResGetConfig + Rule list, mapped by HomeKYCMapper)
+
+/**
+ * These previews feed the mock ID + Selfie server data from [HomeKYCPreviewData] through
+ * [HomeKYCMapper], so they show the real dot/row/heading rules — including the stepper rule
+ * that a dot is filled ONLY for an APPROVED step (processing / pending review / current all
+ * stay empty), and the config palette resolved from the mock GeneralConfigs colors.
+ */
+@Composable
+private fun PreviewMockConfigScreen(content: HomeKYCUiState) {
+    AmaniV2Theme(palette = HomeKYCMapper.resolvePalette(HomeKYCPreviewData.config())) {
+        HomeKYCScreen(state = HomeKYCScreenState.Ready(content))
+    }
+}
+
+@Preview(name = "HomeKYC mock — ID current", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockStart() = PreviewMockConfigScreen(HomeKYCPreviewData.start())
+
+@Preview(name = "HomeKYC mock — ID processing", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockProcessing() = PreviewMockConfigScreen(HomeKYCPreviewData.documentProcessing())
+
+@Preview(name = "HomeKYC mock — ID pending review", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockPendingReview() = PreviewMockConfigScreen(HomeKYCPreviewData.documentPendingReview())
+
+@Preview(name = "HomeKYC mock — ID approved", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockDocumentApproved() = PreviewMockConfigScreen(HomeKYCPreviewData.documentApproved())
+
+@Preview(name = "HomeKYC mock — all approved", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockAllApproved() = PreviewMockConfigScreen(HomeKYCPreviewData.allApproved())
+
+@Preview(name = "HomeKYC mock — ID rejected", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockDocumentRejected() = PreviewMockConfigScreen(HomeKYCPreviewData.documentRejected())
+
+// endregion

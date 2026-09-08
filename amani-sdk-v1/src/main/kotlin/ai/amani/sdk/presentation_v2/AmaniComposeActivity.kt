@@ -294,7 +294,10 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             snackbarMessages = viewModel.messages,
                             // A before-KYC identifier chain (profile_info / questionnaire) sets its
                             // own AmaniEvent listener; re-attach HomeKYC's when it returns to Home.
-                            onReturnToHomeFromPreKyc = { viewModel.reattachAmaniEventListener() }
+                            onReturnToHomeFromPreKyc = { viewModel.reattachAmaniEventListener() },
+                            // Artwork overrides the host app set through AmaniSDKUI (pose
+                            // estimation V2 guide animations).
+                            featureConfig = featureConfig ?: FeatureConfig()
                         )
                     }
 

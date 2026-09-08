@@ -88,7 +88,6 @@ class QrEntryActivity : AppCompatActivity() {
         // Always set it: the SDK keeps the style in a process-wide FeatureConfig that is never
         // reset, so passing the current selection on every launch is what makes the picker stick.
         AmaniSDKUI.setUIStyle(uiStyle)
-        AmaniSDKUI.setSelfiePoseEstimationV2PreparationVideo(R.raw.pose_video)
 
         // Re-init against the server the QR pointed at (it may differ from the App default).
         AmaniSDKUI.init(

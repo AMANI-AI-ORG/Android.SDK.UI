@@ -111,6 +111,9 @@ fun AmaniV2NavHost(
     // pops back to Home. Pre-KYC screens set their own AmaniEvent listener (v1 parity), so the
     // host re-attaches HomeKYC's listener here before the user starts the KYC steps.
     onReturnToHomeFromPreKyc: () -> Unit = {},
+    // The host app's feature flags / artwork overrides (Intent extra), forwarded to the screens
+    // that read them — currently the selfie camera's pose-estimation V2 guide animations.
+    featureConfig: ai.amani.sdk.model.FeatureConfig = ai.amani.sdk.model.FeatureConfig(),
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -448,6 +451,7 @@ fun AmaniV2NavHost(
                     SelfieCaptureScreen(
                         state = SelfieMapper.toSelfieCaptureState(version),
                         version = version,
+                        featureConfig = featureConfig,
                         onBack = { if (!navigator.popBackStack()) onExit() },
                         // The embedded AmaniAi selfie camera hands the captured frame over
                         // in memory (CapturedFrame); the confirm step reads it from there.

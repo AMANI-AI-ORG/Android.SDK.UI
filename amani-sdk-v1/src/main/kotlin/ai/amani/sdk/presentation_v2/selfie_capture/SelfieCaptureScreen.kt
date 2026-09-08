@@ -4,6 +4,8 @@ import ai.amani.sdk.Amani
 import ai.amani.sdk.interfaces.IFragmentCallBack
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.OnFailurePoseEstimation
 import ai.amani.sdk.modules.selfie.pose_estimation.observable.PoseEstimationObserver
+import ai.amani.sdk.model.FeatureConfig
+import ai.amani.sdk.presentation.selfie.SelfiePoseEstimationV2Setup
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.id_capture.CaptureFramePlaceholder
@@ -26,6 +28,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
@@ -59,6 +62,9 @@ fun SelfieCaptureScreen(
     version: Version,
     onCaptured: () -> Unit,
     modifier: Modifier = Modifier,
+    // Host-app artwork overrides for the pose-estimation V2 guide animations; the defaults
+    // bundled with this SDK are used for every field left null.
+    featureConfig: FeatureConfig = FeatureConfig(),
     onBack: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
@@ -83,6 +89,10 @@ fun SelfieCaptureScreen(
                 SelfieCameraHost(
                     version = version,
                     onCaptured = onCaptured,
+                    featureConfig = featureConfig,
+                    // Disc behind the head on the pose-V2 preparation screen: the config
+                    // background, so that screen sits on the same surface as the rest of V2.
+                    discColorHex = palette.background.toHexColor(),
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -104,6 +114,8 @@ fun SelfieCaptureScreen(
 private fun SelfieCameraHost(
     version: Version,
     onCaptured: () -> Unit,
+    featureConfig: FeatureConfig,
+    discColorHex: String?,
     modifier: Modifier = Modifier
 ) {
     val activity = LocalContext.current.findFragmentActivity()
@@ -142,6 +154,8 @@ private fun SelfieCameraHost(
                 activity = activity,
                 containerId = containerId,
                 version = version,
+                featureConfig = featureConfig,
+                discColorHex = discColorHex,
                 deliver = deliver
             )
 
@@ -173,6 +187,8 @@ private fun createSelfieFragment(
     activity: FragmentActivity,
     containerId: Int,
     version: Version,
+    featureConfig: FeatureConfig,
+    discColorHex: String?,
     deliver: (Bitmap?, File?) -> Unit
 ): Fragment? {
     val videoRecord = version.videoRecord
@@ -252,28 +268,43 @@ private fun createSelfieFragment(
             )
             .build(activity)
 
-        SelfieType.PoseEstimationV2 -> Amani.sharedInstance().SelfiePoseEstimation()
-            .BuilderV2()
-            .userInterfaceColors(
-                overlayBackgroundColor = ai.amani.R.color.white,
-                appFontColor = ai.amani.R.color.color_black
-            )
-            .userInterfaceTexts(
-                faceStraight = version.keepStraightText,
-                turnLeft = version.turnLeftText,
-                turnRight = version.turnRightText,
-                faceNotInside = version.faceNotInsideText,
-                faceTooFar = version.faceIsTooFarText,
-                holdPhoneVertically = version.holdStableText,
-                alertTitle = version.selfieAlertTitle,
-                alertDescription = version.selfieAlertDescription,
-                alertTryAgain = version.selfieAlertTryAgain
-            )
-            .videoRecord(videoRecord = videoRecord)
-            .ovalViewAnimationDurationMilSec(500)
-            .observe(poseObserver)
-            .build(activity)
+        SelfieType.PoseEstimationV2 -> {
+            val builder = Amani.sharedInstance().SelfiePoseEstimation()
+                .BuilderV2()
+                .userInterfaceColors(
+                    overlayBackgroundColor = ai.amani.R.color.white,
+                    appFontColor = ai.amani.R.color.color_black
+                )
+                .userInterfaceTexts(
+                    faceStraight = version.keepStraightText,
+                    turnLeft = version.turnLeftText,
+                    turnRight = version.turnRightText,
+                    faceNotInside = version.faceNotInsideText,
+                    faceTooFar = version.faceIsTooFarText,
+                    holdPhoneVertically = version.holdStableText,
+                    alertTitle = version.selfieAlertTitle,
+                    alertDescription = version.selfieAlertDescription,
+                    alertTryAgain = version.selfieAlertTryAgain
+                )
+                .videoRecord(videoRecord = videoRecord)
+                .ovalViewAnimationDurationMilSec(500)
+                .observe(poseObserver)
+            // Guide artwork: the preparation screen (server-gated) plus the centre rotation
+            // hint and the face-straight icon shown during capture. Core SDK 3.21.5 skips
+            // whatever is not configured here, so without this call the flow would run with
+            // no preparation screen and no guide at all.
+            SelfiePoseEstimationV2Setup.apply(
+                builder = builder,
+                preparation = version.poseEstimationV2Preparation,
+                featureConfig = featureConfig,
+                discColorHex = discColorHex
+            ).build(activity)
+        }
 
         else -> null
     }
 }
+
+/** `#AARRGGBB` string for the Core SDK's hex-color builder overloads. */
+private fun androidx.compose.ui.graphics.Color.toHexColor(): String =
+    String.format("#%08X", toArgb())

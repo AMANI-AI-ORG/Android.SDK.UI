@@ -15,6 +15,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.result.ActivityResultLauncher
+import androidx.annotation.DrawableRes
 import androidx.annotation.RawRes
 import java.io.InputStream
 import kotlin.jvm.Throws
@@ -221,8 +222,54 @@ object AmaniSDKUI {
      * Sets the raw video resource used in the Pose Estimation v2 preparation screen.
      * @param videoRes: Raw resource id of an MP4 video shown in the preparation screen.
      */
+    @Deprecated(
+        message = "Core SDK 3.21.5 plays a Lottie animation instead of a video on the " +
+            "pose-estimation V2 preparation screen. This call is ignored — use " +
+            "setSelfiePoseEstimationV2PreparationAnimation(...) or drop it to keep the " +
+            "animation bundled with the UI SDK.",
+        replaceWith = ReplaceWith("setSelfiePoseEstimationV2PreparationAnimation(videoRes)")
+    )
     fun setSelfiePoseEstimationV2PreparationVideo(@RawRes videoRes: Int) {
+        @Suppress("DEPRECATION")
         featureConfig.selfiePoseEstimationV2PreparationVideo = videoRes
+    }
+
+    /**
+     * Overrides the Lottie animation shown full size on the Pose Estimation v2 **preparation**
+     * screen (the "watch and follow the head movement" step).
+     *
+     * Optional: the UI SDK already bundles this animation, so a host app only calls this to
+     * ship its own artwork. The file must be Lottie JSON with `clockwise` /
+     * `counterclockwise` markers and a transparent background.
+     *
+     * @param animationRes: Raw resource id of the Lottie JSON.
+     */
+    fun setSelfiePoseEstimationV2PreparationAnimation(@RawRes animationRes: Int) {
+        featureConfig.selfiePoseEstimationV2PreparationAnimation = animationRes
+    }
+
+    /**
+     * Overrides the Lottie animation played in the centre of the camera circle while the user
+     * performs the Pose Estimation v2 rotation (the **processing** screen hint).
+     *
+     * Optional — the bundled animation is used when this is not set.
+     *
+     * @param animationRes: Raw resource id of the Lottie JSON.
+     */
+    fun setSelfiePoseEstimationV2ProcessingAnimation(@RawRes animationRes: Int) {
+        featureConfig.selfiePoseEstimationV2ProcessingAnimation = animationRes
+    }
+
+    /**
+     * Overrides the icon drawn in the camera circle while the user holds their face straight,
+     * just before the Pose Estimation v2 rotation starts.
+     *
+     * Optional — the bundled head icon is used when this is not set.
+     *
+     * @param drawableRes: Drawable resource id of the icon.
+     */
+    fun setSelfiePoseEstimationV2FaceGuideDrawable(@DrawableRes drawableRes: Int) {
+        featureConfig.selfiePoseEstimationV2FaceGuideDrawable = drawableRes
     }
 
     /** Set for Manual Capture Time Out.

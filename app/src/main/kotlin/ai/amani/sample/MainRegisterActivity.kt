@@ -59,7 +59,19 @@ class MainRegisterActivity : AppCompatActivity() {
             */
 
             AmaniSDKUI.setUIStyle(UIStyle.V2)
-            AmaniSDKUI.setSelfiePoseEstimationV2PreparationVideo(R.raw.pose_video)
+
+            // Pose estimation V2 guide artwork. The UI SDK bundles its own set, so these three
+            // calls are optional — they are here to show how a host app ships artwork of its
+            // own. The preparation screen itself stays server-gated: it only appears when the
+            // selfie step's config carries a poseEstimationV2Preparation block.
+            //
+            // Lottie JSON with `clockwise` / `counterclockwise` markers and a transparent
+            // background; the same file plays full size on the preparation screen and small,
+            // inside the camera circle, while the user rotates their head.
+            AmaniSDKUI.setSelfiePoseEstimationV2PreparationAnimation(R.raw.pose_head_rotation)
+            AmaniSDKUI.setSelfiePoseEstimationV2ProcessingAnimation(R.raw.pose_head_rotation)
+            // Shown while the user holds their face straight, before the rotation starts.
+            AmaniSDKUI.setSelfiePoseEstimationV2FaceGuideDrawable(R.drawable.ic_pose_head_straight)
 
             hideKeyboard()
 
