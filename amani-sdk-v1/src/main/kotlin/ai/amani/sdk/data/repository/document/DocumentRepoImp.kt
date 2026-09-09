@@ -47,7 +47,8 @@ class DocumentRepoImp: DocumentRepository {
 
                 val docList = arrayListOf<FileWithType>()
                 val pickedUri = genericDocumentFlow.dataList.first()
-                val fileData = activity.contentResolver.openInputStream(pickedUri)?.readBytes()
+                val fileData = activity.contentResolver.openInputStream(pickedUri)
+                    ?.use { it.readBytes() }
                 // A picked file is not always a PDF: the `documentSource` config also allows an
                 // image from the gallery, so the real type is read from the content provider.
                 val mimeType = activity.contentResolver.getType(pickedUri) ?: "application/pdf"

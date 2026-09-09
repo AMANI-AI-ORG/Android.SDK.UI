@@ -15,7 +15,6 @@ import ai.amani.sdk.data.repository.signature.SignatureRepoImp
 import ai.amani.sdk.extentions.getFirstErrorCode
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.sort
-import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.interfaces.TermsConditionsCallback
 import ai.amani.sdk.mapper.AmaniEventMapper.asAmaniError
 import ai.amani.sdk.model.*
@@ -27,6 +26,7 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.common.BaseViewModel
+import ai.amani.sdk.event.AmaniEventBus
 import ai.amani.sdk.presentation.common.document_picker.physicalContractRouteOf
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
@@ -147,6 +147,10 @@ open class HomeKYCViewModel(
 
             onCompleted = {
                 if (it.isSuccess) {
+                    // The core re-creates its event holder on login, dropping the listener
+                    // installed before it: re-arm the bus so the step verdicts keep arriving.
+                    AmaniEventBus.attach()
+
                     getApplicationConfig()
                 } else {
                     it.error?.let { error ->
@@ -398,7 +402,14 @@ open class HomeKYCViewModel(
                 setLoaderStatus()
                 _logicEvent.value = HomeKYCLogicEvent.Refresh(CachingHomeKYC.onlyKYCRules)
             },
-            onComplete = onCompleted,
+            onComplete = { uploadResult ->
+                // A picked document is uploaded right after the app comes back from the storage
+                // picker, where the core may have re-created its event holder. Re-arm the bus so
+                // the verdict of this upload reaches the step button instead of leaving it
+                // spinning on "processing".
+                listenAmaniEvents()
+                onCompleted.invoke(uploadResult)
+            },
             genericDocumentFlow = genericDocumentFlow
         )
     }
@@ -629,27 +640,43 @@ open class HomeKYCViewModel(
         SpeechVerifierOptions.token = registerConfig.token
     }
 
+    /** This view model's handle on the shared [AmaniEventBus]; removed in [onCleared]. */
+    private var eventSubscriber: AmaniEventBus.Subscriber? = null
+
+    /**
+     * Subscribes to the AmaniEvent socket over the shared [AmaniEventBus] and re-arms the core
+     * listener.
+     *
+     * Safe to call repeatedly — the host calls it on every resume, because the core re-creates
+     * its event holder (after a login, and after the app comes back from another app such as a
+     * storage picker) and would otherwise deliver nothing, leaving the step button spinning on a
+     * verdict that never arrives.
+     */
     fun listenAmaniEvents() {
 
-        Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack{
-            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
+        AmaniEventBus.attach()
+
+        if (eventSubscriber != null) return
+
+        eventSubscriber = AmaniEventBus.subscribe(object : AmaniEventBus.Subscriber {
+            override fun onError(type: String?, errors: ArrayList<AmaniError?>?) {
                 Timber.e("Amani SDK error type: $type Amani error: " +
-                        "${error?.firstNotNullOf { it?.errorCode }}")
+                        "${errors?.firstNotNullOf { it?.errorCode }}")
 
                 if (type == AmaniErrorTypes.LOGIN.name) {
                     _logicEvent.postValue(
                         HomeKYCLogicEvent.Finish.OnError(
-                            errorCode = error.getFirstErrorCode()
+                            errorCode = errors.getFirstErrorCode()
                         )
                     )
                 }
             }
 
-            override fun profileStatus(profileStatus: ProfileStatus) {
+            override fun onProfileStatus(profileStatus: ProfileStatus) {
                 Timber.d("Profile status received")
             }
 
-            override fun stepsResult(stepsResult: StepsResult?) {
+            override fun onStepsResult(stepsResult: StepsResult?) {
                 Timber.d("Steps result is received")
 
                 try {
@@ -715,6 +742,12 @@ open class HomeKYCViewModel(
 
     init {
         listenAmaniEvents()
+    }
+
+    override fun onCleared() {
+        AmaniEventBus.unsubscribe(eventSubscriber)
+        eventSubscriber = null
+        super.onCleared()
     }
 
     private fun hasOnlyStepsAfterKYCFlow(

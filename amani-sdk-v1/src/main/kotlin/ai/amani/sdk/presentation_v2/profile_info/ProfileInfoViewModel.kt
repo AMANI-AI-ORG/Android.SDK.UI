@@ -3,7 +3,7 @@ package ai.amani.sdk.presentation_v2.profile_info
 import ai.amani.sdk.Amani
 import ai.amani.sdk.data.repository.customer.CustomerDetailRepoImp
 import ai.amani.sdk.model.amani_events.steps_result.StepsResult
-import ai.amani.sdk.presentation_v2.AmaniEventBus
+import ai.amani.sdk.event.AmaniEventBus
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.utils.AppConstant
 import androidx.lifecycle.ViewModel
