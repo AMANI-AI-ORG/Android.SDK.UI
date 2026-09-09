@@ -14,6 +14,8 @@ import ai.amani.sdk.extentions.show
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
+import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
+import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.model.NFCScanScreenModel
 import ai.amani.sdk.model.RegisterConfig
@@ -55,6 +57,37 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     private val binding get() = _binding!!
     private var mAdapter: KYCAdapter? = null
     private val viewModel: HomeKYCViewModel by activityViewModels { HomeKYCViewModel.Factory }
+
+    /** Type of the document whose picker is open, kept for its upload. */
+    private var pickedDocumentType: String? = null
+
+    /**
+     * Picker for the documents whose `documentSource` is not the camera. Registered eagerly
+     * because activity result launchers cannot be registered once the fragment is started.
+     */
+    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+        onDocumentPicked(uri)
+    }
+
+    /** Uploads the file picked from storage, or does nothing when the picker was left empty. */
+    private fun onDocumentPicked(uri: android.net.Uri?) {
+        val docType = pickedDocumentType
+        pickedDocumentType = null
+
+        if (uri == null || docType == null) {
+            Timber.d("No document is picked from storage")
+            return
+        }
+
+        viewModel.uploadDocument(
+            activity = requireActivity(),
+            docType = docType,
+            genericDocumentFlow = GenericDocumentFlow.DataFromGallery(arrayListOf(uri)),
+            onCompleted = { documentUploadResult ->
+                logUploadResult(documentUploadResult, docType)
+            }
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -441,6 +474,13 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                         findNavController().navigateSafely(action)
 
+                    }
+
+                    is ScreenRoutes.DocumentPickerScreen -> {
+                        // The document is picked from storage, so no capture screen is opened:
+                        // the picked file is uploaded from here.
+                        pickedDocumentType = viewModel.getVersion()?.type
+                        documentPickerLauncher.launch(it.source)
                     }
 
                     ScreenRoutes.PhysicalContractScreen -> {

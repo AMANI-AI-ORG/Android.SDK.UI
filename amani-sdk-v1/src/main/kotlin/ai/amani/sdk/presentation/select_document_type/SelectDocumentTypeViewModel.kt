@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation.select_document_type
 
+import ai.amani.sdk.presentation.common.document_picker.physicalContractRouteOf
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import androidx.lifecycle.ViewModel
@@ -24,7 +25,7 @@ class SelectDocumentTypeViewModel: ViewModel() {
             }
 
             else -> {
-                route.invoke(ScreenRoutes.PhysicalContractScreen)
+                route.invoke(physicalContractRouteOf(version))
             }
         }
     }

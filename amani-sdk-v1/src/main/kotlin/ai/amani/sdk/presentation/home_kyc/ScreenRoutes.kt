@@ -1,5 +1,7 @@
 package ai.amani.sdk.presentation.home_kyc
 
+import ai.amani.sdk.model.DocumentSource
+
 /**
  * @Author: zekiamani
  * @Date: 12.09.2022
@@ -13,6 +15,12 @@ sealed interface ScreenRoutes{
     object NFCScanScreen: ScreenRoutes
     object SignatureScreen: ScreenRoutes
     object PhysicalContractScreen: ScreenRoutes
+
+    /**
+     * No screen: the document of a `documentSource` other than camera is picked from storage
+     * right where the flow would have opened the physical contract capture screen.
+     */
+    data class DocumentPickerScreen(val source: DocumentSource): ScreenRoutes
 
     /**
      * Speech verification (document id "ST"). Hosts the OPTIONAL standalone

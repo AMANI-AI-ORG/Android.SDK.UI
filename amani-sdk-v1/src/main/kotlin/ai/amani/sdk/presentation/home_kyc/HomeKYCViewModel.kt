@@ -27,6 +27,7 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.common.BaseViewModel
+import ai.amani.sdk.presentation.common.document_picker.physicalContractRouteOf
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierOptions
@@ -464,14 +465,14 @@ open class HomeKYCViewModel(
                     }
 
                     AmaniDocumentTypes.PHYSICAL_CONTRACT -> {
-                        route.invoke(ScreenRoutes.PhysicalContractScreen)
+                        route.invoke(physicalContractRouteOf(CachingHomeKYC.version))
                     }
 
                     AmaniDocumentTypes.SPEECH -> {
                         route.invoke(ScreenRoutes.SpeechVerifierScreen)
                     }
                     else -> {
-                        route.invoke(ScreenRoutes.PhysicalContractScreen)
+                        route.invoke(physicalContractRouteOf(CachingHomeKYC.version))
                     }
                 }
             } else {
@@ -494,7 +495,7 @@ open class HomeKYCViewModel(
                     }
 
                     else -> {
-                        route.invoke(ScreenRoutes.PhysicalContractScreen)
+                        route.invoke(physicalContractRouteOf(CachingHomeKYC.version))
                     }
                 }
             }

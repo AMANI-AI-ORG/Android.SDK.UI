@@ -4,6 +4,10 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentSelectDocumentTypeBinding
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.model.ConfigModel
+import ai.amani.sdk.model.HomeKYCResultModel
+import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
+import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
+import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
 import ai.amani.sdk.presentation.select_document_type.adapter.DocumentAdapter
 import ai.amani.sdk.utils.ColorConstant
@@ -38,6 +42,17 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
     private val args: SelectDocumentTypeFragmentArgs by navArgs()
     private val viewModel: SelectDocumentTypeViewModel by viewModels()
 
+    /** Document whose picker is open, kept to report its upload back to the KYC home. */
+    private var pickedVersion: Version? = null
+
+    /**
+     * Picker for the documents whose `documentSource` is not the camera. Registered eagerly
+     * because activity result launchers cannot be registered once the fragment is started.
+     */
+    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+        onDocumentPicked(uri)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -70,6 +85,12 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
                         findNavController().navigateSafely(action)
                     }
 
+                    is ScreenRoutes.DocumentPickerScreen -> {
+                        // The document is picked from storage, so the capture screen is skipped.
+                        pickedVersion = version
+                        documentPickerLauncher.launch(it.source)
+                    }
+
                     else -> {
                         val action =
                             SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToPhysicalContractFragment(
@@ -84,6 +105,30 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
                 }
             }
         }
+    }
+
+    /**
+     * Hands the picked file to the KYC home for the upload, the same way the physical contract
+     * screen does after a capture. Leaving the picker empty keeps the selection screen open.
+     */
+    private fun onDocumentPicked(uri: android.net.Uri?) {
+        val version = pickedVersion
+        pickedVersion = null
+
+        if (uri == null || version == null) {
+            Timber.d("No document is picked from storage")
+            return
+        }
+
+        findNavController().getBackStackEntry(R.id.homeKYCFragment)
+            .savedStateHandle[AmaniDocumentTypes.type] = HomeKYCResultModel(
+            docID = version.documentId,
+            docType = version.type,
+            genericDocumentFlow = GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
+        )
+
+        findNavController().clearBackStack(R.id.homeKYCFragment)
+        findNavController().popBackStack(R.id.homeKYCFragment, false)
     }
 
     private fun setCustomUI(
