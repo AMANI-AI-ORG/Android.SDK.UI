@@ -476,6 +476,18 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
 
                     }
 
+                    ScreenRoutes.DocumentInfoScreen -> {
+                        findNavController().navigateSafely(
+                            directions = HomeKYCFragmentDirections
+                                .actionHomeKYCFragmentToDocumentInfoFragment(
+                                    dataModel = ConfigModel(
+                                        version = viewModel.getVersion(),
+                                        generalConfigs = viewModel.getAppConfig()!!.generalConfigs
+                                    )
+                                )
+                        )
+                    }
+
                     is ScreenRoutes.DocumentPickerScreen -> {
                         // The document is picked from storage, so no capture screen is opened:
                         // the picked file is uploaded from here.

@@ -17,10 +17,16 @@ sealed interface ScreenRoutes{
     object PhysicalContractScreen: ScreenRoutes
 
     /**
-     * No screen: the document of a `documentSource` other than camera is picked from storage
+     * No screen: the document of a `documentSource` that picks straight from storage is picked
      * right where the flow would have opened the physical contract capture screen.
      */
     data class DocumentPickerScreen(val source: DocumentSource): ScreenRoutes
+
+    /**
+     * Information screen shown before a `gallery` document is picked, carrying the version's
+     * `basicInfoText` and the button that opens the gallery.
+     */
+    object DocumentInfoScreen: ScreenRoutes
 
     /**
      * Speech verification (document id "ST"). Hosts the OPTIONAL standalone

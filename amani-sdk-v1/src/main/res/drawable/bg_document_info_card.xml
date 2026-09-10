@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rounded surface behind the document information details. The color is tinted at runtime
+     from the configured app font color, so it works on a light and a dark app background. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <corners android:radius="12dp" />
+    <solid android:color="@android:color/transparent" />
+
+</shape>

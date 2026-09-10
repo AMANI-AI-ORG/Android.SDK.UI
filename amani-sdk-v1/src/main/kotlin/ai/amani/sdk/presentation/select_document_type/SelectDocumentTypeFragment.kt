@@ -85,6 +85,18 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
                         findNavController().navigateSafely(action)
                     }
 
+                    ScreenRoutes.DocumentInfoScreen -> {
+                        val action =
+                            SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToDocumentInfoFragment(
+                                ConfigModel(
+                                    version = version,
+                                    generalConfigs = args.dataModel.generalConfigs!!.generalConfigs
+                                )
+                            )
+
+                        findNavController().navigateSafely(action)
+                    }
+
                     is ScreenRoutes.DocumentPickerScreen -> {
                         // The document is picked from storage, so the capture screen is skipped.
                         pickedVersion = version
