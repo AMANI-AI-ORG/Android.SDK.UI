@@ -6,6 +6,7 @@ import android.text.TextUtils
 import android.content.res.ColorStateList
 import ai.amani.base.widget.AmaniButton
 import android.content.Context
+import ai.amani.sdk.extentions.parseVisibleColorOrNull
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
@@ -50,8 +51,8 @@ class CustomButton : AppCompatButton {
     ) {
         this.background = drawable
         val gradientDrawable = this.background as GradientDrawable
-        if (!TextUtils.isEmpty(solidColor)) {
-            gradientDrawable.color = ColorStateList.valueOf(Color.parseColor(solidColor))
+        solidColor.parseVisibleColorOrNull()?.let {
+            gradientDrawable.color = ColorStateList.valueOf(it)
         }
         if (alpha != null) {
             if (alpha > 0F) {
@@ -63,10 +64,10 @@ class CustomButton : AppCompatButton {
             }
         }
         if (strokeSize > 0) {
-            gradientDrawable.setStroke(
-                strokeSize,
-                ColorStateList.valueOf(Color.parseColor(strokeColor))
-            )
+            // A border only exists when one is configured; the transparent default draws none.
+            strokeColor.parseVisibleColorOrNull()?.let {
+                gradientDrawable.setStroke(strokeSize, ColorStateList.valueOf(it))
+            }
         }
         if (alpha != null) {
             if (solidColor == alphaColor && alpha > 0) {
@@ -93,7 +94,8 @@ class CustomButton : AppCompatButton {
      */
     fun setTextProperty(text: String?, textColor: String?) {
         this.text = text
-        this.setTextColor(Color.parseColor(textColor))
+        // See CustomTextView: an unconfigured colour arrives fully transparent and is ignored.
+        textColor.parseVisibleColorOrNull()?.let { setTextColor(it) }
     }
 
 }

@@ -2,6 +2,8 @@ package ai.amani.sdk.presentation_v2.components
 
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.CappedCornerShape
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
@@ -100,9 +102,9 @@ fun ScreenHeader(
 }
 
 /**
- * Soft rounded icon button used in headers. Its corner radius follows the config
- * `buttonRadiusAndroid` like every other button; the back button opts out via [cornerRadius]
- * and keeps the fixed [AmaniV2Dimens.iconButtonRadius].
+ * Soft rounded icon button used in headers (the back button among them). Its corner radius
+ * follows the config `buttonRadiusAndroid` like every other config-styled surface; being a small
+ * square, it reaches its own ceiling — a circle — sooner than a full-width button does.
  */
 @Composable
 fun HeaderIconButton(
@@ -110,12 +112,12 @@ fun HeaderIconButton(
     modifier: Modifier = Modifier,
     containerColor: Color = AmaniV2Theme.palette.backgroundWarm,
     contentColor: Color = AmaniV2Theme.palette.ink,
-    cornerRadius: Dp = AmaniV2Theme.palette.buttonRadius.dp,
+    cornerRadius: Dp = configCornerRadius(),
     onClick: () -> Unit = {}
 ) {
     // Clip to the rounded shape BEFORE .clickable so the press ripple is bounded by the
     // corner radius too — otherwise the ripple draws as a square over the rounded background.
-    val shape = RoundedCornerShape(cornerRadius.scaled())
+    val shape = CappedCornerShape(cornerRadius)
     Box(
         modifier = modifier
             .size(AmaniV2Dimens.iconButtonSize.scaled())

@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation_v2.components
 
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.BorderStroke
@@ -50,7 +51,7 @@ fun PrimaryButton(
             contentColor = palette.primaryButtonText
         )
     }
-    val shape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
+    val shape = RoundedCornerShape(configCornerRadius())
 
     Button(
         onClick = onClick,
@@ -91,7 +92,7 @@ fun SecondaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(AmaniV2Dimens.buttonHeight.scaled()),
-        shape = RoundedCornerShape(palette.buttonRadius.dp.scaled()),
+        shape = RoundedCornerShape(configCornerRadius()),
         // GeneralConfigs.secondaryButton{BorderColor, BackgroundColor, TextColor}; the
         // defaults reproduce the previous hardcoded look (white fill, hairline border, ink).
         border = BorderStroke(1.dp, palette.secondaryButtonBorder),

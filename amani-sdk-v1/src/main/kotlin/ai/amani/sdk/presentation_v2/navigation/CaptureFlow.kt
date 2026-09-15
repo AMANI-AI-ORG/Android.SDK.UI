@@ -4,8 +4,10 @@ import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation.selfie.SelfieType
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
+import ai.amani.sdk.model.DocumentSource
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import datamanager.model.config.Version
+import timber.log.Timber
 
 /**
  * Navigation logic for the V2 capture flow, reusing the shared SDK data layer
@@ -44,12 +46,21 @@ internal object CaptureFlow {
      */
     fun prepareVersions(rule: Rule): List<Version> {
         currentRuleTitle = rule.title
-        val config = CachingHomeKYC.appConfig ?: return emptyList()
-        val sortOrder = rule.sortOrder ?: return emptyList()
+        val config = CachingHomeKYC.appConfig ?: run {
+            Timber.e("V2 capture flow: no app config, the step cannot be prepared")
+            return emptyList()
+        }
+        val sortOrder = rule.sortOrder ?: run {
+            Timber.e("V2 capture flow: rule ${rule.id} has no sort order")
+            return emptyList()
+        }
         // Resolved by rule id, not by sortOrder position: sortOrder is 0-based on profiles that
         // carry a before-KYC step, which shifted the lookup onto the previous step's config.
         val stepConfig = config.stepConfigs?.firstOrNull { it.id != null && it.id == rule.id }
-            ?: return emptyList()
+            ?: run {
+                Timber.e("V2 capture flow: no step config matches rule ${rule.id}")
+                return emptyList()
+            }
         currentStepConfig = stepConfig
         val versions = mutableListOf<Version>()
         stepConfig.mDocuments?.forEach { documentList ->
@@ -85,7 +96,10 @@ internal object CaptureFlow {
      * This is also what the document-type chooser calls once the user picks a card.
      */
     fun directDestinationFor(version: Version): AmaniV2Destination? {
-        val type = version.type ?: return null
+        val type = version.type ?: run {
+            Timber.e("V2 capture flow: version of ${version.documentId} has no type")
+            return null
+        }
         return when (version.documentId) {
             AmaniDocumentTypes.IDENTIFICATION,
             AmaniDocumentTypes.PASSPORT,
@@ -107,7 +121,10 @@ internal object CaptureFlow {
                 AmaniV2Destination.Signature(type)
 
             AmaniDocumentTypes.PHYSICAL_CONTRACT ->
-                AmaniV2Destination.AddressVerify(type)
+                // The config decides where the document comes from: the camera keeps the
+                // capture screen, a gallery document explains itself first, and a PDF goes
+                // straight to the documents provider.
+                documentSourceDestination(version, type)
 
             // Speech verification — hosts the optional AmaniSpeechVerifier module (single
             // document, like selfie: never lands on the document-type chooser).
@@ -116,8 +133,31 @@ internal object CaptureFlow {
 
             AmaniDocumentTypes.NFC -> null
 
-            else -> null
+            // Every other document id is a generic document, exactly like v1: its `when` on
+            // documentId ends with `else -> PhysicalContractScreen`, so a profile-specific id
+            // ("IA", "PD", …) is captured or uploaded through the generic document flow instead
+            // of being dropped. Returning null here left those steps doing nothing at all.
+            else -> documentSourceDestination(version, type)
         }
+    }
+
+    /**
+     * Where a generic (physical contract) document goes, decided by its `documentSource` config:
+     * the camera keeps the capture screen, a gallery document explains itself first, and a PDF
+     * goes straight to the documents provider.
+     */
+    private fun documentSourceDestination(version: Version, type: String): AmaniV2Destination {
+        val source = DocumentSource.from(version.documentSource)
+        val destination = when (source) {
+            DocumentSource.Camera -> AmaniV2Destination.AddressVerify(type)
+            DocumentSource.Gallery -> AmaniV2Destination.DocumentInfo(type)
+            DocumentSource.PdfFile -> AmaniV2Destination.DocumentPick(type)
+        }
+        Timber.i(
+            "V2 generic document: source=$source (config: ${version.documentSource}), " +
+                "destination=$destination"
+        )
+        return destination
     }
 
     /**
@@ -155,13 +195,20 @@ internal object CaptureFlow {
      */
     fun startDestination(): AmaniV2Destination? {
         val all = CachingHomeKYC.versionsList.orEmpty()
-        if (all.isEmpty()) return null
+        if (all.isEmpty()) {
+            Timber.e("V2 capture flow: the prepared step has no versions, nothing to start")
+            return null
+        }
         val nonHidden = visibleVersions()
         // v1: single when `versionsList.size == 1 || non-hidden count == 1`.
         val isSingle = all.size == 1 || nonHidden.size == 1
         // The document the step is actually about (v1 reads documentId off the current
         // version); prefer the visible one so a hidden lead version can't mislead routing.
         val primary = nonHidden.firstOrNull() ?: all.first()
+        Timber.i(
+            "V2 capture flow: starting documentId=${primary.documentId} type=${primary.type} " +
+                "versions=${all.size} visible=${nonHidden.size}"
+        )
         if (isSingle) return directDestinationFor(primary)
 
         return when (primary.documentId) {

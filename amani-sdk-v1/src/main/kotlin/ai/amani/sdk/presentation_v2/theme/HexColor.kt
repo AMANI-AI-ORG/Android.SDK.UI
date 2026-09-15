@@ -24,4 +24,8 @@ fun String?.toAmaniColorOrNull(): Color? {
             else -> null
         }
     }.getOrNull()
+        // A fully transparent value is the core SDK's "not configured" marker (GeneralConfigs
+        // defaults every colour to #00000000): treat it as absent so the caller keeps its own
+        // default instead of painting nothing at all.
+        ?.takeIf { it.alpha > 0f }
 }

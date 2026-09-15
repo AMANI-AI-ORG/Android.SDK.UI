@@ -74,7 +74,7 @@
             android:layout_height="50dp"
             android:layout_marginStart="@dimen/dp_20"
             android:layout_marginEnd="@dimen/dp_20"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="10dp"
             android:fontFamily="@font/rubik_500"
             android:textAllCaps="false"
             android:textSize="@dimen/sp_18"
@@ -83,14 +83,15 @@
             app:layout_constraintStart_toStartOf="parent"
             tools:text="Upload Document" />
 
+        <!-- Same size and bottom offset as the KYC home screen, so the logo sits in one place
+             across the flow. -->
         <ImageView
             android:id="@+id/powered_by_amani"
             android:layout_width="match_parent"
-            android:layout_height="14sp"
-            android:layout_marginBottom="@dimen/dp_20"
+            android:layout_height="@dimen/dp_15"
+            android:layout_marginBottom="10dp"
             android:src="@drawable/ic_bottom_logo"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

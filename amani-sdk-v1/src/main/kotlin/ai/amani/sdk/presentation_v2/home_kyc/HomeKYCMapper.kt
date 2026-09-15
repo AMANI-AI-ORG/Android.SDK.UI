@@ -344,6 +344,10 @@ internal object HomeKYCMapper {
     }
 
     private fun rowStatus(status: String?, isActive: Boolean): StepRowStatus = when {
+        // The server is still deciding on this step: it reads as busy, not as finished, so the
+        // row keeps a spinner until the verdict lands (the local uploading marker only covers
+        // the seconds around the upload itself).
+        status == AppConstant.STATUS_PROCESSING -> StepRowStatus.Processing
         status in DONE_STATUSES -> StepRowStatus.Done
         status in REJECTED_STATUSES -> StepRowStatus.Rejected
         isActive -> StepRowStatus.Active

@@ -5,12 +5,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Environment
 import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.fragment.app.Fragment
 import timber.log.Timber
-import java.io.File
 
 /**
  * Opens the storage picker that a [DocumentSource] asks for and reports the picked file back.
@@ -59,28 +57,6 @@ internal class DocumentPickerLauncher(
         }
     }
 
-    private fun screenshotsFolderUriOrNull(): Uri? {
-        val screenshotsFolder = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-            SCREENSHOTS_FOLDER_NAME
-        )
-        if (!screenshotsFolder.exists()) {
-            Timber.d("Screenshots folder is not available, opening the default gallery")
-            return null
-        }
-        return DocumentsContract.buildDocumentUri(
-            EXTERNAL_STORAGE_AUTHORITY,
-            "$EXTERNAL_STORAGE_PRIMARY${Environment.DIRECTORY_PICTURES}/$SCREENSHOTS_FOLDER_NAME"
-        )
-    }
-
-    private companion object {
-        const val MIME_PDF = "application/pdf"
-        const val MIME_IMAGE = "image/*"
-        const val SCREENSHOTS_FOLDER_NAME = "Screenshots"
-        const val EXTERNAL_STORAGE_AUTHORITY = "com.android.externalstorage.documents"
-        const val EXTERNAL_STORAGE_PRIMARY = "primary:"
-    }
 }
 
 /**

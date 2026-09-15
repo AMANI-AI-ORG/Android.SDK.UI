@@ -2,6 +2,10 @@ package ai.amani.sdk.presentation_v2.navigation
 
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyMapper
+import timber.log.Timber
+import ai.amani.sdk.presentation_v2.document_info.DocumentInfoMapper
+import ai.amani.sdk.presentation_v2.document_info.DocumentInfoScreen
+import ai.amani.sdk.presentation_v2.document_info.DocumentPickScreen
 import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
@@ -378,6 +382,49 @@ fun AmaniV2NavHost(
                 }
             }
 
+            is AmaniV2Destination.DocumentInfo -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    DocumentInfoScreen(
+                        state = DocumentInfoMapper.toUiState(
+                            version = version,
+                            general = CachingHomeKYC.appConfig?.generalConfigs
+                        ),
+                        onBack = { if (!navigator.popBackStack()) onExit() },
+                        // Picked from the gallery → uploaded like any other document.
+                        onPicked = { uri ->
+                            onAddressLegFinished(
+                                version,
+                                ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
+                            )
+                            navigator.popToRoot()
+                        }
+                    )
+                }
+            }
+
+            is AmaniV2Destination.DocumentPick -> {
+                val version = CaptureFlow.versionByType(destination.versionType)
+                if (version == null) {
+                    navigator.popToRoot()
+                } else {
+                    DocumentPickScreen(
+                        onPicked = { uri ->
+                            onAddressLegFinished(
+                                version,
+                                ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
+                            )
+                            navigator.popToRoot()
+                        },
+                        // Nothing picked: this destination has no screen of its own, so there is
+                        // nothing to stay on.
+                        onCancelled = { if (!navigator.popBackStack()) onExit() }
+                    )
+                }
+            }
+
             is AmaniV2Destination.SpeechVerify -> {
                 val version = CaptureFlow.versionByType(destination.versionType)
                 if (version == null) {
@@ -514,9 +561,14 @@ private fun startCaptureFlowForRule(
     navigator: AmaniV2Navigator,
     rule: ai.amani.sdk.model.customer.Rule?
 ) {
-    rule ?: return
+    if (rule == null) {
+        Timber.e("V2 capture flow: no rule resolved for the started step, nothing happens")
+        return
+    }
     CaptureFlow.prepareVersions(rule)
-    CaptureFlow.startDestination()?.let(navigator::navigateTo)
+    val destination = CaptureFlow.startDestination()
+    Timber.i("V2 capture flow: rule=${rule.id} title=${rule.title} destination=$destination")
+    destination?.let(navigator::navigateTo)
 }
 
 /**
