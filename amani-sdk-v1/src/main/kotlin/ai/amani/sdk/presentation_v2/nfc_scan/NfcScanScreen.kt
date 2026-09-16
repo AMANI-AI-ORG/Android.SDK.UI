@@ -6,11 +6,15 @@ import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.sdk.presentation_v2.components.AmaniV2Loader
 import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
+import ai.amani.sdk.presentation_v2.components.WheelDatePickerDialog
+import ai.amani.sdk.presentation_v2.components.WheelDate
 import ai.amani.sdk.presentation_v2.components.SecondaryButton
 import ai.amani.sdk.presentation_v2.id_capture.findFragmentActivity
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.CappedCornerShape
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
 import ai.amani.sdk.presentation_v2.theme.toAmaniColorOrNull
@@ -37,20 +41,31 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.outlined.Cake
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,6 +85,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import timber.log.Timber
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import java.util.Calendar
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.airbnb.lottie.LottieProperty
@@ -208,7 +233,11 @@ internal fun NfcScanContent(
         // clears automatically once the modal closes (cancel/success/error all set modal = null).
         val contentBlur = if (state.modal != null) 18.dp else 0.dp
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = state.texts.headerTitle, onBack = onBack)
+            ScreenHeader(
+                title = if (state.phase == NfcPhase.MrzCheck) state.texts.mrzCheckHeaderTitle
+                else state.texts.headerTitle,
+                onBack = onBack
+            )
 
             Box(
                 modifier = Modifier
@@ -225,7 +254,9 @@ internal fun NfcScanContent(
                     )
                     NfcPhase.MrzCheck -> MrzCheckContent(
                         state = state,
-                        accent = accent,
+                        // The chip-data screen is a form, not the scan animation: it follows the
+                        // app's primary button color instead of the NFC animation tint.
+                        accent = palette.accent,
                         modifier = Modifier.fillMaxSize(),
                         onMrzChanged = onMrzChanged,
                         onConfirm = onMrzConfirmed
@@ -550,78 +581,338 @@ private fun MrzCheckContent(
 ) {
     val palette = AmaniV2Theme.palette
     val mrz = state.mrz
+
+    // Which row is being corrected by hand; null = every row shows its read-only value. The
+    // values come off the chip, so editing is the exception and starts on a tap (the hint under
+    // the rows says so).
+    var editingField by remember { mutableStateOf<MrzField?>(null) }
+
+    /** Which date wheel is open; null = no picker. */
+    var pickingDate by remember { mutableStateOf<MrzField?>(null) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // Clear the nav bar and lift above the keyboard so the Continue button stays reachable.
+            // Clear the nav bar and lift above the keyboard so the confirm button stays reachable.
             .navigationBarsPadding()
             .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = AmaniV2Dimens.screenPadding)
     ) {
-        Spacer(Modifier.height(4.dp))
-        Text(state.texts.mrzCheckTitle, style = AmaniV2Type.heading.scaled(), color = palette.ink)
-        Spacer(Modifier.height(6.dp))
-        Text(state.texts.mrzCheckDescription, style = AmaniV2Type.bodySmall.scaled(), color = palette.inkMuted)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(8.dp))
+        ChipDataEyebrow(text = state.texts.mrzCheckEyebrow, accent = accent)
 
-        MrzField(
+        Spacer(Modifier.height(20.dp))
+        Text(
+            state.texts.mrzCheckTitle,
+            style = AmaniV2Type.title.scaled().copy(fontWeight = FontWeight.Bold),
+            color = palette.ink
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            state.texts.mrzCheckDescription,
+            style = AmaniV2Type.body.scaled(),
+            color = palette.inkMuted
+        )
+
+        Spacer(Modifier.height(24.dp))
+        ChipDataRow(
+            icon = Icons.Outlined.CreditCard,
+            label = state.texts.documentNoLabel,
+            value = mrz.docNumber,
+            displayValue = mrz.docNumber,
+            accent = accent,
+            editing = editingField == MrzField.DocumentNumber,
+            keyboard = KeyboardType.Text,
+            onEdit = { editingField = MrzField.DocumentNumber },
+            onEditDone = { editingField = null },
+            onValueChange = { onMrzChanged(mrz.copy(docNumber = it)) }
+        )
+        Spacer(Modifier.height(12.dp))
+        ChipDataRow(
+            icon = Icons.Outlined.Cake,
             label = state.texts.birthDateLabel,
             value = mrz.birthDate,
+            displayValue = mrz.birthDate.asReadableDate(isBirthDate = true),
             accent = accent,
+            // A date is picked on a wheel, never typed: it rules out an impossible day and keeps
+            // the six-digit MRZ format out of the user's hands.
+            editing = false,
+            onEdit = { pickingDate = MrzField.BirthDate },
+            onEditDone = {},
             onValueChange = { onMrzChanged(mrz.copy(birthDate = it)) }
         )
         Spacer(Modifier.height(12.dp))
-        MrzField(
+        ChipDataRow(
+            icon = Icons.Outlined.CalendarMonth,
             label = state.texts.expiryDateLabel,
             value = mrz.expireDate,
+            displayValue = mrz.expireDate.asReadableDate(isBirthDate = false),
             accent = accent,
+            editing = false,
+            onEdit = { pickingDate = MrzField.ExpiryDate },
+            onEditDone = {},
             onValueChange = { onMrzChanged(mrz.copy(expireDate = it)) }
         )
-        Spacer(Modifier.height(12.dp))
-        MrzField(
-            label = state.texts.documentNoLabel,
-            value = mrz.docNumber,
-            accent = accent,
-            keyboard = KeyboardType.Text,
-            onValueChange = { onMrzChanged(mrz.copy(docNumber = it)) }
-        )
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(16.dp))
+        ChipDataHint(text = state.texts.mrzCheckHint)
+
+        Spacer(Modifier.height(32.dp))
         PrimaryButton(
-            text = state.texts.continueButtonText,
-            enabled = mrz.birthDate.isNotBlank() && mrz.expireDate.isNotBlank() && mrz.docNumber.isNotBlank(),
-            onClick = onConfirm
+            text = state.texts.mrzConfirmButtonText,
+            // The chip is addressed with the MRZ key, which is only built from six-digit dates:
+            // a half-read or hand-typed value must not leave this screen.
+            enabled = mrz.docNumber.isNotBlank() &&
+                mrz.birthDate.isMrzDate() &&
+                mrz.expireDate.isMrzDate(),
+            onClick = {
+                // Hand the reader exactly `yyMMdd`, whatever shape the chip reported.
+                onMrzChanged(
+                    mrz.copy(
+                        birthDate = mrz.birthDate.asMrzDigits(),
+                        expireDate = mrz.expireDate.asMrzDigits(),
+                        docNumber = mrz.docNumber.trim()
+                    )
+                )
+                onConfirm()
+            }
         )
         Spacer(Modifier.height(AmaniV2Dimens.screenPadding))
     }
+
+    pickingDate?.let { field ->
+        key(field) {
+        val isBirthDate = field == MrzField.BirthDate
+        val raw = if (isBirthDate) mrz.birthDate else mrz.expireDate
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+
+        WheelDatePickerDialog(
+            title = if (isBirthDate) state.texts.birthDateLabel else state.texts.expiryDateLabel,
+            initial = raw.asWheelDate(isBirthDate)
+                // An unreadable value opens on something plausible rather than on today: a birth
+                // date decades back, an expiry a few years ahead.
+                ?: WheelDate(1, 1, if (isBirthDate) currentYear - 30 else currentYear + 5),
+            yearRange = if (isBirthDate) (currentYear - 100)..currentYear
+            else (currentYear - 10)..(currentYear + 30),
+            confirmText = state.texts.mrzConfirmButtonText,
+            cancelText = state.texts.cancelButtonText,
+            onDismiss = { pickingDate = null },
+            onConfirm = { picked ->
+                val mrzValue = picked.asMrzDate()
+                Timber.i(
+                    "V2 chip data: ${if (isBirthDate) "birth" else "expiry"} date picked " +
+                        "$picked → $mrzValue (was $raw)"
+                )
+                if (isBirthDate) onMrzChanged(mrz.copy(birthDate = mrzValue))
+                else onMrzChanged(mrz.copy(expireDate = mrzValue))
+                pickingDate = null
+            }
+        )
+        }
+    }
 }
 
+/** The three correctable values, so only one row is in edit mode at a time. */
+private enum class MrzField { DocumentNumber, BirthDate, ExpiryDate }
+
+/** Accent pill above the title: this data was read off the chip, not typed by the user. */
 @Composable
-private fun MrzField(
+private fun ChipDataEyebrow(text: String, accent: Color) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(AmaniV2Dimens.pillRadius))
+            .background(accent.copy(alpha = 0.12f))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(Icons.Filled.Nfc, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+        Text(
+            text.uppercase(),
+            style = AmaniV2Type.label.scaled().copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
+            color = accent
+        )
+    }
+}
+
+/**
+ * One chip-read value: icon, its label, the value itself and a check badge. Tapping the card
+ * turns the value into a text field so a misread can be corrected by hand (v1 ShowMRZCheck).
+ */
+@Composable
+private fun ChipDataRow(
+    icon: ImageVector,
     label: String,
     value: String,
+    displayValue: String,
     accent: Color,
-    modifier: Modifier = Modifier,
-    keyboard: KeyboardType = KeyboardType.Number,
-    onValueChange: (String) -> Unit
+    editing: Boolean,
+    onEdit: () -> Unit,
+    onEditDone: () -> Unit,
+    onValueChange: (String) -> Unit,
+    keyboard: KeyboardType = KeyboardType.Number
 ) {
     val palette = AmaniV2Theme.palette
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, style = AmaniV2Type.caption) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        shape = RoundedCornerShape(AmaniV2Dimens.fieldRadius),
-        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = accent,
-            focusedLabelColor = accent,
-            cursorColor = accent,
-            unfocusedBorderColor = palette.border
-        ),
-        modifier = modifier.fillMaxWidth()
-    )
+    val shape = CappedCornerShape(configCornerRadius())
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(palette.ink.copy(alpha = 0.04f))
+            .clickable(enabled = !editing, onClick = onEdit)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(accent.copy(alpha = 0.14f), CappedCornerShape(configCornerRadius())),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                label.uppercase(),
+                style = AmaniV2Type.label.scaled().copy(letterSpacing = 0.6.sp),
+                color = palette.inkMuted
+            )
+            Spacer(Modifier.height(2.dp))
+            // The value keeps its own typography whether it is read or written: editing turns it
+            // into a bare text field with the same style, so correcting a value never swaps the
+            // card's look for a platform input box.
+            val valueStyle = AmaniV2Type.heading.scaled().copy(
+                fontWeight = FontWeight.SemiBold,
+                color = palette.ink
+            )
+            if (editing) {
+                val focusRequester = remember { FocusRequester() }
+                LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    textStyle = valueStyle,
+                    singleLine = true,
+                    cursorBrush = SolidColor(accent),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = keyboard,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { onEditDone() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                )
+            } else {
+                Text(
+                    displayValue,
+                    style = valueStyle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // The badge doubles as the commit action while a value is being corrected, so the row
+        // keeps the same shape in both modes.
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(if (editing) accent else accent.copy(alpha = 0.14f))
+                .clickable(enabled = editing, onClick = onEditDone),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = if (editing) palette.primaryButtonText else accent,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
 }
+
+/** Footer note explaining where the values came from and that a tap corrects them. */
+@Composable
+private fun ChipDataHint(text: String) {
+    val palette = AmaniV2Theme.palette
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(CappedCornerShape(configCornerRadius()))
+            .background(palette.ink.copy(alpha = 0.05f))
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            Icons.Outlined.Lock,
+            contentDescription = null,
+            tint = palette.inkMuted,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(text, style = AmaniV2Type.bodySmall.scaled(), color = palette.inkMuted)
+    }
+}
+
+/**
+ * MRZ dates arrive as `yyMMdd`; the screen shows them the way they are printed on the document.
+ * A birth year in the future belongs to the previous century — an expiry never does.
+ */
+private fun String.asReadableDate(isBirthDate: Boolean): String {
+    val digits = filter { it.isDigit() }
+    if (digits.length != MRZ_DATE_LENGTH) return this
+
+    val yy = digits.substring(0, 2).toIntOrNull() ?: return this
+    val currentYy = Calendar.getInstance().get(Calendar.YEAR) % 100
+    val year = when {
+        !isBirthDate -> 2000 + yy
+        yy > currentYy -> 1900 + yy
+        else -> 2000 + yy
+    }
+    return "${digits.substring(4, 6)}/${digits.substring(2, 4)}/$year"
+}
+
+private const val MRZ_DATE_LENGTH = 6
+
+/** `yyMMdd` → the wheel's date, or null when the chip value is not a date at all. */
+private fun String.asWheelDate(isBirthDate: Boolean): WheelDate? {
+    val digits = filter { it.isDigit() }
+    if (digits.length != MRZ_DATE_LENGTH) return null
+
+    val yy = digits.substring(0, 2).toIntOrNull() ?: return null
+    val month = digits.substring(2, 4).toIntOrNull()?.takeIf { it in 1..12 } ?: return null
+    val day = digits.substring(4, 6).toIntOrNull()?.takeIf { it in 1..31 } ?: return null
+    val currentYy = Calendar.getInstance().get(Calendar.YEAR) % 100
+    val year = when {
+        !isBirthDate -> 2000 + yy
+        yy > currentYy -> 1900 + yy
+        else -> 2000 + yy
+    }
+    return WheelDate(day = day, month = month, year = year)
+}
+
+/** True when this value is the `yyMMdd` the MRZ key is built from. */
+private fun String.isMrzDate(): Boolean {
+    val digits = asMrzDigits()
+    if (digits.length != MRZ_DATE_LENGTH) return false
+    val month = digits.substring(2, 4).toIntOrNull() ?: return false
+    val day = digits.substring(4, 6).toIntOrNull() ?: return false
+    return month in 1..12 && day in 1..31
+}
+
+/** Drops anything the chip may have added around the six digits (separators, spaces). */
+private fun String.asMrzDigits(): String = filter { it.isDigit() }
+
+/** The wheel's date → the `yyMMdd` the MRZ carries. */
+private fun WheelDate.asMrzDate(): String =
+    "%02d%02d%02d".format(year % 100, month, day)
+
 
 /** v1 NFCScanningBottomDialog counterpart: a bottom card that overlays during the read. */
 @Composable
@@ -802,8 +1093,12 @@ private val previewTexts = NfcTexts(
     searchingLabel = "Searching for chip…",
     cancelButtonText = "Cancel",
     continueButtonText = "Start scan",
-    mrzCheckTitle = "Check your document details",
-    mrzCheckDescription = "We couldn't read the chip. Confirm these values and try again.",
+    mrzCheckHeaderTitle = "Chip data",
+    mrzCheckEyebrow = "Read from chip",
+    mrzCheckTitle = "Check your details",
+    mrzCheckDescription = "This was read securely from your ID's chip. Confirm it matches your document.",
+    mrzCheckHint = "These values were read from your ID. Tap any field to correct it if something looks wrong.",
+    mrzConfirmButtonText = "Confirm",
     birthDateLabel = "Date of birth",
     expiryDateLabel = "Date of expiry",
     documentNoLabel = "Document number",
@@ -835,17 +1130,87 @@ private fun NfcScanningPreview() {
     }
 }
 
-@Preview(name = "NFC — MRZ check", showBackground = true, heightDp = 720)
+@Preview(name = "NFC — chip data", showBackground = true, heightDp = 860)
 @Composable
 private fun NfcMrzCheckPreview() {
     AmaniV2Theme(AmaniV2Palette()) {
         NfcScanContent(
             NfcScanUiState(
                 NfcPhase.MrzCheck,
-                MRZModel(birthDate = "900101", expireDate = "300101", docNumber = "A12345678"),
+                MRZModel(birthDate = "970423", expireDate = "360510", docNumber = "A54P40583"),
                 previewTexts
             )
         )
+    }
+}
+
+/**
+ * The same screen with a config radius no card can take, so the cards and the footer note stay
+ * rounded rectangles instead of deforming.
+ */
+@Preview(name = "NFC — chip data, oversized radius", showBackground = true, heightDp = 860)
+@Composable
+private fun NfcMrzCheckLargeRadiusPreview() {
+    AmaniV2Theme(AmaniV2Palette(buttonRadius = 220)) {
+        NfcScanContent(
+            NfcScanUiState(
+                NfcPhase.MrzCheck,
+                MRZModel(birthDate = "970423", expireDate = "360510", docNumber = "A54P40583"),
+                previewTexts
+            )
+        )
+    }
+}
+
+/** A value the chip could not give up: the row still reads, waiting to be corrected. */
+@Preview(name = "NFC — chip data, unreadable value", showBackground = true, heightDp = 860)
+@Composable
+private fun NfcMrzCheckEmptyValuePreview() {
+    AmaniV2Theme(AmaniV2Palette()) {
+        NfcScanContent(
+            NfcScanUiState(
+                NfcPhase.MrzCheck,
+                MRZModel(birthDate = "970423", expireDate = "", docNumber = "A54P40583"),
+                previewTexts
+            )
+        )
+    }
+}
+
+/** One chip-data row in each of its two modes: read from the chip, and being corrected. */
+@Preview(name = "Chip data row — read vs edit", showBackground = true, widthDp = 390)
+@Composable
+private fun ChipDataRowPreview() {
+    AmaniV2Theme(AmaniV2Palette()) {
+        Column(
+            modifier = Modifier
+                .background(AmaniV2Theme.palette.background)
+                .padding(16.dp)
+        ) {
+            ChipDataRow(
+                icon = Icons.Outlined.CreditCard,
+                label = "Document number",
+                value = "A54P40583",
+                displayValue = "A54P40583",
+                accent = AmaniV2Theme.palette.accent,
+                editing = false,
+                onEdit = {},
+                onEditDone = {},
+                onValueChange = {}
+            )
+            Spacer(Modifier.height(12.dp))
+            ChipDataRow(
+                icon = Icons.Outlined.CreditCard,
+                label = "Document number",
+                value = "A54P40583",
+                displayValue = "A54P40583",
+                accent = AmaniV2Theme.palette.accent,
+                editing = true,
+                onEdit = {},
+                onEditDone = {},
+                onValueChange = {}
+            )
+        }
     }
 }
 

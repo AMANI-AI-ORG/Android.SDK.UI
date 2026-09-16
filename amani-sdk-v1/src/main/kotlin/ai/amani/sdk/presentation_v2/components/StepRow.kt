@@ -36,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
 import androidx.compose.ui.unit.sp
 
 /**
@@ -269,3 +271,103 @@ private val CARD_INNER_GAP = 16.dp
 
 /** A square-cornered card still gets a softened message box. */
 private val MIN_ERROR_RADIUS = 6.dp
+
+@Preview(name = "Step rows — states", showBackground = true, widthDp = 390)
+@Composable
+private fun StepRowStatesPreview() {
+    AmaniV2Theme(AmaniV2Palette()) {
+        Column(
+            modifier = Modifier
+                .background(AmaniV2Theme.palette.background)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StepRow(
+                VerificationStep(
+                    index = 1,
+                    title = "Upload ID",
+                    subtitle = "Completed",
+                    status = StepRowStatus.Done
+                )
+            )
+            StepRow(
+                VerificationStep(
+                    index = 2,
+                    title = "Take a selfie",
+                    subtitle = "Start here · about 30 sec",
+                    status = StepRowStatus.Active
+                ),
+                selected = true
+            )
+            // The server is still deciding: the row keeps a spinner on its right instead of
+            // reading as finished.
+            StepRow(
+                VerificationStep(
+                    index = 3,
+                    title = "IBAN document",
+                    subtitle = "Processing",
+                    status = StepRowStatus.Processing
+                )
+            )
+            StepRow(
+                VerificationStep(
+                    index = 4,
+                    title = "Address document",
+                    subtitle = "Rejected",
+                    status = StepRowStatus.Rejected,
+                    error = StepError(
+                        title = "This step could not be verified",
+                        message = "The document was too blurry to read. Capture it again in good lighting."
+                    )
+                )
+            )
+            StepRow(
+                VerificationStep(
+                    index = 5,
+                    title = "Signature",
+                    subtitle = "Locked",
+                    status = StepRowStatus.Locked
+                )
+            )
+        }
+    }
+}
+
+/**
+ * The same rows under a config radius far larger than a card can take: every surface stays a
+ * rounded rectangle instead of deforming, and the rejection box follows the card.
+ */
+@Preview(name = "Step rows — oversized config radius", showBackground = true, widthDp = 390)
+@Composable
+private fun StepRowLargeRadiusPreview() {
+    AmaniV2Theme(AmaniV2Palette(buttonRadius = 220)) {
+        Column(
+            modifier = Modifier
+                .background(AmaniV2Theme.palette.background)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StepRow(
+                VerificationStep(
+                    index = 1,
+                    title = "Upload ID",
+                    subtitle = "Start here · about 30 sec",
+                    status = StepRowStatus.Active
+                ),
+                selected = true
+            )
+            StepRow(
+                VerificationStep(
+                    index = 2,
+                    title = "Address document",
+                    subtitle = "Rejected",
+                    status = StepRowStatus.Rejected,
+                    error = StepError(
+                        title = "This step could not be verified",
+                        message = "The document was too blurry to read. Capture it again in good lighting."
+                    )
+                )
+            )
+        }
+    }
+}

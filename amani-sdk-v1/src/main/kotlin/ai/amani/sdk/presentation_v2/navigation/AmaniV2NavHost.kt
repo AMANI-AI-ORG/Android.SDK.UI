@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation_v2.navigation
 
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation_v2.components.AmaniV2AlertDialog
 import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyMapper
 import timber.log.Timber
 import ai.amani.sdk.presentation_v2.document_info.DocumentInfoMapper
@@ -605,8 +606,12 @@ private fun DocumentTypeRoute(
  * Captured-image confirmation. Beyond the stateless [PreviewScreen] this owns the
  * NFC hand-off: on confirm of the *final* side of an NFC-enabled ID it reads the MRZ off
  * the captured document (v1 PreviewScreenViewModel) — showing a loader *on this screen*
- * meanwhile — and only then navigates to the NFC screen. If the MRZ can't be read it drops
- * back to re-capture (retake) rather than proceeding.
+ * meanwhile — and only then navigates to the NFC screen.
+ *
+ * An unreadable MRZ sends the user back to re-capture WITH a message, and only for a limited
+ * number of attempts (config `maxAttempt`, v1 parity): a worn or MRZ-less document would
+ * otherwise bounce between the loader and the capture screen forever. Out of attempts the leg
+ * finishes without NFC — the ID is uploaded on its own, exactly like v1's OutOfMaxAttempt.
  */
 @Composable
 private fun CaptureConfirmRoute(
@@ -621,6 +626,34 @@ private fun CaptureConfirmRoute(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val nfcRepository = remember { ai.amani.sdk.data.repository.nfc.NFCRepositoryImp() }
     var loadingMrz by remember { mutableStateOf(false) }
+
+    // Survives the trip to the capture screen and back, which is what makes the attempts count
+    // (a plain remember would reset on every return and never reach the limit).
+    var mrzAttempts by rememberSaveable(destination.versionType) { mutableStateOf(0) }
+    val maxMrzAttempts = version.maxAttempt.takeIf { it > 0 } ?: DEFAULT_MRZ_ATTEMPTS
+
+    // Set when a read failed and the user still has attempts left: the dialog states what
+    // happened and takes them back to re-capture once they acknowledge it (v1 parity).
+    var mrzErrorVisible by remember { mutableStateOf(false) }
+
+    /**
+     * One failed MRZ read: either tell the user and send them back to re-capture, or, out of
+     * attempts, finish the leg without NFC so the ID still gets uploaded.
+     */
+    fun onMrzUnreadable() {
+        mrzAttempts += 1
+        Timber.e("V2 capture: MRZ could not be read, attempt $mrzAttempts of $maxMrzAttempts")
+
+        if (mrzAttempts >= maxMrzAttempts) {
+            Timber.i("V2 capture: out of MRZ attempts, uploading the ID without NFC")
+            mrzAttempts = 0
+            onCaptureLegFinished(version)
+            navigator.popToRoot()
+            return
+        }
+
+        mrzErrorVisible = true
+    }
 
     androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
         PreviewScreen(
@@ -666,15 +699,14 @@ private fun CaptureConfirmRoute(
                                             )
                                         )
                                     } else {
-                                        // MRZ unreadable → make the user re-capture the side.
-                                        navigator.popBackStack()
+                                        onMrzUnreadable()
                                     }
                                 }
                             },
                             onError = {
                                 scope.launch {
                                     loadingMrz = false
-                                    navigator.popBackStack()
+                                    onMrzUnreadable()
                                 }
                             }
                         )
@@ -689,6 +721,22 @@ private fun CaptureConfirmRoute(
             },
             onRetake = { if (!loadingMrz) navigator.popBackStack() }
         )
+
+        // MRZ unreadable: the same alert v1 shows, in the V2 style — acknowledging it returns
+        // the user to the capture screen for another try.
+        if (mrzErrorVisible) {
+            val general = CachingHomeKYC.appConfig?.generalConfigs
+            AmaniV2AlertDialog(
+                title = general?.tryAgainText?.takeIf { it.isNotBlank() } ?: "Try again",
+                description = version.mrzReadErrorText.takeIf { it.isNotBlank() }
+                    ?: "We couldn't read your document. Capture the back side again.",
+                confirmText = general?.okText?.takeIf { it.isNotBlank() } ?: "OK",
+                onConfirm = {
+                    mrzErrorVisible = false
+                    navigator.popBackStack()
+                }
+            )
+        }
 
         // MRZ read loader: dim the confirm screen and block interaction while reading.
         if (loadingMrz) {
@@ -706,3 +754,6 @@ private fun CaptureConfirmRoute(
         }
     }
 }
+
+/** v1 PreviewScreenViewModel's default when the config carries no `maxAttempt`. */
+private const val DEFAULT_MRZ_ATTEMPTS = 3

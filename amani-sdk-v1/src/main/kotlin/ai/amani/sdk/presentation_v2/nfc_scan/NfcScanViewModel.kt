@@ -141,7 +141,10 @@ class NfcScanViewModel(
     }
 
     /** MRZ correction: field edits and confirm (v1 continue → back to ReadyToScan). */
-    fun onMrzChanged(mrz: MRZModel) = update { it.copy(mrz = mrz) }
+    fun onMrzChanged(mrz: MRZModel) {
+        Timber.i("V2 chip data: MRZ updated to $mrz")
+        update { it.copy(mrz = mrz) }
+    }
 
     fun onMrzConfirmed() = update { it.copy(phase = NfcPhase.ReadyToScan) }
 

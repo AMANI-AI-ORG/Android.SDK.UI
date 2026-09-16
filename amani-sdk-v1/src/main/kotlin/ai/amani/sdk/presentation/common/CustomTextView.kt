@@ -5,7 +5,6 @@ import androidx.appcompat.widget.AppCompatTextView
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.content.res.ColorStateList
-import ai.amani.sdk.extentions.parseVisibleColorOrNull
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
@@ -79,9 +78,7 @@ class CustomTextView : AppCompatTextView {
     fun setTextProperty(text: String?, textColor: String?) {
         if (text.isNullOrBlank()) return
         this.text = text
-        // The core SDK marks an unconfigured colour as fully transparent; painting it would make
-        // the text invisible, so the view keeps the colour it already has.
-        textColor.parseVisibleColorOrNull()?.let { setTextColor(it) }
+        this.setTextColor(Color.parseColor(textColor))
     }
 
     /**

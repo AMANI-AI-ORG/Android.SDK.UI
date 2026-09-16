@@ -31,8 +31,20 @@ internal object NfcMapper {
                 ?: version.nfcDialogTitle.orFallback("Searching for chip..."),
             cancelButtonText = (version.cancelButtonText ?: general?.tryAgainText).orFallback("Cancel"),
             continueButtonText = general?.continueText.orFallback("Start scan"),
-            mrzCheckTitle = version.nfcConfigureTitle.orFallback("Check your document details"),
-            mrzCheckDescription = version.nfcFailedDescription.orFallback("We couldn't read the chip. Confirm these values and try again."),
+            // TODO(config): no server field for the chip-data header yet — add one and read it
+            //  here instead of the static fallback.
+            mrzCheckHeaderTitle = version.nfcConfigureTitle.orFallback("Chip data"),
+            // TODO(config): no server field for the "read from chip" eyebrow yet.
+            mrzCheckEyebrow = "Read from chip",
+            mrzCheckTitle = version.nfcConfigureTitle.orFallback("Check your details"),
+            mrzCheckDescription = version.nfcFailedDescription.orFallback(
+                "This was read securely from your ID's chip. Confirm it matches your document."
+            ),
+            // TODO(config): no server field for the footer hint yet.
+            mrzCheckHint = "These values were read from your ID. " +
+                "Tap any field to correct it if something looks wrong.",
+            mrzConfirmButtonText = (general?.confirmText ?: general?.continueText)
+                .orFallback("Confirm"),
             birthDateLabel = version.documentDateOfBirth.orFallback("Date of birth"),
             expiryDateLabel = version.documentDateOfExpiry.orFallback("Date of expiry"),
             documentNoLabel = version.documentNoTitle.orFallback("Document number"),

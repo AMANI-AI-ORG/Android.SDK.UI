@@ -18,8 +18,12 @@ data class NfcTexts(
     val cancelButtonText: String,
     val continueButtonText: String,
     // MRZ correction (v1 ShowMRZCheck)
+    val mrzCheckHeaderTitle: String,
+    val mrzCheckEyebrow: String,
     val mrzCheckTitle: String,
     val mrzCheckDescription: String,
+    val mrzCheckHint: String,
+    val mrzConfirmButtonText: String,
     val birthDateLabel: String,
     val expiryDateLabel: String,
     val documentNoLabel: String,

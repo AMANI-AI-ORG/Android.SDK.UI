@@ -136,7 +136,7 @@ fun DocumentInfoScreen(
     }
 }
 
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Document info — gallery", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun DocumentInfoScreenPreview() {
     DocumentInfoScreen(
@@ -144,6 +144,21 @@ private fun DocumentInfoScreenPreview() {
             headerTitle = "IBAN Document",
             headline = "You can send your IBAN in two ways: a bank app screenshot or a WhatsApp chat.",
             details = "METHOD 1 — WhatsApp\n1. Share your IBAN to WhatsApp.\n2. Write your name right below it.\n3. Screenshot both messages.",
+            buttonText = "Upload Document"
+        ),
+        onPicked = {}
+    )
+}
+
+/** A document configured without details: the card disappears and the headline stands alone. */
+@Preview(name = "Document info — headline only", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun DocumentInfoHeadlineOnlyPreview() {
+    DocumentInfoScreen(
+        state = DocumentInfoUiState(
+            headerTitle = "IBAN Document",
+            headline = "Upload a screenshot that shows your IBAN and your name together.",
+            details = "",
             buttonText = "Upload Document"
         ),
         onPicked = {}
