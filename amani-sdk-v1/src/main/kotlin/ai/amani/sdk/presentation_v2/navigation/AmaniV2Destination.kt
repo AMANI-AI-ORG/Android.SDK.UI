@@ -179,6 +179,26 @@ sealed interface AmaniV2Destination : Parcelable {
     ) : AmaniV2Destination
 
     /**
+     * Information screen of a `gallery` document (config `documentSource`) — explains what to
+     * upload and opens the gallery; the host uploads the picked file like a photographed one and
+     * pops to Home. [versionType] keys the chosen version.
+     */
+    @Parcelize
+    data class DocumentInfo(
+        val versionType: String
+    ) : AmaniV2Destination
+
+    /**
+     * No screen: a `pdfFile` document (config `documentSource`) goes straight to the documents
+     * provider. Opens the picker, uploads what comes back and pops to Home; an empty pick returns
+     * to where the flow came from. [versionType] keys the chosen version.
+     */
+    @Parcelize
+    data class DocumentPick(
+        val versionType: String
+    ) : AmaniV2Destination
+
+    /**
      * Speech verification (document id "ST", type like `XXX_ST_0`) — hosts the OPTIONAL,
      * standalone AmaniSpeechVerifier module (a `compileOnly` dependency, not bundled). The
      * user reads a passphrase aloud; on success the host uploads the recorded session through

@@ -7,19 +7,18 @@ import ai.amani.sdk.extentions.popBackStackSafely
 import ai.amani.sdk.extentions.replaceChildFragmentWithoutBackStack
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.extentions.showSnackbar
+import ai.amani.sdk.model.DocumentSource
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.modules.document.DocBuilder
 import ai.amani.sdk.modules.document.interfaces.IDocumentCallBack
 import ai.amani.sdk.presentation.AmaniMainActivity
+import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -30,6 +29,12 @@ import timber.log.Timber
 
 
 /**
+ * Capture screen of a generic document.
+ *
+ * Only reached by the documents whose `documentSource` is the camera — the picker sources are
+ * handled where the flow is routed, without opening this screen. The select button still offers
+ * a PDF from storage as an alternative to the capture.
+ *
  * @Author: zekiamani
  * @Date: 1.03.2023
  */
@@ -37,6 +42,14 @@ class PhysicalContractFragment: Fragment() {
 
     private lateinit var binding: FragmentPhysicalContractBinding
     private var args = navArgs<PhysicalContractFragmentArgs>()
+
+    /**
+     * PDF alternative behind the select button. Registered eagerly because activity result
+     * launchers cannot be registered once the fragment is started.
+     */
+    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+        onPdfPicked(uri)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -120,50 +133,29 @@ class PhysicalContractFragment: Fragment() {
     private fun clickEvents() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             AmaniMainActivity.addSelectButtonListener {
-                pickPdfFileFromStorage()
+                documentPickerLauncher.launch(DocumentSource.PdfFile)
             }
         }
     }
 
-    private fun pickPdfFileFromStorage() {
-        getContent?.launch("application/pdf")
-    }
-
-    private var getContent: ActivityResultLauncher<String>? = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            Timber.d("PDF file is taken from gallery")
-            if (it.scheme == "content") {
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                    try {
-                        requireContext().contentResolver.query(it, null, null, null, null)?.use { cursor ->
-                            val pdfData = requireActivity().contentResolver.openInputStream(uri)?.readBytes()
-                            if (pdfData == null) {
-                                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                                    Toast.makeText(requireContext(), "PDF could not take", Toast.LENGTH_LONG).show()
-                                }
-                            }
-                            val listOfUri = arrayListOf(uri)
-
-                            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                                AmaniMainActivity.hideSelectButton()
-
-                                findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
-                                    HomeKYCResultModel(
-                                        docID = args.value.dataModel.version!!.documentId!!,
-                                        docType = args.value.dataModel.version!!.type,
-                                        genericDocumentFlow = GenericDocumentFlow.DataFromGallery(listOfUri)
-                                    )
-
-                                findNavController().clearBackStack(R.id.homeKYCFragment)
-                                findNavController().popBackStack(R.id.homeKYCFragment, false)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
+    /** Hands the picked PDF to the KYC home for the upload, the capture screen is left behind. */
+    private fun onPdfPicked(uri: Uri?) {
+        if (uri == null) {
+            Timber.d("No PDF is picked for the physical contract")
+            return
         }
+
+        AmaniMainActivity.hideSelectButton()
+
+        findNavController().getBackStackEntry(R.id.homeKYCFragment).savedStateHandle[AmaniDocumentTypes.type] =
+            HomeKYCResultModel(
+                docID = args.value.dataModel.version!!.documentId!!,
+                docType = args.value.dataModel.version!!.type,
+                genericDocumentFlow = GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
+            )
+
+        findNavController().clearBackStack(R.id.homeKYCFragment)
+        findNavController().popBackStack(R.id.homeKYCFragment, false)
     }
 
     override fun onPause() {

@@ -5,6 +5,7 @@ import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.amaniV2ContentMaxWidth
 import ai.amani.sdk.presentation_v2.theme.scaled
@@ -167,7 +168,7 @@ private fun LabeledTextField(
     modifier: Modifier = Modifier
 ) {
     val palette = AmaniV2Theme.palette
-    val shape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
+    val shape = RoundedCornerShape(configCornerRadius())
     Column(modifier.fillMaxWidth()) {
         if (title.isNotBlank()) {
             Text(
@@ -207,7 +208,7 @@ private fun DateField(
     modifier: Modifier = Modifier
 ) {
     val palette = AmaniV2Theme.palette
-    val shape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
+    val shape = RoundedCornerShape(configCornerRadius())
     Column(modifier.fillMaxWidth()) {
         if (title.isNotBlank()) {
             Text(

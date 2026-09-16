@@ -36,8 +36,9 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="20dp"
+            android:layout_marginBottom="10dp"
             android:orientation="vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/image_view_powered_by_amani"
             app:layout_constraintTop_toBottomOf="@+id/upload_document_description" />
 
         <ProgressBar

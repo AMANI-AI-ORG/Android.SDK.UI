@@ -2,7 +2,7 @@ package ai.amani.sdk.presentation.otp.profile_info
 
 import ai.amani.base.utility.AppConstants
 import ai.amani.sdk.Amani
-import ai.amani.sdk.interfaces.AmaniEventCallBack
+import ai.amani.sdk.event.AmaniEventBus
 import ai.amani.sdk.model.OTPScreenArgModel
 import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.amani_events.profile_status.ProfileStatus
@@ -137,15 +137,12 @@ class ProfileInfoViewModel: BaseViewModel() {
         else navDirection.invoke(direction)
     }
 
+    /** This view model's handle on the shared [AmaniEventBus]; removed in [onCleared]. */
+    private var eventSubscriber: AmaniEventBus.Subscriber? = null
+
     private fun setAmaniEventListener() {
-        Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack{
-            override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
-            }
-
-            override fun profileStatus(profileStatus: ProfileStatus) {
-            }
-
-            override fun stepsResult(stepsResult: StepsResult?) {
+        eventSubscriber = AmaniEventBus.subscribe(object : AmaniEventBus.Subscriber {
+            override fun onStepsResult(stepsResult: StepsResult?) {
                 stepsResult?.result?.forEach {
                     if (it.id == step?.id) {
                         when(it.status) {
@@ -172,5 +169,10 @@ class ProfileInfoViewModel: BaseViewModel() {
             }
         })
     }
-}
 
+    override fun onCleared() {
+        AmaniEventBus.unsubscribe(eventSubscriber)
+        eventSubscriber = null
+        super.onCleared()
+    }
+}

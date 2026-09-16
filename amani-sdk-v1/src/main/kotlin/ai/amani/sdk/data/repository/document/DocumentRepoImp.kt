@@ -46,8 +46,13 @@ class DocumentRepoImp: DocumentRepository {
             is GenericDocumentFlow.DataFromGallery -> {
 
                 val docList = arrayListOf<FileWithType>()
-                val pdfData = activity.contentResolver.openInputStream(genericDocumentFlow.dataList.first())?.readBytes()
-                docList.add(FileWithType(pdfData!!, "application/pdf"))
+                val pickedUri = genericDocumentFlow.dataList.first()
+                val fileData = activity.contentResolver.openInputStream(pickedUri)
+                    ?.use { it.readBytes() }
+                // A picked file is not always a PDF: the `documentSource` config also allows an
+                // image from the gallery, so the real type is read from the content provider.
+                val mimeType = activity.contentResolver.getType(pickedUri) ?: "application/pdf"
+                docList.add(FileWithType(fileData!!, mimeType))
 
                 Amani.sharedInstance().Document().upload(
                     activity,

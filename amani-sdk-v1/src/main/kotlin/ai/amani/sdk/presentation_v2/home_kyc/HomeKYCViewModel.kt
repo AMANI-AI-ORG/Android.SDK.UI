@@ -10,7 +10,7 @@ import ai.amani.sdk.data.repository.selfie_capture.SelfieCaptureRepoImp
 import ai.amani.sdk.data.repository.signature.SignatureRepoImp
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.presentation.selfie.SelfieType
-import ai.amani.sdk.presentation_v2.AmaniEventBus
+import ai.amani.sdk.event.AmaniEventBus
 import ai.amani.sdk.presentation_v2.selfie_capture.SelfieTypeResolver
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.extentions.sort

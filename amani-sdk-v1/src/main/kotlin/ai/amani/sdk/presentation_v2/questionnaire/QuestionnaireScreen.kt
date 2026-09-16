@@ -6,6 +6,7 @@ import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.amaniV2ContentMaxWidth
 import ai.amani.sdk.presentation_v2.theme.scaled
@@ -292,7 +293,7 @@ private fun AnswerField(
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = RoundedCornerShape(palette.buttonRadius.dp.scaled()),
+        shape = RoundedCornerShape(configCornerRadius()),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = palette.surface,
             unfocusedContainerColor = palette.surface,

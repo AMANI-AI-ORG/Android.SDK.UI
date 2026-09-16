@@ -1,4 +1,4 @@
-package ai.amani.sdk.presentation_v2
+package ai.amani.sdk.event
 
 import ai.amani.sdk.Amani
 import ai.amani.sdk.interfaces.AmaniEventCallBack
@@ -8,8 +8,8 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * Single owner of the core SDK's AmaniEvent listener, fanning every event out to all V2
- * subscribers.
+ * Single owner of the core SDK's AmaniEvent listener, fanning every event out to all
+ * subscribers of both the V1 and the V2 flows.
  *
  * The core keeps exactly ONE listener (`AmaniEvent().setListener` replaces the previous one),
  * so screens registering their own silently stole events from each other: a HomeKYC view model
@@ -17,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * over, and that screen then waited forever for a verdict that was delivered elsewhere — the
  * profile-info screen hanging on "Continue".
  *
- * Every V2 screen [subscribe]s here instead; the core listener is installed once, on first
+ * Every screen [subscribe]s here instead; the core listener is installed once, on first
  * subscription, and stays installed.
  */
 internal object AmaniEventBus {

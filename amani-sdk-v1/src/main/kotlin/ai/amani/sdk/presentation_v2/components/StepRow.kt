@@ -1,6 +1,8 @@
 package ai.amani.sdk.presentation_v2.components
 
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.CappedCornerShape
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
 import androidx.compose.foundation.background
@@ -32,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -119,7 +122,10 @@ fun StepRow(
     val titleColor = if (step.status == StepRowStatus.Locked) mutedColor else fontColor
     val contentAlpha = if (step.status == StepRowStatus.Rejected) 0.75f else 1f
 
-    val rowShape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
+    // The configured radius is used as it comes; only a value the card cannot physically take
+    // is reduced, and the limit is the card's own measured height (see [CappedCornerShape]).
+    val rowRadius = configCornerRadius()
+    val rowShape = CappedCornerShape(rowRadius)
 
     Column(
         modifier = modifier
@@ -190,7 +196,7 @@ fun StepRow(
             }
 
             if (step.error != null) {
-                InlineError(step.error, statusColor)
+                InlineError(step.error, statusColor, rowRadius)
             }
         }
     }
@@ -204,8 +210,10 @@ fun StepRow(
 private fun StepBadge(status: StepRowStatus, index: Int, fill: Color, glyph: Color) {
     Box(
         modifier = Modifier
-            .size(32.dp.scaled())
-            .background(fill, RoundedCornerShape(10.dp.scaled())),
+            .size(BADGE_SIZE.scaled())
+            // The badge is a config-styled surface like the card around it, so it takes the
+            // same radius; being much smaller, it reaches its own ceiling (a circle) sooner.
+            .background(fill, CappedCornerShape(configCornerRadius())),
         contentAlignment = Alignment.Center
     ) {
         when (status) {
@@ -216,15 +224,24 @@ private fun StepBadge(status: StepRowStatus, index: Int, fill: Color, glyph: Col
     }
 }
 
+/**
+ * @param rowRadius the card's own corner radius; the message box follows it so the two do not
+ * read as mismatched shapes. Nested corners look right when the inner radius is the outer one
+ * minus the gap between them, floored so a square-cornered card still gets a soft box. Like the
+ * card, the box reduces the radius only when its own height cannot take it.
+ */
 @Composable
-private fun InlineError(error: StepError, statusColor: Color) {
+private fun InlineError(error: StepError, statusColor: Color, rowRadius: Dp) {
     val palette = AmaniV2Theme.palette
+    val errorShape = CappedCornerShape(
+        (rowRadius - CARD_INNER_GAP).coerceAtLeast(MIN_ERROR_RADIUS)
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 12.dp.scaled())
-            .background(palette.background, RoundedCornerShape(10.dp.scaled()))
-            .border(1.dp, statusColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp.scaled()))
+            .background(palette.background, errorShape)
+            .border(1.dp, statusColor.copy(alpha = 0.25f), errorShape)
             .padding(horizontal = 12.dp.scaled(), vertical = 10.dp.scaled()),
         horizontalArrangement = Arrangement.spacedBy(10.dp.scaled())
     ) {
@@ -243,3 +260,12 @@ private fun InlineError(error: StepError, statusColor: Color) {
         }
     }
 }
+
+/** Side of the square status badge. */
+private val BADGE_SIZE = 32.dp
+
+/** Horizontal gap between the card's edge and the message box inside it. */
+private val CARD_INNER_GAP = 16.dp
+
+/** A square-cornered card still gets a softened message box. */
+private val MIN_ERROR_RADIUS = 6.dp

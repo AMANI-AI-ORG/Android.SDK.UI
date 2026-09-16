@@ -1,7 +1,7 @@
 package ai.amani.sdk.presentation_v2.phone_otp
 
 import ai.amani.sdk.Amani
-import ai.amani.sdk.presentation_v2.AmaniEventBus
+import ai.amani.sdk.event.AmaniEventBus
 import ai.amani.sdk.extentions.Validator.Companion.isValidPhone
 import ai.amani.sdk.model.amani_events.error.AmaniError
 import ai.amani.sdk.model.amani_events.error.AmaniErrorTypes

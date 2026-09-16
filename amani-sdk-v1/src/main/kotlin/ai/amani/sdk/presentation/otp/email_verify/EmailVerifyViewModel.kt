@@ -2,8 +2,8 @@ package ai.amani.sdk.presentation.otp.email_verify
 
 import ai.amani.amani_sdk.R
 import ai.amani.sdk.Amani
+import ai.amani.sdk.event.AmaniEventBus
 import ai.amani.sdk.extentions.Validator.Companion.isValidEmail
-import ai.amani.sdk.interfaces.AmaniEventCallBack
 import ai.amani.sdk.interfaces.IUploadCallBack
 import ai.amani.sdk.model.OTPScreenArgModel
 import ai.amani.sdk.model.amani_events.error.AmaniError
@@ -109,23 +109,22 @@ class EmailVerifyViewModel: BaseViewModel() {
         }
     }
 
+    /** This view model's handle on the shared [AmaniEventBus]; removed in [onCleared]. */
+    private var eventSubscriber: AmaniEventBus.Subscriber? = null
+
     private fun listenAmaniEvents() {
-        Amani.sharedInstance().AmaniEvent().setListener(
-            object : AmaniEventCallBack{
-                override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
-                    if (type == AmaniErrorTypes.CUSTOMER.name) {
-                        _uiState.value = EmailVerifyStates.InvalidEmail(error?.first()?.errorMessage.toString())
-                    }
-                }
-
-                override fun profileStatus(profileStatus: ProfileStatus) {
-
-                }
-
-                override fun stepsResult(stepsResult: StepsResult?) {
-
+        eventSubscriber = AmaniEventBus.subscribe(object : AmaniEventBus.Subscriber {
+            override fun onError(type: String?, errors: ArrayList<AmaniError?>?) {
+                if (type == AmaniErrorTypes.CUSTOMER.name) {
+                    _uiState.value = EmailVerifyStates.InvalidEmail(errors?.first()?.errorMessage.toString())
                 }
             }
-        )
+        })
+    }
+
+    override fun onCleared() {
+        AmaniEventBus.unsubscribe(eventSubscriber)
+        eventSubscriber = null
+        super.onCleared()
     }
 }

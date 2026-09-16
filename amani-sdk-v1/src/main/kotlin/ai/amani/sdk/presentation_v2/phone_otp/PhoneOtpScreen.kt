@@ -4,6 +4,7 @@ import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
+import ai.amani.sdk.presentation_v2.theme.configCornerRadius
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.amaniV2ContentMaxWidth
 import ai.amani.sdk.presentation_v2.theme.scaled
@@ -129,7 +130,7 @@ fun PhoneOtpScreen(
                     singleLine = true,
                     placeholder = { if (state.hint.isNotBlank()) Text(state.hint, color = palette.inkLight) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(palette.buttonRadius.dp.scaled()),
+                    shape = RoundedCornerShape(configCornerRadius()),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = palette.surface,
                         unfocusedContainerColor = palette.surface,
@@ -204,7 +205,7 @@ private fun PhoneNumberField(
     onNumberChange: (String) -> Unit
 ) {
     val palette = AmaniV2Theme.palette
-    val shape = RoundedCornerShape(palette.buttonRadius.dp.scaled())
+    val shape = RoundedCornerShape(configCornerRadius())
     val currentOnDial by rememberUpdatedState(onDialCode)
     // CCP colors from the config palette.
     val contentArgb = palette.ink.toArgb()
@@ -349,8 +350,8 @@ private fun PreviewPhoneCountryPickerOpen() {
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = 44.dp)
-                            .background(palette.surface, RoundedCornerShape(palette.buttonRadius.dp))
-                            .border(1.dp, palette.border, RoundedCornerShape(palette.buttonRadius.dp))
+                            .background(palette.surface, RoundedCornerShape(configCornerRadius()))
+                            .border(1.dp, palette.border, RoundedCornerShape(configCornerRadius()))
                             .padding(horizontal = 12.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {

@@ -34,6 +34,9 @@
             android:id="@+id/action_homeKYCFragment_to_physicalContractFragment"
             app:destination="@id/physicalContractFragment" />
         <action
+            android:id="@+id/action_homeKYCFragment_to_documentInfoFragment"
+            app:destination="@id/documentInfoFragment" />
+        <action
             android:id="@+id/action_homeKYCFragment_to_speechVerifierHostFragment"
             app:destination="@id/speechVerifierHostFragment" />
 
@@ -105,6 +108,9 @@
         <action
             android:id="@+id/action_selectDocumentTypeFragment_to_physicalContractFragment"
             app:destination="@id/physicalContractFragment" />
+        <action
+            android:id="@+id/action_selectDocumentTypeFragment_to_documentInfoFragment"
+            app:destination="@id/documentInfoFragment" />
         <argument
             android:name="dataModel"
             app:nullable="false"
@@ -156,6 +162,16 @@
         android:label="SignatureFragment" >
         <argument
             android:name="configModel"
+            app:nullable="false"
+            app:argType="ai.amani.sdk.model.ConfigModel" />
+    </fragment>
+    <fragment
+        android:id="@+id/documentInfoFragment"
+        tools:layout="@layout/fragment_document_info"
+        android:name="ai.amani.sdk.presentation.document_info.DocumentInfoFragment"
+        android:label="DocumentInfoFragment" >
+        <argument
+            android:name="dataModel"
             app:nullable="false"
             app:argType="ai.amani.sdk.model.ConfigModel" />
     </fragment>
