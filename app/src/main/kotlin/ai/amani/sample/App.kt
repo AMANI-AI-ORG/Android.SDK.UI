@@ -1,6 +1,5 @@
 package ai.amani.sample
 
-import ai.amani.base.utility.AmaniVersion
 import android.app.Application
 import timber.log.Timber
 
@@ -15,12 +14,9 @@ class App :Application(){
     override fun onCreate() {
         super.onCreate()
 
-        AmaniSDKUI.init(
-            applicationContext = this.applicationContext,
-            serverURL = TestCredentials.SERVER_URL,
-            amaniVersion = AmaniVersion.V2,
-            sharedSecret = null
-        )
+        // No AmaniSDKUI.init() here on purpose: the sample starts from the QR entry screen and
+        // the scanned QR carries the server URL for that customer, so the SDK is initialised in
+        // QrEntryActivity.startKyc() right before the KYC flow is launched.
 
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())

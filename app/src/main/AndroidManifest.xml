@@ -38,11 +38,6 @@
             android:name="ai.amani.sample.presentation.scan.QrScanActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
-
-        <!-- Kept as a reference: manual token/customer entry demo (no longer the launcher). -->
-        <activity
-            android:name="ai.amani.sample.MainRegisterActivity"
-            android:exported="false" />
     </application>
 
 </manifest>
