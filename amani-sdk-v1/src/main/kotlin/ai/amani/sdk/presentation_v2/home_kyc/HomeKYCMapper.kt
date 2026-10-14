@@ -114,15 +114,15 @@ internal object HomeKYCMapper {
      *  - [statusOverrides] maps a rule id to a fresher status (from the AmaniEvent
      *    `stepsResult` socket, or a failed upload) and wins over [Rule.status].
      *  - [errorOverrides] maps a rule id to the server rejection message to show inline.
-     *  - [processingRuleId] is the rule currently uploading / awaiting the verdict; its
-     *    row renders the [StepRowStatus.Processing] spinner.
+     *  - [processingRuleIds] are the rules currently uploading / awaiting the verdict; their
+     *    rows render the [StepRowStatus.Processing] spinner and are not startable.
      */
     fun toUiState(
         rules: List<Rule>,
         config: ResGetConfig?,
         statusOverrides: Map<String, String> = emptyMap(),
         errorOverrides: Map<String, String> = emptyMap(),
-        processingRuleId: String? = null
+        processingRuleIds: Set<String> = emptySet()
     ): HomeKYCUiState {
         val g = config?.generalConfigs
         fun eff(rule: Rule): String? = effectiveStatus(rule, statusOverrides)
@@ -158,7 +158,7 @@ internal object HomeKYCMapper {
         }
 
         val steps = rules.mapIndexed { index, rule ->
-            val isProcessing = rule.id != null && rule.id == processingRuleId
+            val isProcessing = rule.id != null && rule.id in processingRuleIds
             val status = eff(rule)
             // Per-step server styling, selected by the rule's status with a "processing"
             // override while uploading.

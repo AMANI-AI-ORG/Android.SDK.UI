@@ -158,7 +158,7 @@ internal object HomeKYCPreviewData {
     fun documentProcessing(): HomeKYCUiState = HomeKYCMapper.toUiState(
         rules(documentStatus = AppConstant.STATUS_PROCESSING),
         config(),
-        processingRuleId = RULE_ID_DOCUMENT
+        processingRuleIds = setOf(RULE_ID_DOCUMENT)
     )
 
     /** ID awaiting a reviewer — dot still empty (PENDING_REVIEW is not APPROVED). */

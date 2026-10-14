@@ -292,7 +292,7 @@ open class HomeKYCViewModel(
                     onStart = {
                         setLoaderStatus()
                     },
-                    onCompleted
+                    releaseStepOnFailure(onCompleted)
                 )
 
             }
@@ -304,7 +304,7 @@ open class HomeKYCViewModel(
                     onStart = {
                         setLoaderStatus()
                     },
-                    onCompleted
+                    releaseStepOnFailure(onCompleted)
                 )
             }
 
@@ -315,7 +315,7 @@ open class HomeKYCViewModel(
                     onStart = {
                         setLoaderStatus()
                     },
-                    onCompleted
+                    releaseStepOnFailure(onCompleted)
                 )
             }
 
@@ -326,7 +326,7 @@ open class HomeKYCViewModel(
                     onStart = {
                         setLoaderStatus()
                     },
-                    onCompleted
+                    releaseStepOnFailure(onCompleted)
                 )
             }
 
@@ -350,7 +350,7 @@ open class HomeKYCViewModel(
             onStart = {
                 setLoaderStatus()
             },
-            onCompleted
+            releaseStepOnFailure(onCompleted)
         )
     }
 
@@ -368,7 +368,7 @@ open class HomeKYCViewModel(
         nfcRepository.upload(
             activity,
             type,
-            onCompleted
+            releaseStepOnFailure(onCompleted)
         )
     }
 
@@ -380,7 +380,7 @@ open class HomeKYCViewModel(
     ) {
         setLoaderStatus()
         signatureRepository.uploadSignature(
-            onCompleted
+            releaseStepOnFailure(onCompleted)
         )
     }
 
@@ -394,6 +394,7 @@ open class HomeKYCViewModel(
         onCompleted: (uploadRes: UploadResultModel) -> Unit
     ) {
         setLoaderStatus()
+        val completion = releaseStepOnFailure(onCompleted)
 
         documentRepository.upload(
             activity = activity,
@@ -408,7 +409,7 @@ open class HomeKYCViewModel(
                 // the verdict of this upload reaches the step button instead of leaving it
                 // spinning on "processing".
                 listenAmaniEvents()
-                onCompleted.invoke(uploadResult)
+                completion.invoke(uploadResult)
             },
             genericDocumentFlow = genericDocumentFlow
         )
@@ -426,7 +427,22 @@ open class HomeKYCViewModel(
             return
         }
 
-        selectedStepIDNumber = docList[adapterPosition].id!!
+        // A step whose document is still processing cannot be started again: either its upload
+        // is in flight / awaiting the verdict (the button shows its loader) or the server
+        // reports it as PROCESSING. A PDF picked from storage uploads from this screen, so the
+        // user stays here and a second tap would otherwise upload the same step twice. Checked
+        // before anything is selected, so an in-flight upload keeps its step and version.
+        // The status is read from the tapped rule: the cached list keeps its first-load status,
+        // only the adapter receives the socket verdicts.
+        val selectedRule = docList[adapterPosition]
+        if (selectedRule.isShowLoader || rule.isShowLoader
+            || rule.status == AppConstant.STATUS_PROCESSING
+        ) {
+            Timber.i("Step ${selectedRule.id} is still processing, it cannot be started again")
+            return
+        }
+
+        selectedStepIDNumber = selectedRule.id!!
         //Creating VersionList
         try {
             setVersionList(rule)
@@ -530,6 +546,24 @@ open class HomeKYCViewModel(
             //Creating version list accordingly sort order from remote config
             //Sort order is a row number of current document
             CachingHomeKYC.versionsList!!.addAll(documentList.versions!!)
+        }
+    }
+
+    /**
+     * Wraps an upload's completion so a failed upload releases its step: no verdict arrives for
+     * it, so the step would otherwise keep its loader and [navigateScreen] would never start it
+     * again. The step is captured now, when the upload starts.
+     */
+    private fun releaseStepOnFailure(
+        onCompleted: (uploadRes: UploadResultModel) -> Unit
+    ): (uploadRes: UploadResultModel) -> Unit {
+        val stepId = selectedStepIDNumber
+        return { uploadResult ->
+            if (!uploadResult.isSuccess) {
+                getDocList()?.firstOrNull { it.id == stepId }?.isShowLoader = false
+                _logicEvent.postValue(HomeKYCLogicEvent.Refresh(CachingHomeKYC.onlyKYCRules))
+            }
+            onCompleted.invoke(uploadResult)
         }
     }
 
@@ -694,6 +728,12 @@ open class HomeKYCViewModel(
                     docList.any { rule ->
                         rule.id == result.id
                     }
+                }
+
+                // A verdict ends the step's upload: drop its loader on the cached rule too, so
+                // the step can be started again (navigateScreen blocks steps with a loader).
+                docList.forEach { rule ->
+                    if (steps.any { it.id == rule.id }) rule.isShowLoader = false
                 }
 
                 //Refreshing the UI with fresh steps
