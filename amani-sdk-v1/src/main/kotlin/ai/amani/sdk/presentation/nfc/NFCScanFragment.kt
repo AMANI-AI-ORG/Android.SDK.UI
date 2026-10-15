@@ -17,6 +17,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
+import ai.amani.sdk.utils.MrzDates
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -161,8 +162,9 @@ class NFCScanFragment : Fragment() {
             appFontColor
         )
 
-        binding.birthDateInput.setText(args.dataModel.mrzModel.birthDate)
-        binding.expiryDateInput.setText(args.dataModel.mrzModel.expireDate)
+        // Shown as dd/MM/yyyy; the view model keeps the yyMMdd the chip reader needs.
+        binding.birthDateInput.setText(MrzDates.toDisplay(args.dataModel.mrzModel.birthDate, isBirthDate = true))
+        binding.expiryDateInput.setText(MrzDates.toDisplay(args.dataModel.mrzModel.expireDate, isBirthDate = false))
         binding.docNumberInput.setText(args.dataModel.mrzModel.docNumber)
 
         viewModel.setMRZ(
@@ -186,11 +188,11 @@ class NFCScanFragment : Fragment() {
         }
 
         binding.birthDateInput.setOnClickListener {
-            birthDatePicker.showDatePickerDialog(dateFormat = "yy-MM-dd")
+            birthDatePicker.showDatePickerDialog(dateFormat = MRZ_DATE_FORMAT)
         }
 
         binding.expiryDateInput.setOnClickListener {
-            expiryDatePicker.showDatePickerDialog(dateFormat = "yy-MM-dd")
+            expiryDatePicker.showDatePickerDialog(dateFormat = MRZ_DATE_FORMAT)
         }
 
         binding.continueBtn.setBackgroundDrawable(
@@ -222,16 +224,16 @@ class NFCScanFragment : Fragment() {
         expiryDatePicker = DatePickerHandler(
             context = requireContext(),
             listener = {
-                binding.expiryDateInput.setText(it.replace("-", ""))
-                viewModel.mrzData.expireDate = it.replace("-", "")
+                binding.expiryDateInput.setText(MrzDates.toDisplay(it, isBirthDate = false))
+                viewModel.mrzData.expireDate = it
             }
         )
 
         birthDatePicker = DatePickerHandler(
             context = requireContext(),
             listener = {
-                binding.birthDateInput.setText(it.replace("-", ""))
-                viewModel.mrzData.birthDate = it.replace("-", "")
+                binding.birthDateInput.setText(MrzDates.toDisplay(it, isBirthDate = true))
+                viewModel.mrzData.birthDate = it
             }
         )
     }
@@ -398,3 +400,6 @@ class NFCScanFragment : Fragment() {
         alertDialog = null
     }
 }
+
+/** What the date pickers hand back: the MRZ `yyMMdd` the chip reader is given as it is. */
+private const val MRZ_DATE_FORMAT = "yyMMdd"
