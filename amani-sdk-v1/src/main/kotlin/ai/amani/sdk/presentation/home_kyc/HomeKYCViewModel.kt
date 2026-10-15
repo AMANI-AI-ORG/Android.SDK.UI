@@ -593,7 +593,7 @@ open class HomeKYCViewModel(
     @Throws
     private fun setVersionList(rule : Rule){
         CachingHomeKYC.versionsList = mutableListOf()
-        val stepConfig: StepConfig = CachingHomeKYC.appConfig!!.getStepConfig(rule.sortOrder!!)
+        val stepConfig: StepConfig = CachingHomeKYC.appConfig!!.getStepConfig(rule)
         val documentLists: List<DocumentList?> =
             stepConfig.mDocuments!!
         for (documentList in documentLists) {
