@@ -42,6 +42,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.res.ResourcesCompat
 import datamanager.model.config.ResGetConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -278,6 +279,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
             }
         }
 
+        viewModel.showSkipOptional.observe(viewLifecycleOwner) { show ->
+            binding.skipOptionalStepsBtn.visibility = if (show) View.VISIBLE else View.GONE
+        }
+
         viewModel.logicEvent.observe(viewLifecycleOwner) {
             Timber.i("Logic event $it is triggered")
             when (it) {
@@ -377,8 +382,34 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
             binding.parentLayout.setBackgroundColor(
                 viewModel.getAppConfig()!!.generalConfigs?.appBackground!!.toColorInt()
             )
+
+            styleSkipOptionalButton(appConfig)
+
             binding.parentLayout.show()
         }
+    }
+
+    /**
+     * The skip button ends the KYC while optional steps remain. Its text is the dashboard's
+     * buttonTextOptionalSteps, else the general continueText; styled as the primary button.
+     */
+    private fun styleSkipOptionalButton(appConfig: ResGetConfig) {
+        val gc = appConfig.generalConfigs ?: return
+        binding.skipOptionalStepsBtn.setBackgroundDrawable(
+            ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null),
+            gc.primaryButtonBackgroundColor,
+            4, gc.primaryButtonBackgroundColor,
+            0f, null,
+            true, gc.buttonRadiusAndroid
+        )
+        binding.skipOptionalStepsBtn.setTextProperty(
+            gc.buttonTextOptionalSteps?.takeIf { it.isNotBlank() }
+                // A config read from JSON can carry null despite the non-null type.
+                ?: gc.continueText?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.continue_text),
+            gc.primaryButtonTextColor
+        )
+        binding.skipOptionalStepsBtn.setOnClickListener { viewModel.onSkipOptionalSteps() }
     }
 
     private fun renderRecyclerView(docList: ArrayList<Rule>, appConfig: ResGetConfig) {

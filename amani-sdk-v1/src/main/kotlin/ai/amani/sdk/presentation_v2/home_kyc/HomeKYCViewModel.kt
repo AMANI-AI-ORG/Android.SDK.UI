@@ -22,6 +22,7 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation.home_kyc.OptionalSteps
 import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierLauncher
 import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierOptions
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
@@ -584,6 +585,21 @@ class HomeKYCViewModel(
             Timber.e(e, "V2 HomeKYC: failed to build doc list")
             null
         }
+    }
+
+    /**
+     * Ends the KYC without its remaining optional steps (the home skip button). Takes the same
+     * route as a fully completed flow: the host runs any after-KYC steps, then the approved
+     * screen. Ignored unless the skip is currently offered, so a stale tap cannot end the KYC.
+     */
+    fun skipOptionalSteps() {
+        val rules = CachingHomeKYC.onlyKYCRules ?: return
+        val offered = OptionalSteps.canSkipRemaining(
+            rules = rules,
+            statusOf = { statusOverrides[it.id] ?: it.status },
+            processing = { it.id != null && it.id in processingRuleIds }
+        )
+        if (offered) sendEffect(HomeKYCEffect.ProfileApproved)
     }
 
     /**

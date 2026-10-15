@@ -20,6 +20,7 @@ internal object CachingHomeKYC {
     @Volatile private var _versionsList: MutableList<Version>? = null
     @Volatile private var _onlyKYCRules: ArrayList<Rule>? = null
     @Volatile private var _termsAcceptedOrDeclinedInSession: Boolean = false
+    @Volatile private var _optionalStepsSkipped: Boolean = false
 
     // Thread-safe public accessors
     var appConfig: ResGetConfig?
@@ -46,6 +47,14 @@ internal object CachingHomeKYC {
         get() = synchronized(lock) { _termsAcceptedOrDeclinedInSession }
         set(value) = synchronized(lock) { _termsAcceptedOrDeclinedInSession = value }
 
+    /**
+     * The user ended the KYC with the skip button while optional steps remained. Kept for the
+     * session so a return from an after-KYC screen finishes the KYC instead of showing Home again.
+     */
+    var optionalStepsSkipped: Boolean
+        get() = synchronized(lock) { _optionalStepsSkipped }
+        set(value) = synchronized(lock) { _optionalStepsSkipped = value }
+
     // Clears all cache safely
     fun clearCache() = synchronized(lock) {
         _appConfig = null
@@ -54,5 +63,6 @@ internal object CachingHomeKYC {
         _versionsList = null
         _onlyKYCRules = null
         _termsAcceptedOrDeclinedInSession = false
+        _optionalStepsSkipped = false
     }
 }

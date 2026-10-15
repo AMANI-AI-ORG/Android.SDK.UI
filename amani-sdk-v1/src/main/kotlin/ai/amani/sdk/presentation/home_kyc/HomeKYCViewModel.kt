@@ -78,6 +78,16 @@ open class HomeKYCViewModel(
 
     private var selectedStepIDNumber = ""
 
+    /**
+     * Latest status of each step from the socket verdicts. The cached rules keep their first-load
+     * status (only the adapter is refreshed), so this is what the skip button is decided on.
+     */
+    private val latestStatuses = mutableMapOf<String, String>()
+
+    /** Whether the bottom skip button shows: every required step done, optional ones remaining. */
+    private val _showSkipOptional = MutableLiveData(false)
+    val showSkipOptional: LiveData<Boolean> = _showSkipOptional
+
     private var profileInfoModel : ProfileInfoModel = ProfileInfoModel()
     private var featureConfig : FeatureConfig = FeatureConfig()
 
@@ -217,12 +227,13 @@ open class HomeKYCViewModel(
                     },
                     stepsAfterKYC = { afterKycSteps ->
                         //If there is no steps before KYC continue with KYC process
-                        if (checkKYCStepsAreApproved(customerDetail)) {
+                        if (kycStepsDone(customerDetail)) {
                             navigateBeforeOrAfterKYCFlowScreens(afterKycSteps)
                         } else{
                             val docList = getDocList()
                             docList?.let {
                                 _uiState.value = HomeKYCState.Loaded(it)
+                                refreshSkipOptional()
                             }?: run {
                                 _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
                             }
@@ -230,12 +241,13 @@ open class HomeKYCViewModel(
                     },
 
                     no = {
-                        if (checkKYCStepsAreApproved(customerDetail)){
+                        if (kycStepsDone(customerDetail)){
                             _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved)
                         } else {
                             val docList = getDocList()
                             docList?.let {
                                 _uiState.value = HomeKYCState.Loaded(it)
+                                refreshSkipOptional()
                             }?: run {
                                 _logicEvent.postValue(HomeKYCLogicEvent.Finish.OnError(CORRUPTED_DOC_LIST))
                             }
@@ -264,6 +276,52 @@ open class HomeKYCViewModel(
         }
 
         return size == approvedStep
+    }
+
+    /**
+     * The KYC steps are done: all of them, or the required ones after the user chose to skip the
+     * optional ones this session (back from an after-KYC screen, the KYC then finishes).
+     */
+    private fun kycStepsDone(customerDetail: CustomerDetailResult?): Boolean {
+        if (checkKYCStepsAreApproved(customerDetail)) return true
+        if (!CachingHomeKYC.optionalStepsSkipped) return false
+        val kycRules = customerDetail?.rules?.filter { it.identifier == "kyc" || it.identifier == "" }
+            ?: return false
+        return OptionalSteps.requiredCompleted(kycRules) { it.status }
+    }
+
+    /** Recomputes [showSkipOptional] from the current steps, statuses and uploads in flight. */
+    private fun refreshSkipOptional() {
+        val docList = getDocList()
+        _showSkipOptional.postValue(
+            docList != null && OptionalSteps.canSkipRemaining(
+                rules = docList,
+                statusOf = { latestStatuses[it.id] ?: it.status },
+                processing = { it.isShowLoader }
+            )
+        )
+    }
+
+    /**
+     * The skip button: ends the KYC without its remaining optional steps. Takes the route of a
+     * fully completed KYC: any after-KYC steps first, then the approved screen. Ignored unless
+     * the skip is currently offered, so a stale tap cannot end the KYC.
+     */
+    fun onSkipOptionalSteps() {
+        val docList = getDocList() ?: return
+        val offered = OptionalSteps.canSkipRemaining(
+            rules = docList,
+            statusOf = { latestStatuses[it.id] ?: it.status },
+            processing = { it.isShowLoader }
+        )
+        if (!offered) return
+        CachingHomeKYC.optionalStepsSkipped = true
+        _showSkipOptional.postValue(false)
+        hasOnlyStepsAfterKYCFlow(
+            appConfig = CachingHomeKYC.appConfig ?: return,
+            steps = { navigateBeforeOrAfterKYCFlowScreens(steps = it) },
+            no = { _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved) }
+        )
     }
 
     /** Provides the upload according to SelfieType
@@ -562,6 +620,7 @@ open class HomeKYCViewModel(
             if (!uploadResult.isSuccess) {
                 getDocList()?.firstOrNull { it.id == stepId }?.isShowLoader = false
                 _logicEvent.postValue(HomeKYCLogicEvent.Refresh(CachingHomeKYC.onlyKYCRules))
+                refreshSkipOptional()
             }
             onCompleted.invoke(uploadResult)
         }
@@ -575,6 +634,8 @@ open class HomeKYCViewModel(
                 CachingHomeKYC.onlyKYCRules!![it].isShowLoader = true
             }
         }
+        // An upload in flight hides the skip button until its verdict.
+        refreshSkipOptional()
     }
 
     /** Setting the current version accordingly selected rule
@@ -735,6 +796,8 @@ open class HomeKYCViewModel(
                 docList.forEach { rule ->
                     if (steps.any { it.id == rule.id }) rule.isShowLoader = false
                 }
+                steps.forEach { step -> step.id?.let { id -> step.status?.let { latestStatuses[id] = it } } }
+                refreshSkipOptional()
 
                 //Refreshing the UI with fresh steps
                 _logicEvent.postValue(HomeKYCLogicEvent.Refresh(StepsResultModelMapper.map(

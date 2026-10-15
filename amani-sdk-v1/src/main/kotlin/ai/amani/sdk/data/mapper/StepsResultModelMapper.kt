@@ -37,7 +37,8 @@ object StepsResultModelMapper {
                 phase = null,
                 sortOrder = stepsResult.result[0].sortOrder,
                 title = null,
-                isShowLoader = false
+                isShowLoader = false,
+                optional = stepsResult.result[0].optional
             )
 
             documentList.add(0, rule)
@@ -64,7 +65,8 @@ object StepsResultModelMapper {
                     phase = null,
                     sortOrder = stepsResult.result[it].sortOrder,
                     title = null,
-                    isShowLoader = false
+                    isShowLoader = false,
+                    optional = stepsResult.result[it].optional
                 )
 
             documentList.add(it, rule)

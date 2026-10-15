@@ -30,7 +30,8 @@ internal object HomeKYCPreviewData {
         id: String,
         title: String,
         status: String,
-        sortOrder: Int
+        sortOrder: Int,
+        optional: Boolean? = null
     ): Rule = Rule(
         adapter = null,
         attempt = 0,
@@ -42,7 +43,8 @@ internal object HomeKYCPreviewData {
         status = status,
         title = title,
         isShowLoader = false,
-        identifier = id
+        identifier = id,
+        optional = optional
     )
 
     /**
@@ -79,7 +81,8 @@ internal object HomeKYCPreviewData {
             v2HomeRejectedSubtitle = "{count} step needs your attention before we can continue.",
             v2StepStartHereLabel = "Start here",
             v2StepUpNextLabel = "Up next",
-            v2StepDefaultDuration = "~30 sec"
+            v2StepDefaultDuration = "~30 sec",
+            buttonTextOptionalSteps = "Skip optional steps and finish"
         ),
         listOf(
             stepConfig(
@@ -178,6 +181,18 @@ internal object HomeKYCPreviewData {
         rules(
             documentStatus = AppConstant.STATUS_APPROVED,
             selfieStatus = AppConstant.STATUS_APPROVED
+        ),
+        config()
+    )
+
+    /**
+     * ID approved and Selfie optional and not done: the bottom skip button shows, with the
+     * config's buttonTextOptionalSteps.
+     */
+    fun optionalRemaining(): HomeKYCUiState = HomeKYCMapper.toUiState(
+        listOf(
+            rule(RULE_ID_DOCUMENT, "ID", AppConstant.STATUS_APPROVED, sortOrder = 0),
+            rule(RULE_ID_SELFIE, "Selfie", AppConstant.STATUS_NOT_UPLOADED, sortOrder = 1, optional = true)
         ),
         config()
     )

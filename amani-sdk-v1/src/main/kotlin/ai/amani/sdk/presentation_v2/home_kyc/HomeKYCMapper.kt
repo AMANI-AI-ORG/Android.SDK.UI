@@ -1,6 +1,7 @@
 package ai.amani.sdk.presentation_v2.home_kyc
 
 import ai.amani.sdk.model.customer.Rule
+import ai.amani.sdk.presentation.home_kyc.OptionalSteps
 import ai.amani.sdk.presentation_v2.components.DotStep
 import ai.amani.sdk.presentation_v2.components.StepError
 import ai.amani.sdk.presentation_v2.components.StepRowStatus
@@ -246,13 +247,25 @@ internal object HomeKYCMapper {
             )
         }
 
+        // Every required step is done and only optional ones remain: offer to finish now.
+        // The button text is the dashboard's buttonTextOptionalSteps, else the general continueText.
+        val canSkipOptional = OptionalSteps.canSkipRemaining(
+            rules = rules,
+            statusOf = ::eff,
+            processing = { it.id != null && it.id in processingRuleIds }
+        )
+        val skipOptionalLabel = if (canSkipOptional) {
+            g?.buttonTextOptionalSteps?.takeIf { it.isNotBlank() } ?: g?.continueText.orFallback("Continue")
+        } else null
+
         return HomeKYCUiState(
             // Config-driven: GeneralConfigs.mainTitleText (v1 toolbar title), fallback when blank/null.
             headerTitle = g?.mainTitleText.orFallback("Verification"),
             dots = dots,
             title = title,
             subtitle = subtitle,
-            steps = steps
+            steps = steps,
+            skipOptionalLabel = skipOptionalLabel
         )
     }
 

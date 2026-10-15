@@ -38,8 +38,24 @@
             android:layout_marginTop="20dp"
             android:layout_marginBottom="10dp"
             android:orientation="vertical"
-            app:layout_constraintBottom_toTopOf="@+id/image_view_powered_by_amani"
+            app:layout_constraintBottom_toTopOf="@+id/skip_optional_steps_btn"
             app:layout_constraintTop_toBottomOf="@+id/upload_document_description" />
+
+        <!-- Ends the KYC while optional steps remain; shown only when every required step is done. -->
+        <ai.amani.sdk.presentation.common.CustomButton
+            android:id="@+id/skip_optional_steps_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginStart="@dimen/dp_20"
+            android:layout_marginEnd="@dimen/dp_20"
+            android:layout_marginBottom="12dp"
+            android:textAllCaps="false"
+            android:fontFamily="@font/rubik_500"
+            android:textSize="@dimen/sp_18"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@+id/image_view_powered_by_amani"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <ProgressBar
             android:id="@+id/progress_loader_centered"

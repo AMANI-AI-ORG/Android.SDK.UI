@@ -295,6 +295,9 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                             // A before-KYC identifier chain (profile_info / questionnaire) sets its
                             // own AmaniEvent listener; re-attach HomeKYC's when it returns to Home.
                             onReturnToHomeFromPreKyc = { viewModel.reattachAmaniEventListener() },
+                            // Required steps done, optional ones skipped: finish like a fully
+                            // completed flow (after-KYC steps, then the approved screen).
+                            onSkipOptionalSteps = { viewModel.skipOptionalSteps() },
                             // Artwork overrides the host app set through AmaniSDKUI (pose
                             // estimation V2 guide animations).
                             featureConfig = featureConfig ?: FeatureConfig()
