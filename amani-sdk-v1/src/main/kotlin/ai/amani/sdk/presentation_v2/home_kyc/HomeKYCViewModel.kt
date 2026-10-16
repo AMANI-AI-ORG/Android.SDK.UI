@@ -326,6 +326,7 @@ class HomeKYCViewModel(
     private fun applySpeechVerdict(ruleId: String?, status: String) {
         if (ruleId == null) return
         statusOverrides[ruleId] = status
+        CachingHomeKYC.rememberStepStatus(ruleId, status)
         if (status == STATUS_APPROVED) errorOverrides.remove(ruleId)
         ruleId?.let(processingRuleIds::remove)
         refreshReady()
@@ -521,6 +522,7 @@ class HomeKYCViewModel(
                     val id = res.id ?: return@forEach
                     res.status?.let { status ->
                         statusOverrides[id] = status
+                        CachingHomeKYC.rememberStepStatus(id, status)
                         changed = true
                         when (status) {
                             // Rejections AND pending-review verdicts carry a server message

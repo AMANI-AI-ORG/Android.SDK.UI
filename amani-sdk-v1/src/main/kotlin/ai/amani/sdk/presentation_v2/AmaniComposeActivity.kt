@@ -113,7 +113,8 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
      */
     private fun finishCancelled() {
         val returnIntent = Intent()
-        returnIntent.putExtra(AppConstant.KYC_RESULT, ai.amani.sdk.model.KYCResult())
+        // APPROVED when only optional steps are left undone, INCOMPLETE otherwise (as v1).
+        returnIntent.putExtra(AppConstant.KYC_RESULT, CachingHomeKYC.exitResult())
         setResult(RESULT_OK, returnIntent)
         finish()
     }

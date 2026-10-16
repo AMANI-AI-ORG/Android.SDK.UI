@@ -255,7 +255,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
             .addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     val intent = Intent()
-                    intent.putExtra(AppConstant.KYC_RESULT, KYCResult())
+                    // APPROVED when only optional steps are left undone, INCOMPLETE otherwise.
+                    intent.putExtra(AppConstant.KYC_RESULT, CachingHomeKYC.exitResult())
                     requireActivity().setResult(Activity.RESULT_OK, intent)
                     requireActivity().finish()
                 }

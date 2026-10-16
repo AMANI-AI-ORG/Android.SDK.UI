@@ -808,7 +808,14 @@ open class HomeKYCViewModel(
                 docList.forEach { rule ->
                     if (steps.any { it.id == rule.id }) rule.isShowLoader = false
                 }
-                steps.forEach { step -> step.id?.let { id -> step.status?.let { latestStatuses[id] = it } } }
+                steps.forEach { step ->
+                    step.id?.let { id ->
+                        step.status?.let {
+                            latestStatuses[id] = it
+                            CachingHomeKYC.rememberStepStatus(id, it)
+                        }
+                    }
+                }
                 refreshSkipOptional()
 
                 //Refreshing the UI with fresh steps
