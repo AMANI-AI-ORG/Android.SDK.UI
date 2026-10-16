@@ -1,5 +1,7 @@
 package ai.amani.sdk.presentation.congratulations_screen
 
+import androidx.navigation.fragment.findNavController
+import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentCongratulationsBinding
 import ai.amani.sdk.data.manager.UiVoiceKey
@@ -71,9 +73,19 @@ class CongratulationsFragment : Fragment() {
     private fun handleBackPressed() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true){
             override fun handleOnBackPressed() {
-                finishActivity()
+                if (args.canReturnToSteps) returnToSteps() else finishActivity()
             }
         })
+    }
+
+    /**
+     * Reached with the skip-optional-steps button: back returns to the steps screen, where the
+     * optional steps can still be done. The skip is forgotten, so the steps screen does not finish
+     * the KYC again on its own; the button is offered again.
+     */
+    private fun returnToSteps() {
+        CachingHomeKYC.optionalStepsSkipped = false
+        findNavController().popBackStack()
     }
 
     private fun finishActivity() {

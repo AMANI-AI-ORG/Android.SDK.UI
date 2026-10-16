@@ -170,6 +170,10 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
             val approved = androidx.compose.runtime.saveable.rememberSaveable {
                 androidx.compose.runtime.mutableStateOf(false)
             }
+            // Reached with the skip-optional-steps button: back returns to the steps screen.
+            val approvedBySkip = androidx.compose.runtime.saveable.rememberSaveable {
+                androidx.compose.runtime.mutableStateOf(false)
+            }
             // v1 after-KYC routing: identifier steps configured to run AFTER the KYC steps are
             // shown once they're all approved, before the final approved screen. Holds the
             // current post-KYC step (null = none / done).
@@ -182,6 +186,17 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                         HomeKYCEffect.ProfileApproved -> {
                             val next = PreKycFlow.nextAfterKycStep()
                             if (next != null) postKycDest.value = next else approved.value = true
+                        }
+                        HomeKYCEffect.ProfileApprovedBySkip -> {
+                            // After-KYC steps keep their usual route; only the direct way to the
+                            // approved screen can be walked back.
+                            val next = PreKycFlow.nextAfterKycStep()
+                            if (next != null) {
+                                postKycDest.value = next
+                            } else {
+                                approvedBySkip.value = true
+                                approved.value = true
+                            }
                         }
                         else -> {}
                     }
@@ -210,7 +225,14 @@ class AmaniComposeActivity : FragmentActivity(), NfcIntentHost {
                 if (approved.value) {
                     // Final success screen (v1 CongratulationsFragment): continue/close/back
                     // all return KYCResult APPROVED to the caller and finish.
-                    BackHandler { finishApproved() }
+                    BackHandler {
+                        if (approvedBySkip.value) {
+                            approvedBySkip.value = false
+                            approved.value = false
+                        } else {
+                            finishApproved()
+                        }
+                    }
                     ApprovedScreen(
                         state = ApprovedMapper.toUiState(
                             general = CachingHomeKYC.appConfig?.generalConfigs,

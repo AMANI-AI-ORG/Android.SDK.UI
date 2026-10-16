@@ -599,7 +599,7 @@ class HomeKYCViewModel(
             statusOf = { statusOverrides[it.id] ?: it.status },
             processing = { it.id != null && it.id in processingRuleIds }
         )
-        if (offered) sendEffect(HomeKYCEffect.ProfileApproved)
+        if (offered) sendEffect(HomeKYCEffect.ProfileApprovedBySkip)
     }
 
     /**

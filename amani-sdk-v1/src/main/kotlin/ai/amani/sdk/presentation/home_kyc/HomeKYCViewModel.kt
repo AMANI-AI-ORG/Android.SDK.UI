@@ -76,6 +76,15 @@ open class HomeKYCViewModel(
         MutableLiveData(HomeKYCLogicEvent.Empty)
     val logicEvent: LiveData<HomeKYCLogicEvent> = _logicEvent
 
+    /**
+     * Marks the last logic event as handled. LiveData hands its last value to every new observer,
+     * so without this the steps screen, shown again after back from the approved screen, would
+     * receive the same approval and navigate there again.
+     */
+    fun consumeLogicEvent() {
+        _logicEvent.value = HomeKYCLogicEvent.Empty
+    }
+
     private var selectedStepIDNumber = ""
 
     /**
@@ -290,8 +299,11 @@ open class HomeKYCViewModel(
         return OptionalSteps.requiredCompleted(kycRules) { it.status }
     }
 
-    /** Recomputes [showSkipOptional] from the current steps, statuses and uploads in flight. */
-    private fun refreshSkipOptional() {
+    /**
+     * Recomputes [showSkipOptional] from the current steps, statuses and uploads in flight. Also
+     * called when the steps screen is shown again (back from the approved screen after a skip).
+     */
+    fun refreshSkipOptional() {
         val docList = getDocList()
         _showSkipOptional.postValue(
             docList != null && OptionalSteps.canSkipRemaining(
@@ -320,7 +332,7 @@ open class HomeKYCViewModel(
         hasOnlyStepsAfterKYCFlow(
             appConfig = CachingHomeKYC.appConfig ?: return,
             steps = { navigateBeforeOrAfterKYCFlowScreens(steps = it) },
-            no = { _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApproved) }
+            no = { _logicEvent.postValue(HomeKYCLogicEvent.Finish.ProfileApprovedBySkip) }
         )
     }
 

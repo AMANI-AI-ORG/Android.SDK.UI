@@ -233,6 +233,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             AmaniMainActivity.hideSelectButton()
             viewModel.listenAmaniEvents()
+            // Back from the approved screen after a skip: offer the skip button again.
+            viewModel.refreshSkipOptional()
         }
     }
 
@@ -304,6 +306,23 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                                     viewModel.getAppConfig()!!.generalConfigs
                                 )
                             )
+                        findNavController().navigateSafely(action)
+                    }
+                }
+
+                is HomeKYCLogicEvent.Finish.ProfileApprovedBySkip -> {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                        Timber.d("Profile is APPROVED, optional steps skipped")
+                        // The steps screen is kept below: back on the approved screen returns to it.
+                        val action =
+                            HomeKYCFragmentDirections.actionHomeKYCFragmentToCongratulationsFragmentKeepSteps(
+                                ConfigModel(
+                                    viewModel.getVersion(),
+                                    viewModel.getAppConfig()!!.generalConfigs
+                                ),
+                                canReturnToSteps = true
+                            )
+                        viewModel.consumeLogicEvent()
                         findNavController().navigateSafely(action)
                     }
                 }
