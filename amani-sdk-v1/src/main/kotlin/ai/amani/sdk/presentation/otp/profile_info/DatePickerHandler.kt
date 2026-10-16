@@ -48,7 +48,9 @@ class DatePickerHandler(private val context: Context, listener: (String) -> Unit
     private fun formatDate(format: String, year: Int, month: Int, day: Int): String {
         val calendar = Calendar.getInstance()
         calendar.set(year, month, day)
-        val dateFormat = SimpleDateFormat(format, Locale.getDefault())
+        // The value is data (the MRZ key, the profile's birth date), not text for the user: always
+        // ASCII digits, never the device language's (Arabic, Persian, ...), which NFC would refuse.
+        val dateFormat = SimpleDateFormat(format, Locale.US)
         return dateFormat.format(calendar.time)
     }
 }

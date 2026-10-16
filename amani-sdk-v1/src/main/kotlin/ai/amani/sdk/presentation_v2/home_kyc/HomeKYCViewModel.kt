@@ -22,6 +22,7 @@ import ai.amani.sdk.model.amani_events.steps_result.StepsResult
 import ai.amani.sdk.model.customer.CustomerDetailResult
 import ai.amani.sdk.model.customer.Rule
 import ai.amani.sdk.presentation.home_kyc.CachingHomeKYC
+import ai.amani.sdk.presentation.home_kyc.OptionalSteps
 import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierLauncher
 import ai.amani.sdk.presentation_v2.speech_verify.SpeechVerifierOptions
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Palette
@@ -103,8 +104,12 @@ class HomeKYCViewModel(
     // [HomeKYCMapper.toUiState] instead of mutating the rules in place.
     private val statusOverrides = mutableMapOf<String, String>()
     private val errorOverrides = mutableMapOf<String, String>()
-    /** Rule id currently uploading / awaiting the verdict — renders the row spinner. */
-    private var processingRuleId: String? = null
+    /**
+     * Rule ids currently uploading / awaiting the verdict — each renders its row spinner and
+     * cannot be started again. A set, not a single id: starting another step while a picked
+     * PDF is still processing must not hand the first step its tap back.
+     */
+    private val processingRuleIds = mutableSetOf<String>()
 
     /** This view model's handle on the shared [AmaniEventBus]; removed in [onCleared]. */
     private var eventSubscriber: AmaniEventBus.Subscriber? = null
@@ -158,7 +163,7 @@ class HomeKYCViewModel(
         CachingHomeKYC.clearCache()
         statusOverrides.clear()
         errorOverrides.clear()
-        processingRuleId = null
+        processingRuleIds.clear()
         _brandPalette.value = null
 
         // Hand the session's profile-scoped JWT to the optional speech-verifier flow (backs
@@ -216,7 +221,7 @@ class HomeKYCViewModel(
         val ruleId = ruleIdFor(version)
         // Clear any stale rejection on this step and show the spinner before uploading.
         ruleId?.let { errorOverrides.remove(it) }
-        processingRuleId = ruleId
+        ruleId?.let(processingRuleIds::add)
         refreshReady()
 
         val onComplete: (ai.amani.sdk.model.UploadResultModel) -> Unit = { result ->
@@ -264,7 +269,7 @@ class HomeKYCViewModel(
         }
         val ruleId = ruleIdFor(version)
         ruleId?.let { errorOverrides.remove(it) }
-        processingRuleId = ruleId
+        ruleId?.let(processingRuleIds::add)
         refreshReady()
 
         documentRepository.upload(
@@ -294,7 +299,7 @@ class HomeKYCViewModel(
     fun uploadSpeechStep(activity: FragmentActivity, version: Version) {
         val ruleId = ruleIdFor(version)
         ruleId?.let { errorOverrides.remove(it) }
-        processingRuleId = ruleId
+        ruleId?.let(processingRuleIds::add)
         refreshReady()
 
         SpeechVerifierLauncher.upload(
@@ -305,7 +310,7 @@ class HomeKYCViewModel(
                 // Hard upload failure: no socket verdict will come, so stop the spinner and
                 // return the step to its actionable state, then surface the error in the
                 // host snackbar.
-                if (ruleId == processingRuleId) processingRuleId = null
+                ruleId?.let(processingRuleIds::remove)
                 refreshReady()
                 viewModelScope.launch { _messages.send(message) }
             }
@@ -321,8 +326,9 @@ class HomeKYCViewModel(
     private fun applySpeechVerdict(ruleId: String?, status: String) {
         if (ruleId == null) return
         statusOverrides[ruleId] = status
+        CachingHomeKYC.rememberStepStatus(ruleId, status)
         if (status == STATUS_APPROVED) errorOverrides.remove(ruleId)
-        if (ruleId == processingRuleId) processingRuleId = null
+        ruleId?.let(processingRuleIds::remove)
         refreshReady()
 
         val docList = CachingHomeKYC.onlyKYCRules ?: return
@@ -345,7 +351,7 @@ class HomeKYCViewModel(
         }
         val ruleId = ruleIdFor(version)
         ruleId?.let { errorOverrides.remove(it) }
-        processingRuleId = ruleId
+        ruleId?.let(processingRuleIds::add)
         refreshReady()
 
         Amani.sharedInstance().IDCapture()
@@ -361,7 +367,7 @@ class HomeKYCViewModel(
      * document reached the server, not that it was approved — and approval (not delivery)
      * is what the step's state must reflect. So the step keeps its processing loader after
      * upload regardless of this result; only the AmaniEvent socket verdict (see
-     * [listenAmaniEvents]) clears [processingRuleId] and swaps the spinner for the real
+     * [listenAmaniEvents]) clears the step from [processingRuleIds] and swaps the spinner for the real
      * status (Done / Rejected / Pending review). An APPROVED verdict then unlocks the next
      * step. A failure here is logged only; the loader stays until that socket status comes.
      */
@@ -470,7 +476,7 @@ class HomeKYCViewModel(
                 config = CachingHomeKYC.appConfig,
                 statusOverrides = statusOverrides,
                 errorOverrides = errorOverrides,
-                processingRuleId = processingRuleId
+                processingRuleIds = processingRuleIds.toSet()
             )
         )
     }
@@ -516,6 +522,7 @@ class HomeKYCViewModel(
                     val id = res.id ?: return@forEach
                     res.status?.let { status ->
                         statusOverrides[id] = status
+                        CachingHomeKYC.rememberStepStatus(id, status)
                         changed = true
                         when (status) {
                             // Rejections AND pending-review verdicts carry a server message
@@ -529,7 +536,7 @@ class HomeKYCViewModel(
                         }
                     }
                     // A verdict for the uploading step stops its spinner.
-                    if (id == processingRuleId) processingRuleId = null
+                    processingRuleIds.remove(id)
                 }
                 if (!changed) return
 
@@ -580,6 +587,21 @@ class HomeKYCViewModel(
             Timber.e(e, "V2 HomeKYC: failed to build doc list")
             null
         }
+    }
+
+    /**
+     * Ends the KYC without its remaining optional steps (the home skip button). Takes the same
+     * route as a fully completed flow: the host runs any after-KYC steps, then the approved
+     * screen. Ignored unless the skip is currently offered, so a stale tap cannot end the KYC.
+     */
+    fun skipOptionalSteps() {
+        val rules = CachingHomeKYC.onlyKYCRules ?: return
+        val offered = OptionalSteps.canSkipRemaining(
+            rules = rules,
+            statusOf = { statusOverrides[it.id] ?: it.status },
+            processing = { it.id != null && it.id in processingRuleIds }
+        )
+        if (offered) sendEffect(HomeKYCEffect.ProfileApprovedBySkip)
     }
 
     /**

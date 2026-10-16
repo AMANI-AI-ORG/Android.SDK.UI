@@ -27,6 +27,11 @@
             app:popUpTo="@navigation/nav"
             app:popUpToInclusive="true"
             app:launchSingleTop="true" />
+        <!-- From the skip-optional-steps button: the steps screen stays below the approved one. -->
+        <action
+            android:id="@+id/action_homeKYCFragment_to_congratulationsFragment_keepSteps"
+            app:destination="@id/congratulationsFragment"
+            app:launchSingleTop="true" />
         <action
             android:id="@+id/action_homeKYCFragment_to_signatureFragment"
             app:destination="@id/signatureFragment" />
@@ -155,6 +160,11 @@
             android:name="configModel"
             app:nullable="false"
             app:argType="ai.amani.sdk.model.ConfigModel" />
+        <!-- True only when reached from the skip-optional-steps button: back returns to the steps. -->
+        <argument
+            android:name="canReturnToSteps"
+            android:defaultValue="false"
+            app:argType="boolean" />
     </fragment>
     <fragment
         android:id="@+id/signatureFragment"

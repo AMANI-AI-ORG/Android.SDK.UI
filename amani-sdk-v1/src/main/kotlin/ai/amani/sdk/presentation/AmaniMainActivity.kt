@@ -168,12 +168,22 @@ class AmaniMainActivity : AppCompatActivity() {
 
                 if (currentFragment != null) {
                     if (currentFragment == R.id.congratulationsFragment) {
-                        finish()
+                        // Reached with the skip-optional-steps button: the toolbar back does what the
+                        // system back does there, return to the steps (CongratulationsFragment's
+                        // back callback). Every other way to this screen keeps closing the SDK.
+                        val canReturnToSteps = navController.currentBackStackEntry
+                            ?.arguments?.getBoolean("canReturnToSteps", false) == true
+                        if (canReturnToSteps) {
+                            onBackPressedDispatcher.onBackPressed()
+                        } else {
+                            finish()
+                        }
                         return@launch
                     }
 
                     if (currentFragment == R.id.homeKYCFragment) {
-                        finishActivity()
+                        // Same result as the system back on the steps screen.
+                        finishActivity(CachingHomeKYC.exitResult())
                         return@launch
                     }
 
@@ -264,10 +274,10 @@ class AmaniMainActivity : AppCompatActivity() {
     /**
      * Finish whole activity and return the relevant data to client
      */
-    private fun finishActivity() {
-        //Finishing activity with KYCResult as INCOMPLETE
+    private fun finishActivity(result: KYCResult = KYCResult()) {
+        //Finishing activity with KYCResult, INCOMPLETE unless told otherwise
         val intent = Intent()
-        intent.putExtra(AppConstant.KYC_RESULT, KYCResult())
+        intent.putExtra(AppConstant.KYC_RESULT, result)
         this.setResult(Activity.RESULT_OK, intent)
         finish()
     }

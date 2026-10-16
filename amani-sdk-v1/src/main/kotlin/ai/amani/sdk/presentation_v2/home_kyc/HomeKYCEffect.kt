@@ -22,6 +22,12 @@ sealed interface HomeKYCEffect {
     /** All KYC steps are approved — the flow is complete. */
     data object ProfileApproved : HomeKYCEffect
 
+    /**
+     * The user ended the KYC with the skip-optional-steps button. Shown like [ProfileApproved],
+     * but back on the approved screen returns to the steps instead of finishing.
+     */
+    data object ProfileApprovedBySkip : HomeKYCEffect
+
     /** Terminal error (login/config/customer-detail). Carries the SDK error code. */
     data class Error(val errorCode: Int) : HomeKYCEffect
 }

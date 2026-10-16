@@ -2,6 +2,7 @@ package ai.amani.sdk.presentation_v2.home_kyc
 
 import ai.amani.sdk.presentation_v2.components.AmaniV2Loader
 import ai.amani.sdk.presentation_v2.components.DotStep
+import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.components.StepRow
 import ai.amani.sdk.presentation_v2.components.StepRowStatus
@@ -44,7 +45,12 @@ data class HomeKYCUiState(
     // Blank/null means "no large heading" and the screen skips rendering it entirely.
     val title: String?,
     val subtitle: String,
-    val steps: List<VerificationStep>
+    val steps: List<VerificationStep>,
+    /**
+     * Text of the bottom button that ends the KYC while optional steps remain; null hides it.
+     * Set only when every required step is done (see `OptionalSteps.canSkipRemaining`).
+     */
+    val skipOptionalLabel: String? = null
 )
 
 /**
@@ -67,7 +73,9 @@ fun HomeKYCScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     // Start the given step (its backing rule id). Called when an actionable row is tapped.
-    onStartStep: (ruleId: String?) -> Unit = {}
+    onStartStep: (ruleId: String?) -> Unit = {},
+    // Finish the KYC without the remaining optional steps (the bottom skip button).
+    onSkipOptional: () -> Unit = {}
 ) {
     when (state) {
         HomeKYCScreenState.Loading -> AmaniV2Loader(modifier)
@@ -75,7 +83,8 @@ fun HomeKYCScreen(
             state = state.content,
             modifier = modifier,
             onBack = onBack,
-            onStartStep = onStartStep
+            onStartStep = onStartStep,
+            onSkipOptional = onSkipOptional
         )
     }
 }
@@ -86,7 +95,8 @@ private fun HomeKYCContent(
     state: HomeKYCUiState,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onStartStep: (ruleId: String?) -> Unit = {}
+    onStartStep: (ruleId: String?) -> Unit = {},
+    onSkipOptional: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
     val contentMaxWidth = amaniV2ContentMaxWidth()
@@ -148,9 +158,22 @@ private fun HomeKYCContent(
                 }
             }
             // Clear the system navigation bar so the last row isn't overlapped on devices
-            // that draw a bottom nav bar (gesture / 3-button).
+            // that draw a bottom nav bar (gesture / 3-button). With the skip button the bar
+            // is cleared below the button instead.
             Spacer(Modifier.height(24.dp))
-            Spacer(Modifier.navigationBarsPadding())
+            if (state.skipOptionalLabel == null) Spacer(Modifier.navigationBarsPadding())
+        }
+        state.skipOptionalLabel?.let { label ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = contentMaxWidth)
+                    .navigationBarsPadding()
+                    .padding(horizontal = AmaniV2Dimens.screenPadding)
+                    .padding(bottom = 20.dp)
+            ) {
+                PrimaryButton(text = label, onClick = onSkipOptional)
+            }
         }
     }
 }
@@ -271,6 +294,10 @@ private fun PreviewMockDocumentApproved() = PreviewMockConfigScreen(HomeKYCPrevi
 @Preview(name = "HomeKYC mock — all approved", showBackground = true, widthDp = 360, heightDp = 740)
 @Composable
 private fun PreviewMockAllApproved() = PreviewMockConfigScreen(HomeKYCPreviewData.allApproved())
+
+@Preview(name = "HomeKYC mock — optional step remaining", showBackground = true, widthDp = 360, heightDp = 740)
+@Composable
+private fun PreviewMockOptionalRemaining() = PreviewMockConfigScreen(HomeKYCPreviewData.optionalRemaining())
 
 @Preview(name = "HomeKYC mock — ID rejected", showBackground = true, widthDp = 360, heightDp = 740)
 @Composable

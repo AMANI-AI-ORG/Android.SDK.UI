@@ -116,6 +116,9 @@ fun AmaniV2NavHost(
     // pops back to Home. Pre-KYC screens set their own AmaniEvent listener (v1 parity), so the
     // host re-attaches HomeKYC's listener here before the user starts the KYC steps.
     onReturnToHomeFromPreKyc: () -> Unit = {},
+    // Invoked by the home skip button: every required step is done and the user ends the KYC
+    // without the remaining optional steps.
+    onSkipOptionalSteps: () -> Unit = {},
     // The host app's feature flags / artwork overrides (Intent extra), forwarded to the screens
     // that read them — currently the selfie camera's pose-estimation V2 guide animations.
     featureConfig: ai.amani.sdk.model.FeatureConfig = ai.amani.sdk.model.FeatureConfig(),
@@ -180,7 +183,8 @@ fun AmaniV2NavHost(
                 // rule id and we start exactly that step.
                 onStartStep = { ruleId ->
                     startCaptureFlowForRule(navigator, resolveRuleById(ruleId))
-                }
+                },
+                onSkipOptional = onSkipOptionalSteps
             )
 
             AmaniV2Destination.DocumentType -> DocumentTypeRoute(

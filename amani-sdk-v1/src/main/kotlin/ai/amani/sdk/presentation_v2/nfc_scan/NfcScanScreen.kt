@@ -91,6 +91,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
 import java.util.Calendar
+import java.util.Locale
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -911,7 +912,8 @@ private fun String.asMrzDigits(): String = filter { it.isDigit() }
 
 /** The wheel's date → the `yyMMdd` the MRZ carries. */
 private fun WheelDate.asMrzDate(): String =
-    "%02d%02d%02d".format(year % 100, month, day)
+    // Locale.US: ASCII digits whatever the device language, the chip reader takes no others.
+    String.format(Locale.US, "%02d%02d%02d", year % 100, month, day)
 
 
 /** v1 NFCScanningBottomDialog counterpart: a bottom card that overlays during the read. */
@@ -1137,7 +1139,7 @@ private fun NfcMrzCheckPreview() {
         NfcScanContent(
             NfcScanUiState(
                 NfcPhase.MrzCheck,
-                MRZModel(birthDate = "970423", expireDate = "360510", docNumber = "A54P40583"),
+                MRZModel(birthDate = "850615", expireDate = "401231", docNumber = "X00000000"),
                 previewTexts
             )
         )
@@ -1155,7 +1157,7 @@ private fun NfcMrzCheckLargeRadiusPreview() {
         NfcScanContent(
             NfcScanUiState(
                 NfcPhase.MrzCheck,
-                MRZModel(birthDate = "970423", expireDate = "360510", docNumber = "A54P40583"),
+                MRZModel(birthDate = "850615", expireDate = "401231", docNumber = "X00000000"),
                 previewTexts
             )
         )
@@ -1170,7 +1172,7 @@ private fun NfcMrzCheckEmptyValuePreview() {
         NfcScanContent(
             NfcScanUiState(
                 NfcPhase.MrzCheck,
-                MRZModel(birthDate = "970423", expireDate = "", docNumber = "A54P40583"),
+                MRZModel(birthDate = "850615", expireDate = "", docNumber = "X00000000"),
                 previewTexts
             )
         )
@@ -1190,8 +1192,8 @@ private fun ChipDataRowPreview() {
             ChipDataRow(
                 icon = Icons.Outlined.CreditCard,
                 label = "Document number",
-                value = "A54P40583",
-                displayValue = "A54P40583",
+                value = "X00000000",
+                displayValue = "X00000000",
                 accent = AmaniV2Theme.palette.accent,
                 editing = false,
                 onEdit = {},
@@ -1202,8 +1204,8 @@ private fun ChipDataRowPreview() {
             ChipDataRow(
                 icon = Icons.Outlined.CreditCard,
                 label = "Document number",
-                value = "A54P40583",
-                displayValue = "A54P40583",
+                value = "X00000000",
+                displayValue = "X00000000",
                 accent = AmaniV2Theme.palette.accent,
                 editing = true,
                 onEdit = {},

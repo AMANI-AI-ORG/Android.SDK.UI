@@ -16,6 +16,12 @@ sealed class HomeKYCLogicEvent {
 
         object ProfileApproved: HomeKYCLogicEvent()
 
+        /**
+         * The user ended the KYC with the skip-optional-steps button. Shown like [ProfileApproved],
+         * but the steps screen stays below it so back returns there instead of closing the SDK.
+         */
+        object ProfileApprovedBySkip: HomeKYCLogicEvent()
+
         class OnError(val errorCode: Int = 0)  : HomeKYCLogicEvent()
 
         class OnException(val exception: Throwable): HomeKYCLogicEvent()

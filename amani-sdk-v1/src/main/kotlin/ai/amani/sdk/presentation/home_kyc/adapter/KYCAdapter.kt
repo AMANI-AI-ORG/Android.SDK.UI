@@ -56,14 +56,16 @@ class KYCAdapter(
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
 
-        val stepConfig = appConfig!!.getStepConfig(mDocumentList[position].sortOrder!!)
+        val stepConfig = appConfig!!.getStepConfig(mDocumentList[position])
         val steps = appConfig!!.stepConfigs
 
-        // If identifier is instance of invisible identifiers, do not show it
+        // If identifier is instance of invisible identifiers, do not show it: collapse the row,
+        // an unbound row would otherwise take its place as an empty, half-transparent button.
         if (!isRuleVisible(stepConfig)) {
-            deactivateButton(holder)
+            setRowShown(holder, false)
             return
         }
+        setRowShown(holder, true)
 
         val loaderColor = if (appConfig!!.generalConfigs?.loaderColor != null)
             appConfig!!.generalConfigs?.loaderColor else AppConstants.COLOR_BLACK
@@ -361,22 +363,19 @@ class KYCAdapter(
         try {
             Timber.i("Document list update is started")
             if (!newDocumentList.isNullOrEmpty()) {
-                if (newDocumentList.size == 1) {
-                    repeat(mDocumentList.size) {
-                        if (mDocumentList[it].sortOrder == newDocumentList[0].sortOrder) {
-                            mDocumentList[it] = newDocumentList[0]
-                            notifyItemChanged(it)
-                            Timber.i("Document list index: ${newDocumentList[0].id} is up to date ")
-                        }
-                    }
-                } else {
-                    repeat(newDocumentList.size) {
-                        repeat(mDocumentList.size) { index ->
-                            if (mDocumentList[index].sortOrder == newDocumentList[it].sortOrder) {
-                                mDocumentList[index] = newDocumentList[it]
-                                notifyItemChanged(index)
-                                Timber.i("Document list index: ${mDocumentList[it].id} is up to date")
-                            }
+                newDocumentList.forEach { update ->
+                    mDocumentList.indices.forEach { index ->
+                        val current = mDocumentList[index]
+                        if (isSameStep(current, update)) {
+                            // A verdict carries only the status and errors: keep the row's title,
+                            // document classes and identifier instead of replacing the rule.
+                            mDocumentList[index] = current.copy(
+                                status = update.status,
+                                errors = update.errors,
+                                isShowLoader = update.isShowLoader
+                            )
+                            notifyItemChanged(index)
+                            Timber.i("Document list index: ${current.id} is up to date")
                         }
                     }
                 }
@@ -386,6 +385,27 @@ class KYCAdapter(
             e.printStackTrace()
         }
 
+    }
+
+    /** Matches a verdict to its row by step id; the sort order only when an id is missing. */
+    private fun isSameStep(current: Rule, update: Rule): Boolean =
+        if (current.id != null && update.id != null) current.id == update.id
+        else current.sortOrder == update.sortOrder
+
+    /**
+     * Collapses a hidden row (no height, no top margin), and restores the layout's own height and
+     * margin when the holder is reused for a shown row.
+     */
+    private fun setRowShown(holder: MyViewHolder, shown: Boolean) {
+        val params = holder.itemView.layoutParams as? ViewGroup.MarginLayoutParams ?: return
+        val original = holder.itemView.getTag(R.id.recyclerView) as? IntArray
+            ?: intArrayOf(params.height, params.topMargin).also {
+                holder.itemView.setTag(R.id.recyclerView, it)
+            }
+        holder.itemView.visibility = if (shown) View.VISIBLE else View.GONE
+        params.height = if (shown) original[0] else 0
+        params.topMargin = if (shown) original[1] else 0
+        holder.itemView.layoutParams = params
     }
 
     override fun getItemCount(): Int {
