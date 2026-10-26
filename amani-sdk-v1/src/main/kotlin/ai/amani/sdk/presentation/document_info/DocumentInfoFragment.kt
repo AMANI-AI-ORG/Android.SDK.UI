@@ -2,11 +2,13 @@ package ai.amani.sdk.presentation.document_info
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentDocumentInfoBinding
+import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.setToolBarTitle
 import ai.amani.sdk.model.DocumentSource
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.binding.setPropertyConfirmButton
 import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
+import ai.amani.sdk.presentation.common.document_picker.showNoPickerMessage
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.utils.ColorConstant
@@ -38,8 +40,24 @@ class DocumentInfoFragment : Fragment() {
     private val args: DocumentInfoFragmentArgs by navArgs()
 
     /** Gallery picker of this screen; registered eagerly, as activity results require. */
-    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+    private val documentPickerLauncher = DocumentPickerLauncher(
+        fragment = this,
+        onUnavailable = { onNoDocumentPicker() }
+    ) { uri ->
         onDocumentPicked(uri)
+    }
+
+    /**
+     * No app can pick the image: this screen is replaced by the capture screen, and the user is
+     * told why.
+     */
+    private fun onNoDocumentPicker() {
+        findNavController().navigateSafely(
+            DocumentInfoFragmentDirections.actionDocumentInfoFragmentToPhysicalContractFragment(
+                args.dataModel
+            )
+        )
+        showNoPickerMessage()
     }
 
     override fun onCreateView(

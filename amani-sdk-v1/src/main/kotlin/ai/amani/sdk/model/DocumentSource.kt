@@ -35,10 +35,10 @@ package ai.amani.sdk.model
  *    │             │      │        │  Text, capture-    │   │ (SDK strings as fallback) │
  *  photo      "select"    │        │  Description       │   │                           │
  *  taken      PDF button  │        └─────────┬──────────┘   │ [Upload via gallery]      │
- *    │             │      │              continue           │ [Upload via PDF] primary  │
- *    │             │      │                  │              │ [Upload via camera]       │
- *    │             │      │                  │              └─┬──────┬──────┬───────┬───┘
- *    │             │      │                  │             Gallery  PDF   Camera  back /
+ *    │       (shown only  │              continue           │ [Upload via PDF] primary  │
+ *    │        when an app │                  │              │ [Upload via camera]       │
+ *    │        can pick a  │                  │              └─┬──────┬──────┬───────┬───┘
+ *    │        PDF)        │                  │             Gallery  PDF   Camera  back /
  *    │             │      │                  │                │      │      │    outside
  *    │             │      │                  │                │      │      │       │
  *    │             │      │                  │                │      │      │       ▼
@@ -49,40 +49,68 @@ package ai.amani.sdk.model
  *    │             │      │                  │                │      │          (as Camera)
  *    │             ▼      ▼                  ▼                ▼      ▼
  *    │      ┌──────────────────────┐  ┌──────────────────────────────────────┐
- *    │      │ PDF picker           │  │ Image picker (gallery choice skips   │
- *    │      │ ACTION_OPEN_DOCUMENT │  │ the information screen: the dialog   │
- *    │      │ application/pdf      │  │ already explains the document)       │
- *    │      │                      │  │ ACTION_OPEN_DOCUMENT, any image,     │
- *    │      │                      │  │ opened in Pictures/Screenshots when  │
- *    │      │                      │  │ that folder exists                   │
- *    │      └───┬──────────────┬───┘  └───┬─────────────────────────────┬────┘
- *    │        file        cancelled      file                       cancelled
- *    │          │              │          │                             │
- *    │          │              ▼          │                             ▼
- *    │          │       V1: stays on the screen that opened the picker
- *    │          │       V2: info / capture screen stays; a direct pick
- *    │          │           (DocumentPick) pops back to where it started
- *    │          │                         │
- *    ▼          ▼                         ▼
- *  DataFromCamera              DataFromGallery(uri)
+ *    │      │ PDF chain            │  │ Image chain (a gallery choice skips  │
+ *    │      │ (PickerLaunchers)    │  │ the information screen: the dialog   │
+ *    │      │                      │  │ already explains the document)       │
+ *    │      │ 1. Documents         │  │                                      │
+ *    │      │    provider,         │  │ 1. Gallery app: ACTION_PICK on the   │
+ *    │      │    ACTION_OPEN_      │  │    MediaStore images (a chooser when │
+ *    │      │    DOCUMENT          │  │    several gallery apps exist)       │
+ *    │      │ 2. Any GET_CONTENT   │  │ 2. Documents provider, ACTION_OPEN_  │
+ *    │      │    app               │  │    DOCUMENT, any image, opened in    │
+ *    │      │                      │  │    Pictures/Screenshots or else      │
+ *    │      │ application/pdf      │  │    DCIM/Screenshots when one exists  │
+ *    │      │                      │  │ 3. Any GET_CONTENT app, any image    │
+ *    │      └──┬───────┬────────┬──┘  └──┬─────────┬─────────────────────┬──┘
+ *    │       file  cancelled   none     file     none                cancelled
+ *    │         │       │      opens       │      opens                    │
+ *    │         │       │        │         │        │                      │
+ *    │         │       │        └─────────┼────────┴──────────┐           │
+ *    │         │       │                  │                   ▼           │
+ *    │         │       │                  │   ┌─────────────────────────┐ │
+ *    │         │       │                  │   │ Camera fallback         │ │
+ *    │         │       │                  │   │ capture screen replaces │ │
+ *    │         │       │                  │   │ the picker's screen,    │ │
+ *    │         │       │                  │   │ snackbar with error     │ │
+ *    │         │       │                  │   │ code DS-01; from the    │ │
+ *    │         │       │                  │   │ capture screen's own    │ │
+ *    │         │       │                  │   │ button: it hides, the   │ │
+ *    │         │       │                  │   │ capture stays           │ │
+ *    │         │       │                  │   └────────────┬────────────┘ │
+ *    │         │       ▼                  │                │              ▼
+ *    │         │    V1: stays on the screen that opened the picker
+ *    │         │    V2: info / capture screen stays; a direct pick
+ *    │         │        (DocumentPick) pops back to where it started
+ *    │         │                          │                │
+ *    ▼         ▼                          ▼                ▼
+ *  DataFromCamera              DataFromGallery(uri)   (as Camera)
  *    │                                    │
  *    └────────────────┬───────────────────┘
  *                     ▼
  *     KYC home uploads the document, the step shows its processing state
  * ```
  *
- * Neither picker needs a runtime permission or a manifest entry: the documents provider grants
- * read access to the one file the user picked.
+ * No picker needs a runtime permission: the app that answers grants read access to the one file
+ * the user picked. Each picker of a chain is tried rather than resolved up front; the SDK
+ * manifest's `<queries>` only serves the check that decides whether the capture screen offers
+ * its PDF button. The integrating app adds nothing.
  */
 enum class DocumentSource {
 
     /** Classic capture screen: the document is photographed with the camera. */
     Camera,
 
-    /** The document is picked as a PDF from the documents provider. */
+    /**
+     * The document is picked as a PDF from the documents provider, else from any `GET_CONTENT`
+     * app; with neither, it is photographed instead.
+     */
     PdfFile,
 
-    /** The document is picked as an image from the gallery, preferring the Screenshots folder. */
+    /**
+     * The document is picked as an image from the device's gallery app, else from the documents
+     * provider (preferring the Screenshots folder), else from any `GET_CONTENT` app; with none of
+     * them, it is photographed instead.
+     */
     Gallery,
 
     /**

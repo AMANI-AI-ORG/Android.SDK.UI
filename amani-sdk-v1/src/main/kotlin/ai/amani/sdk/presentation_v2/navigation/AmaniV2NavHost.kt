@@ -9,6 +9,7 @@ import ai.amani.sdk.presentation_v2.document_info.DocumentInfoScreen
 import ai.amani.sdk.presentation_v2.document_info.DocumentPickScreen
 import ai.amani.sdk.presentation_v2.document_info.DocumentSourceChoiceDialog
 import ai.amani.sdk.presentation.common.document_picker.documentSourceChoiceTextsOf
+import ai.amani.sdk.presentation.common.document_picker.noPickerMessage
 import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
@@ -53,6 +54,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -133,6 +135,24 @@ fun AmaniV2NavHost(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // No app on the device can pick the document: tell the user, with the error code support
+    // looks up.
+    fun showNoPickerMessage() {
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                context.resources.noPickerMessage(),
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
+
+    // A picker document whose device has no picker is photographed instead: the capture screen
+    // takes the place of the destination that tried to pick.
+    fun fallBackToCamera(versionType: String) {
+        navigator.replaceCurrent(AmaniV2Destination.AddressVerify(versionType))
+        showNoPickerMessage()
+    }
 
     // Advance the before-KYC identifier chain (v1's step-by-step `getNavDirection`): mark this
     // step done, move to the next pending step, or pop to Home (re-attaching Home's listener)
@@ -384,7 +404,9 @@ fun AmaniV2NavHost(
                                 ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
                             )
                             navigator.popToRoot()
-                        }
+                        },
+                        // The PDF picker disappeared after the screen checked for it.
+                        onPickerUnavailable = ::showNoPickerMessage
                     )
                 }
             }
@@ -407,7 +429,8 @@ fun AmaniV2NavHost(
                                 ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
                             )
                             navigator.popToRoot()
-                        }
+                        },
+                        onUnavailable = { fallBackToCamera(destination.versionType) }
                     )
                 }
             }
@@ -428,7 +451,8 @@ fun AmaniV2NavHost(
                         },
                         // Nothing picked: this destination has no screen of its own, so there is
                         // nothing to stay on.
-                        onCancelled = { if (!navigator.popBackStack()) onExit() }
+                        onCancelled = { if (!navigator.popBackStack()) onExit() },
+                        onUnavailable = { fallBackToCamera(destination.versionType) }
                     )
                 }
             }

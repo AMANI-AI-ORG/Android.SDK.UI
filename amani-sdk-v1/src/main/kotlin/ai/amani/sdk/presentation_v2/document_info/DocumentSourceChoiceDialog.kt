@@ -25,6 +25,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.SideEffect
+import android.view.Gravity
+import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.compose.ui.window.DialogProperties
 
 /**
@@ -55,6 +61,19 @@ fun DocumentSourceChoiceDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // The dialog window inherits the translucent activity theme (no dim, not floating), so
+        // it is set up like the V1 DialogFragment's window: centered, as tall as the card, and
+        // dimming the screen behind it.
+        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            window?.run {
+                setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                setGravity(Gravity.CENTER)
+                addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                setDimAmount(DIM_AMOUNT)
+            }
+        }
+
         Column(
             modifier = modifier
                 .padding(AmaniV2Dimens.screenPadding)
@@ -96,6 +115,9 @@ fun DocumentSourceChoiceDialog(
         }
     }
 }
+
+/** Dim behind the dialog: the platform dialog default, which the V1 dialog shows with. */
+private const val DIM_AMOUNT = 0.6f
 
 @Preview(name = "Document source choice", showBackground = true, widthDp = 360, heightDp = 640)
 @Composable

@@ -16,6 +16,7 @@ import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
 import ai.amani.sdk.presentation.common.document_picker.DocumentSourceDialog
+import ai.amani.sdk.presentation.common.document_picker.showNoPickerMessage
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.model.NFCScanScreenModel
@@ -67,8 +68,23 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
      * Picker for the documents whose `documentSource` is not the camera. Registered eagerly
      * because activity result launchers cannot be registered once the fragment is started.
      */
-    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+    private val documentPickerLauncher = DocumentPickerLauncher(
+        fragment = this,
+        onUnavailable = { onNoDocumentPicker() }
+    ) { uri ->
         onDocumentPicked(uri)
+    }
+
+    /** No app can pick the document: it is photographed instead, and the user is told why. */
+    private fun onNoDocumentPicker() {
+        val docType = pickedDocumentType
+        pickedDocumentType = null
+        if (viewModel.getVersion()?.type != docType) {
+            Timber.e("No picker for a document that is no longer current, nothing to capture")
+            return
+        }
+        navigateToPhysicalContract()
+        showNoPickerMessage()
     }
 
     /** Uploads the file picked from storage, or does nothing when the picker was left empty. */

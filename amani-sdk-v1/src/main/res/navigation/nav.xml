@@ -180,6 +180,12 @@
         tools:layout="@layout/fragment_document_info"
         android:name="ai.amani.sdk.presentation.document_info.DocumentInfoFragment"
         android:label="DocumentInfoFragment" >
+        <!-- Camera fallback when the device has no picker for the gallery document -->
+        <action
+            android:id="@+id/action_documentInfoFragment_to_physicalContractFragment"
+            app:destination="@id/physicalContractFragment"
+            app:popUpTo="@id/documentInfoFragment"
+            app:popUpToInclusive="true" />
         <argument
             android:name="dataModel"
             app:nullable="false"

@@ -7,6 +7,7 @@ import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
 import ai.amani.sdk.presentation.common.document_picker.DocumentSourceDialog
+import ai.amani.sdk.presentation.common.document_picker.showNoPickerMessage
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
@@ -50,8 +51,19 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
      * Picker for the documents whose `documentSource` is not the camera. Registered eagerly
      * because activity result launchers cannot be registered once the fragment is started.
      */
-    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+    private val documentPickerLauncher = DocumentPickerLauncher(
+        fragment = this,
+        onUnavailable = { onNoDocumentPicker() }
+    ) { uri ->
         onDocumentPicked(uri)
+    }
+
+    /** No app can pick the document: it is photographed instead, and the user is told why. */
+    private fun onNoDocumentPicker() {
+        val version = pickedVersion ?: return
+        pickedVersion = null
+        navigateToPhysicalContract(version)
+        showNoPickerMessage()
     }
 
     override fun onCreateView(

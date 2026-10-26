@@ -82,4 +82,6 @@
     <string name="document_source_gallery">Upload via gallery</string>
     <string name="document_source_pdf">Upload via PDF (Recommended)</string>
     <string name="document_source_camera">Upload via camera</string>
+    <!-- Shown over the capture screen when no app on the device can pick a document; %1$s is the error code -->
+    <string name="document_picker_unavailable">No app on this device can open your files. Please take a photo of your document instead. (Error code: %1$s)</string>
 </resources>
