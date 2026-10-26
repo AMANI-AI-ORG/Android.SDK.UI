@@ -111,11 +111,11 @@ fun Fragment.debugToast(message: String?) {
 }
 
 
-fun Fragment.showSnackbar(message: String) {
+fun Fragment.showSnackbar(message: String, duration: Int = Snackbar.LENGTH_SHORT) {
     val snackbar = Snackbar.make(
         requireActivity().findViewById(android.R.id.content),
         message,
-        Snackbar.LENGTH_SHORT
+        duration
     )
 
     snackbar.show()

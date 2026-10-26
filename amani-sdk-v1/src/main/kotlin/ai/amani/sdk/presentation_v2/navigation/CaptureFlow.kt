@@ -143,8 +143,8 @@ internal object CaptureFlow {
 
     /**
      * Where a generic (physical contract) document goes, decided by its `documentSource` config:
-     * the camera keeps the capture screen, a gallery document explains itself first, and a PDF
-     * goes straight to the documents provider.
+     * the camera keeps the capture screen, a gallery document explains itself first, a PDF goes
+     * straight to the documents provider, and an optional document lets the user choose.
      */
     private fun documentSourceDestination(version: Version, type: String): AmaniV2Destination {
         val source = DocumentSource.from(version.documentSource)
@@ -152,6 +152,7 @@ internal object CaptureFlow {
             DocumentSource.Camera -> AmaniV2Destination.AddressVerify(type)
             DocumentSource.Gallery -> AmaniV2Destination.DocumentInfo(type)
             DocumentSource.PdfFile -> AmaniV2Destination.DocumentPick(type)
+            DocumentSource.Optional -> AmaniV2Destination.DocumentSourceChoice(type)
         }
         Timber.i(
             "V2 generic document: source=$source (config: ${version.documentSource}), " +
@@ -159,6 +160,23 @@ internal object CaptureFlow {
         )
         return destination
     }
+
+    /**
+     * Where the source the user chose for an `optional` document goes, or null for
+     * [DocumentSource.Optional], which the dialog never offers. The choice dialog already
+     * carries the document's explanation, so a gallery choice opens the gallery straight away
+     * instead of the information screen a `gallery` config shows first.
+     */
+    fun chosenSourceDestination(versionType: String, source: DocumentSource): AmaniV2Destination? =
+        when (source) {
+            DocumentSource.PdfFile,
+            DocumentSource.Gallery -> AmaniV2Destination.DocumentPick(versionType, source)
+            DocumentSource.Camera -> AmaniV2Destination.AddressVerify(versionType)
+            DocumentSource.Optional -> {
+                Timber.e("V2 Optional is no choice of the source dialog, ignored")
+                null
+            }
+        }
 
     /**
      * Where a selfie guide's "Open camera" action goes, mirroring v1's per-type animation

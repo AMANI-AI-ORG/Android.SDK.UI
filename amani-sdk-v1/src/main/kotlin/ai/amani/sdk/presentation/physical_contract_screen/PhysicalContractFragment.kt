@@ -13,6 +13,9 @@ import ai.amani.sdk.modules.document.DocBuilder
 import ai.amani.sdk.modules.document.interfaces.IDocumentCallBack
 import ai.amani.sdk.presentation.AmaniMainActivity
 import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
+import ai.amani.sdk.presentation.common.document_picker.MIME_PDF
+import ai.amani.sdk.presentation.common.document_picker.hasPickerFor
+import ai.amani.sdk.presentation.common.document_picker.showNoPickerMessage
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import android.net.Uri
 import android.os.Bundle
@@ -32,8 +35,9 @@ import timber.log.Timber
  * Capture screen of a generic document.
  *
  * Only reached by the documents whose `documentSource` is the camera — the picker sources are
- * handled where the flow is routed, without opening this screen. The select button still offers
- * a PDF from storage as an alternative to the capture.
+ * handled where the flow is routed, without opening this screen, unless the device has no picker
+ * for them and the flow falls back here. The select button still offers a PDF from storage as an
+ * alternative to the capture, when an app on the device can pick one.
  *
  * @Author: zekiamani
  * @Date: 1.03.2023
@@ -47,8 +51,23 @@ class PhysicalContractFragment: Fragment() {
      * PDF alternative behind the select button. Registered eagerly because activity result
      * launchers cannot be registered once the fragment is started.
      */
-    private val documentPickerLauncher = DocumentPickerLauncher(this) { uri ->
+    private val documentPickerLauncher = DocumentPickerLauncher(
+        fragment = this,
+        onUnavailable = { onNoPdfPicker() }
+    ) { uri ->
         onPdfPicked(uri)
+    }
+
+    /**
+     * The select button is offered only when an app can pick a PDF; it is checked when the
+     * screen shows, as an app can be installed or removed while the SDK runs.
+     */
+    private fun canPickPdf(): Boolean = requireContext().hasPickerFor(MIME_PDF)
+
+    /** The PDF picker disappeared after the check: the capture stays, the button goes. */
+    private fun onNoPdfPicker() {
+        AmaniMainActivity.hideSelectButton()
+        showNoPickerMessage()
     }
 
     override fun onCreateView(
@@ -135,6 +154,7 @@ class PhysicalContractFragment: Fragment() {
             AmaniMainActivity.addSelectButtonListener {
                 documentPickerLauncher.launch(DocumentSource.PdfFile)
             }
+            if (!canPickPdf()) AmaniMainActivity.hideSelectButton()
         }
     }
 
@@ -168,7 +188,12 @@ class PhysicalContractFragment: Fragment() {
     override fun onResume() {
         super.onResume()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-            AmaniMainActivity.showSelectButton()
+            if (canPickPdf()) {
+                AmaniMainActivity.showSelectButton()
+            } else {
+                Timber.w("No app can pick a PDF, the select button stays hidden")
+                AmaniMainActivity.hideSelectButton()
+            }
         }
     }
 }

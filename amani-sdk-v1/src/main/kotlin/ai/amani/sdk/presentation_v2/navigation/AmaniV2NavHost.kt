@@ -7,6 +7,9 @@ import timber.log.Timber
 import ai.amani.sdk.presentation_v2.document_info.DocumentInfoMapper
 import ai.amani.sdk.presentation_v2.document_info.DocumentInfoScreen
 import ai.amani.sdk.presentation_v2.document_info.DocumentPickScreen
+import ai.amani.sdk.presentation_v2.document_info.DocumentSourceChoiceDialog
+import ai.amani.sdk.presentation.common.document_picker.documentSourceChoiceTextsOf
+import ai.amani.sdk.presentation.common.document_picker.noPickerMessage
 import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
@@ -51,6 +54,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -131,6 +135,24 @@ fun AmaniV2NavHost(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // No app on the device can pick the document: tell the user, with the error code support
+    // looks up.
+    fun showNoPickerMessage() {
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                context.resources.noPickerMessage(),
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
+
+    // A picker document whose device has no picker is photographed instead: the capture screen
+    // takes the place of the destination that tried to pick.
+    fun fallBackToCamera(versionType: String) {
+        navigator.replaceCurrent(AmaniV2Destination.AddressVerify(versionType))
+        showNoPickerMessage()
+    }
 
     // Advance the before-KYC identifier chain (v1's step-by-step `getNavDirection`): mark this
     // step done, move to the next pending step, or pop to Home (re-attaching Home's listener)
@@ -382,7 +404,9 @@ fun AmaniV2NavHost(
                                 ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
                             )
                             navigator.popToRoot()
-                        }
+                        },
+                        // The PDF picker disappeared after the screen checked for it.
+                        onPickerUnavailable = ::showNoPickerMessage
                     )
                 }
             }
@@ -405,7 +429,8 @@ fun AmaniV2NavHost(
                                 ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow.DataFromGallery(arrayListOf(uri))
                             )
                             navigator.popToRoot()
-                        }
+                        },
+                        onUnavailable = { fallBackToCamera(destination.versionType) }
                     )
                 }
             }
@@ -416,6 +441,7 @@ fun AmaniV2NavHost(
                     navigator.popToRoot()
                 } else {
                     DocumentPickScreen(
+                        source = destination.source,
                         onPicked = { uri ->
                             onAddressLegFinished(
                                 version,
@@ -425,10 +451,14 @@ fun AmaniV2NavHost(
                         },
                         // Nothing picked: this destination has no screen of its own, so there is
                         // nothing to stay on.
-                        onCancelled = { if (!navigator.popBackStack()) onExit() }
+                        onCancelled = { if (!navigator.popBackStack()) onExit() },
+                        onUnavailable = { fallBackToCamera(destination.versionType) }
                     )
                 }
             }
+
+            // Never on the stack: the navigator holds it as the source dialog shown below.
+            is AmaniV2Destination.DocumentSourceChoice -> Unit
 
             is AmaniV2Destination.SpeechVerify -> {
                 val version = CaptureFlow.versionByType(destination.versionType)
@@ -543,6 +573,30 @@ fun AmaniV2NavHost(
             }
         }
     }
+
+        // Source dialog of an `optional` document, over whichever screen started the document
+        // (Home or the document type chooser). The choice replaces the dialog with its route.
+        navigator.sourceChoice?.let { choice ->
+            val versionType = choice.versionType
+            val version = CaptureFlow.versionByType(versionType)
+            if (version == null) {
+                // Stale type (e.g. config reload or a restored process) — nothing to choose for.
+                LaunchedEffect(choice) { navigator.dismissSourceChoice() }
+            } else {
+                DocumentSourceChoiceDialog(
+                    texts = remember(version) {
+                        documentSourceChoiceTextsOf(version, context.resources)
+                    },
+                    onChosen = { source ->
+                        navigator.dismissSourceChoice()
+                        Timber.i("V2 document source $source is chosen for $versionType")
+                        CaptureFlow.chosenSourceDestination(versionType, source)
+                            ?.let(navigator::navigateTo)
+                    },
+                    onDismiss = navigator::dismissSourceChoice
+                )
+            }
+        }
 
         SnackbarHost(
             hostState = snackbarHostState,

@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation_v2.navigation
 
+import ai.amani.sdk.model.DocumentSource
 import ai.amani.sdk.model.MRZModel
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
@@ -190,11 +191,24 @@ sealed interface AmaniV2Destination : Parcelable {
 
     /**
      * No screen: a `pdfFile` document (config `documentSource`) goes straight to the documents
-     * provider. Opens the picker, uploads what comes back and pops to Home; an empty pick returns
-     * to where the flow came from. [versionType] keys the chosen version.
+     * provider, and so does the gallery or PDF choice of an `optional` document. Opens the picker
+     * of [source], uploads what comes back and pops to Home; an empty pick returns to where the
+     * flow came from. [versionType] keys the chosen version.
      */
     @Parcelize
     data class DocumentPick(
+        val versionType: String,
+        val source: DocumentSource = DocumentSource.PdfFile
+    ) : AmaniV2Destination
+
+    /**
+     * Never on the stack: an `optional` document (config `documentSource`) lets the user choose
+     * the gallery, a PDF or the camera in a dialog over the current screen —
+     * [AmaniV2Navigator.navigateTo] holds it as [AmaniV2Navigator.sourceChoice] — then navigates
+     * to [CaptureFlow.chosenSourceDestination]. [versionType] keys the chosen version.
+     */
+    @Parcelize
+    data class DocumentSourceChoice(
         val versionType: String
     ) : AmaniV2Destination
 

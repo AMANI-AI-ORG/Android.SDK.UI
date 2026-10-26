@@ -29,6 +29,12 @@ sealed interface ScreenRoutes{
     object DocumentInfoScreen: ScreenRoutes
 
     /**
+     * No screen: an `optional` `documentSource` lets the user choose between the gallery, a PDF
+     * and the camera in a dialog shown over the current screen, then takes the chosen route.
+     */
+    object DocumentSourceDialog: ScreenRoutes
+
+    /**
      * Speech verification (document id "ST"). Hosts the OPTIONAL standalone
      * AmaniSpeechVerifier module (a `compileOnly` dependency, not bundled). Unlike the other
      * routes it has no nav-graph destination — HomeKYCFragment commits the module's fragment

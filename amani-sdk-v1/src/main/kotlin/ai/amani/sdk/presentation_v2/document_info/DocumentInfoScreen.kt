@@ -1,8 +1,6 @@
 package ai.amani.sdk.presentation_v2.document_info
 
-import ai.amani.sdk.presentation.common.document_picker.MIME_IMAGE
-import ai.amani.sdk.presentation.common.document_picker.OpenDocumentIn
-import ai.amani.sdk.presentation.common.document_picker.screenshotsFolderUriOrNull
+import ai.amani.sdk.model.DocumentSource
 import ai.amani.sdk.presentation_v2.components.PrimaryButton
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Dimens
@@ -10,7 +8,6 @@ import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Type
 import ai.amani.sdk.presentation_v2.theme.scaled
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,25 +42,28 @@ import timber.log.Timber
  * The picked file is handed back through [onPicked]; the host uploads it exactly like a
  * photographed document (`GenericDocumentFlow.DataFromGallery`) and pops to Home. Leaving the
  * picker without choosing anything keeps the user on this screen, so the explanation stays
- * readable and the action can be retried.
+ * readable and the action can be retried. A device without any image picker goes to
+ * [onUnavailable], where the host falls back to the camera capture screen.
  */
 @Composable
 fun DocumentInfoScreen(
     state: DocumentInfoUiState,
     onPicked: (Uri) -> Unit,
+    onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
     val currentOnPicked by rememberUpdatedState(onPicked)
 
-    val galleryPicker = rememberLauncherForActivityResult(OpenDocumentIn()) { uri: Uri? ->
+    // Every picker of the gallery chain reports here.
+    val launchers = rememberPickerLaunchers { uri ->
         if (uri == null) {
             Timber.d("V2 document info: no document picked from the gallery")
-            return@rememberLauncherForActivityResult
+        } else {
+            Timber.d("V2 document info: document picked from the gallery")
+            currentOnPicked(uri)
         }
-        Timber.d("V2 document info: document picked from the gallery")
-        currentOnPicked(uri)
     }
 
     Column(
@@ -120,16 +120,8 @@ fun DocumentInfoScreen(
                 text = state.buttonText,
                 leadingIcon = Icons.Outlined.PhotoLibrary,
                 onClick = {
-                    val initialUri = screenshotsFolderUriOrNull()
-                    Timber.i("V2 document info: opening the gallery, initialUri=$initialUri")
-                    runCatching {
-                        galleryPicker.launch(
-                            OpenDocumentIn.Input(
-                                mimeType = MIME_IMAGE,
-                                initialUri = initialUri
-                            )
-                        )
-                    }.onFailure { Timber.e(it, "V2 document info: the gallery could not be opened") }
+                    Timber.i("V2 document info: opening the gallery")
+                    if (!launchers.launch(DocumentSource.Gallery)) onUnavailable()
                 }
             )
         }
@@ -146,7 +138,8 @@ private fun DocumentInfoScreenPreview() {
             details = "METHOD 1 — WhatsApp\n1. Share your IBAN to WhatsApp.\n2. Write your name right below it.\n3. Screenshot both messages.",
             buttonText = "Upload Document"
         ),
-        onPicked = {}
+        onPicked = {},
+        onUnavailable = {}
     )
 }
 
@@ -161,6 +154,7 @@ private fun DocumentInfoHeadlineOnlyPreview() {
             details = "",
             buttonText = "Upload Document"
         ),
-        onPicked = {}
+        onPicked = {},
+        onUnavailable = {}
     )
 }

@@ -1,6 +1,10 @@
 package ai.amani.sdk.presentation_v2.address_verify
 
 import ai.amani.sdk.Amani
+import ai.amani.sdk.model.DocumentSource
+import ai.amani.sdk.presentation.common.document_picker.MIME_PDF
+import ai.amani.sdk.presentation.common.document_picker.hasPickerFor
+import ai.amani.sdk.presentation_v2.document_info.rememberPickerLaunchers
 import ai.amani.sdk.modules.document.DocBuilder
 import ai.amani.sdk.modules.document.interfaces.IDocumentCallBack
 import ai.amani.sdk.presentation_v2.components.ScreenHeader
@@ -13,8 +17,6 @@ import ai.amani.sdk.presentation_v2.theme.scaled
 import android.net.Uri
 import android.view.View
 import android.widget.FrameLayout
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,8 +35,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +77,8 @@ data class AddressVerifyUiState(
  *  - Camera capture confirmed → [onCaptured] (v1 IDocumentCallBack success → Home uploads
  *    with GenericDocumentFlow.DataFromCamera).
  *  - PDF picked → [onPdfPicked] (v1 → Home uploads with DataFromGallery(uri)).
+ *  - No app can pick a PDF → the upload button is not offered; a picker that disappears after
+ *    that check goes to [onPickerUnavailable] and the capture stays.
  *
  * In `@Preview`/inspection there is no Activity to host a Fragment, so a framed
  * placeholder stands in for the capture area.
@@ -82,21 +89,24 @@ fun AddressVerifyScreen(
     versionType: String,
     onCaptured: () -> Unit,
     onPdfPicked: (Uri) -> Unit,
+    onPickerUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
     val palette = AmaniV2Theme.palette
     val currentOnPdfPicked by rememberUpdatedState(onPdfPicked)
 
-    // v1 pickPdfFileFromStorage(): GetContent limited to PDFs.
-    val pdfPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
+    // The PDF chain shared with every other picker: documents provider, then GET_CONTENT.
+    val launchers = rememberPickerLaunchers { uri: Uri? ->
         uri?.let {
             Timber.d("V2 address: PDF picked from storage")
             currentOnPdfPicked(it)
         }
     }
+    // Checked once per visit, and cleared when the picker turns out to be gone after all.
+    val context = LocalContext.current
+    val inspection = LocalInspectionMode.current
+    var canPickPdf by remember { mutableStateOf(inspection || context.hasPickerFor(MIME_PDF)) }
 
     Column(
         modifier = modifier
@@ -148,12 +158,19 @@ fun AddressVerifyScreen(
                 .padding(top = 16.dp, bottom = 20.dp)
         ) {
             // v1's toolbar "select" button, brought into the screen: upload a PDF instead
-            // of photographing the document.
-            SecondaryButton(
-                text = state.uploadPdfButtonText,
-                leadingIcon = Icons.Outlined.UploadFile,
-                onClick = { pdfPicker.launch("application/pdf") }
-            )
+            // of photographing the document, when an app can pick one.
+            if (canPickPdf) {
+                SecondaryButton(
+                    text = state.uploadPdfButtonText,
+                    leadingIcon = Icons.Outlined.UploadFile,
+                    onClick = {
+                        if (!launchers.launch(DocumentSource.PdfFile)) {
+                            canPickPdf = false
+                            onPickerUnavailable()
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -274,7 +291,8 @@ private fun AddressVerifyScreenPreview() {
             ),
             versionType = "TUR_IB_0",
             onCaptured = {},
-            onPdfPicked = {}
+            onPdfPicked = {},
+            onPickerUnavailable = {}
         )
     }
 }

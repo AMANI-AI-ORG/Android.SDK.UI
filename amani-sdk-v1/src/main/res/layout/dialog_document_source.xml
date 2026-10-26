@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Source dialog of an `optional` document: gallery, PDF and camera stacked as the SDK buttons,
+     with the PDF in the middle as the primary button so it reads as the recommended way.
+     Every color and the corner radius are applied at runtime from the remote config. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/rubik_500"
+        android:gravity="center_horizontal"
+        android:textSize="18sp"
+        tools:text="Upload your document" />
+
+    <TextView
+        android:id="@+id/tvDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/rubik_300"
+        android:gravity="center_horizontal"
+        android:lineSpacingMultiplier="1.3"
+        android:textSize="14sp"
+        tools:text="Choose how you would like to add your document." />
+
+    <ai.amani.sdk.presentation.common.CustomButton
+        android:id="@+id/btnGallery"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="24dp"
+        android:stateListAnimator="@null"
+        tools:text="Upload via gallery" />
+
+    <ai.amani.sdk.presentation.common.CustomButton
+        android:id="@+id/btnPdf"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:stateListAnimator="@null"
+        tools:text="Upload via PDF (Recommended)" />
+
+    <ai.amani.sdk.presentation.common.CustomButton
+        android:id="@+id/btnCamera"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:stateListAnimator="@null"
+        tools:text="Upload via camera" />
+
+</LinearLayout>

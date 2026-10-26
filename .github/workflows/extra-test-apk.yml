@@ -1,0 +1,262 @@
+name: 🧪 Extra · Test APK
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOT part of the release pipeline (① Prepare → ② Verify → ③ Ship → ④ Measure).
+# A manual helper that builds the sample app's APK from any branch for testing.
+# It publishes nothing, creates no tag, bumps no version and pushes no commit.
+#
+#   Default      → fastest path: no tests, no lint, only the APK is assembled.
+#   Validations  → the release CI's checks first (unit tests, then instrumented
+#                  tests on an emulator), and the APK only if both pass; a
+#                  release APK also keeps the build's own lint-vital check.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type of the APK'
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+      full_validation:
+        description: 'Run every release validation first (unit + instrumented tests, lint-vital) — slower'
+        required: false
+        default: false
+        type: boolean
+
+run-name: >-
+  🧪 Test APK · ${{ inputs.build_type }}
+  · ${{ inputs.full_validation && 'validated' || 'fast' }}
+  · ${{ github.ref_name }}
+
+# A newer run for the same branch and build type replaces an older one.
+concurrency:
+  group: extra-test-apk-${{ github.ref_name }}-${{ inputs.build_type }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+
+  # ── Validation 1. Unit tests (only with full_validation) ────────────────────
+  unit-tests:
+    name: Validate · Unit Tests
+    if: inputs.full_validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run unit tests
+        run: ./gradlew :amani-sdk-v1:test --continue
+
+      - name: Upload unit-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: amani-sdk-v1/build/reports/tests/
+
+  # ── Validation 2. Instrumented tests (only with full_validation) ────────────
+  android-tests:
+    name: Validate · Android Instrumented Tests
+    needs: unit-tests
+    if: inputs.full_validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Enable KVM (hardware acceleration)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Cache AVD
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-29-x86_64-${{ runner.os }}
+
+      - name: Create AVD and generate snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: Nexus 6
+          avd-name: ci-avd
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+          disable-animations: true
+          script: echo "AVD snapshot generated"
+
+      - name: Run Android instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          profile: Nexus 6
+          avd-name: ci-avd
+          force-avd-creation: false
+          emulator-options: >-
+            -no-snapshot-save
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+          disable-animations: true
+          script: ./gradlew :amani-sdk-v1:connectedAndroidTest --continue
+
+      - name: Upload instrumented-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-results
+          path: amani-sdk-v1/build/reports/androidTests/
+
+  # ── Build the APK ────────────────────────────────────────────────────────────
+  # Runs straight away in the fast mode (both validations skipped) and only after
+  # both pass in the validated mode.
+  build-apk:
+    name: Build ${{ inputs.build_type }} APK
+    needs: [unit-tests, android-tests]
+    if: >-
+      !cancelled()
+      && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'skipped')
+      && (needs.android-tests.result == 'success' || needs.android-tests.result == 'skipped')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      # Gradle's own cache (dependencies, build cache) — reused across runs.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Assemble APK
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          FULL_VALIDATION: ${{ inputs.full_validation }}
+        run: |
+          VARIANT="$(tr '[:lower:]' '[:upper:]' <<< "${BUILD_TYPE:0:1}")${BUILD_TYPE:1}"
+          ARGS=(":app:assemble${VARIANT}" --parallel --build-cache)
+
+          # A release assemble runs lint-vital by default: kept when validating,
+          # skipped in the fast mode.
+          if [[ "$FULL_VALIDATION" != "true" && "$BUILD_TYPE" == "release" ]]; then
+            ARGS+=(-x lintVitalRelease -x lintVitalAnalyzeRelease)
+          fi
+
+          echo "▶ ./gradlew ${ARGS[*]}"
+          ./gradlew "${ARGS[@]}"
+
+      # The sample app has no release signing config, so a release APK comes out
+      # unsigned and cannot be installed. Sign it with a throwaway key made on the
+      # runner: installable for testing, never for a store.
+      - name: Sign release APK with a throwaway test key
+        if: inputs.build_type == 'release'
+        run: |
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          keytool -genkeypair -v -keystore test.keystore -storepass android \
+            -alias test -keypass android -keyalg RSA -keysize 2048 -validity 1 \
+            -dname "CN=Test APK, O=Amani, C=TR"
+
+          # The app splits per ABI; the universal APK installs on every device.
+          DIR=app/build/outputs/apk/release
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$DIR/app-universal-release-unsigned.apk" "$DIR/aligned.apk"
+          "$BUILD_TOOLS/apksigner" sign --ks test.keystore --ks-pass pass:android \
+            --out "$DIR/app-universal-release.apk" "$DIR/aligned.apk"
+
+      - name: Name the APK after the branch and commit
+        id: apk
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          SAFE_REF="${REF_NAME//\//-}"
+          NAME="amani-sample-${BUILD_TYPE}-${SAFE_REF}-${GITHUB_SHA::7}"
+          # The universal APK of the ABI splits: it installs on every device.
+          SOURCE="app/build/outputs/apk/${BUILD_TYPE}/app-universal-${BUILD_TYPE}.apk"
+          mkdir -p out
+          cp "$SOURCE" "out/${NAME}.apk"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: out/${{ steps.apk.outputs.name }}.apk
+          retention-days: 14
+
+      - name: Summary
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          FULL_VALIDATION: ${{ inputs.full_validation }}
+          APK_NAME: ${{ steps.apk.outputs.name }}
+        run: |
+          {
+            echo "## 🧪 Test APK — not part of the release pipeline"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| APK | \`${APK_NAME}.apk\` (artifact below, kept 14 days) |"
+            echo "| Build type | ${BUILD_TYPE} |"
+            if [[ "$FULL_VALIDATION" == "true" ]]; then
+              echo "| Validations | unit tests ✅ · instrumented tests ✅ |"
+            else
+              echo "| Validations | skipped (fast mode) |"
+            fi
+            echo "| Branch | \`${GITHUB_REF_NAME}\` @ \`${GITHUB_SHA::7}\` |"
+            if [[ "$BUILD_TYPE" == "release" ]]; then
+              echo
+              echo "> Release APK is signed with a throwaway test key: installable for testing only."
+              echo "> Every run makes a new key, so uninstall a previous build of the app first."
+            fi
+            echo
+            echo "Nothing was published, tagged, bumped or pushed."
+          } >> "$GITHUB_STEP_SUMMARY"
