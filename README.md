@@ -7,7 +7,7 @@
 [![② Release · Verify](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-ci.yml/badge.svg)](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-ci.yml)
 [![③ Release · Ship](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-publish.yml/badge.svg)](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-publish.yml)
 [![④ Release · Measure](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-measure.yml/badge.svg)](https://github.com/AMANI-AI-ORG/Android.SDK.UI/actions/workflows/release-measure.yml)
-![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
+![Min SDK](https://img.shields.io/badge/minSDK-23+-green)
 ![Compiler](https://img.shields.io/badge/compileSdk-36-brightgreen)
 ![Java](https://img.shields.io/badge/JavaVersion_17-blue)
 ![Trending](https://img.shields.io/github/languages/top/AMANI-AI-ORG/Android.SDK.UI)
@@ -19,7 +19,7 @@ Amani UI package is an interface package prepared using Amani Core SDK. You can 
 
 The minimum requirements for the SDK are:
 
-* ![Min SDK](https://img.shields.io/badge/minSDK-21+-green)
+* ![Min SDK](https://img.shields.io/badge/minSDK-23+-green)
 * ![Compiler](https://img.shields.io/badge/compileSdk-36-brightgreen)
 
 ## How do I get set up? ##
