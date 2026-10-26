@@ -1,6 +1,5 @@
 package ai.amani.sdk.presentation.home_kyc
 
-import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.DialogTermsAndConditionsBinding
 import ai.amani.sdk.extentions.parcelable
 import ai.amani.sdk.model.TermsAndConditionsConfig
@@ -11,7 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.DialogFragment
 import androidx.core.graphics.drawable.toDrawable
@@ -68,17 +66,12 @@ class TermsAndConditionsDialog : DialogFragment() {
         b.tvDescription.text = config.descriptionText
         b.tvDescription.setTextColor(config.descriptionTextColor.toColorInt())
 
-        b.btnPrimary.setTextProperty(config.acceptButtonText, config.primaryButtonTextColor)
-        val primaryDrawable = ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null)
-        b.btnPrimary.setBackgroundDrawable(
-            primaryDrawable,
-            config.primaryButtonBackgroundColor,
-            4,
-            config.primaryButtonBorderColor,
-            0f,
-            null,
-            true,
-            config.buttonRadius
+        b.btnPrimary.setConfigStyle(
+            text = config.acceptButtonText,
+            textColor = config.primaryButtonTextColor,
+            backgroundColor = config.primaryButtonBackgroundColor,
+            borderColor = config.primaryButtonBorderColor,
+            radius = config.buttonRadius
         )
 
         b.btnPrimary.isEnabled = false
@@ -109,18 +102,12 @@ class TermsAndConditionsDialog : DialogFragment() {
             }
         }
 
-        b.btnSecondary.setTextProperty(config.declineButtonText ?: "", config.secondaryButtonTextColor)
-        val secondaryDrawable = ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null)
-
-        b.btnSecondary.setBackgroundDrawable(
-            secondaryDrawable,
-            config.secondaryButtonBackgroundColor,
-            4,
-            config.secondaryButtonBorderColor,
-            0f,
-            null,
-            true,
-            config.buttonRadius
+        b.btnSecondary.setConfigStyle(
+            text = config.declineButtonText ?: "",
+            textColor = config.secondaryButtonTextColor,
+            backgroundColor = config.secondaryButtonBackgroundColor,
+            borderColor = config.secondaryButtonBorderColor,
+            radius = config.buttonRadius
         )
         b.btnSecondary.setOnClickListener {
             onTermsResultListener?.invoke(false)

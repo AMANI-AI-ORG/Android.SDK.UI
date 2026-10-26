@@ -1,7 +1,10 @@
 package ai.amani.sdk.presentation_v2.document_info
 
+import ai.amani.sdk.model.DocumentSource
+import ai.amani.sdk.presentation.common.document_picker.MIME_IMAGE
 import ai.amani.sdk.presentation.common.document_picker.MIME_PDF
 import ai.amani.sdk.presentation.common.document_picker.OpenDocumentIn
+import ai.amani.sdk.presentation.common.document_picker.screenshotsFolderUriOrNull
 import ai.amani.sdk.presentation_v2.theme.AmaniV2Theme
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,8 +21,9 @@ import androidx.compose.ui.Modifier
 import timber.log.Timber
 
 /**
- * No screen of its own: a `pdfFile` document goes straight to the documents provider, so this
- * destination only opens the picker and reports the outcome.
+ * No screen of its own: a `pdfFile` document goes straight to the documents provider, and so
+ * does the gallery or PDF choice of an `optional` document, so this destination only opens the
+ * picker of [source] and reports the outcome.
  *
  * A picked file goes to [onPicked] (the host uploads it like any other document and pops to
  * Home); leaving the picker empty goes to [onCancelled], which takes the user back where the
@@ -32,7 +36,8 @@ import timber.log.Timber
 fun DocumentPickScreen(
     onPicked: (Uri) -> Unit,
     onCancelled: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    source: DocumentSource = DocumentSource.PdfFile
 ) {
     val palette = AmaniV2Theme.palette
     val currentOnPicked by rememberUpdatedState(onPicked)
@@ -54,7 +59,15 @@ fun DocumentPickScreen(
     LaunchedEffect(Unit) {
         if (launched.value) return@LaunchedEffect
         launched.value = true
-        picker.launch(OpenDocumentIn.Input(mimeType = MIME_PDF))
+        picker.launch(
+            if (source == DocumentSource.Gallery) {
+                // Same hint as the V1 gallery picker: a gallery document is nearly always a
+                // screenshot.
+                OpenDocumentIn.Input(mimeType = MIME_IMAGE, initialUri = screenshotsFolderUriOrNull())
+            } else {
+                OpenDocumentIn.Input(mimeType = MIME_PDF)
+            }
+        )
     }
 
     Box(

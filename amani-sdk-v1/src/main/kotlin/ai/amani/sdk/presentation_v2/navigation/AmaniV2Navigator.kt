@@ -45,16 +45,37 @@ class AmaniV2Navigator internal constructor(
     var isMovingForward by mutableStateOf(true)
         private set
 
+    /**
+     * Source dialog open over [current], or null. An `optional` document's source choice is a
+     * dialog rather than a screen, so [navigateTo] and [replaceCurrent] hold it here instead of
+     * pushing it — whichever caller resolves it, the stack never carries it.
+     */
+    var sourceChoice by mutableStateOf<AmaniV2Destination.DocumentSourceChoice?>(null)
+        private set
+
     /** Push a new destination onto the stack. */
     fun navigateTo(destination: AmaniV2Destination) {
+        if (destination is AmaniV2Destination.DocumentSourceChoice) {
+            sourceChoice = destination
+            return
+        }
         isMovingForward = true
         backStack.add(destination)
     }
 
     /** Replace the current destination without growing the stack (e.g. start -> approved). */
     fun replaceCurrent(destination: AmaniV2Destination) {
+        if (destination is AmaniV2Destination.DocumentSourceChoice) {
+            sourceChoice = destination
+            return
+        }
         isMovingForward = true
         backStack[backStack.lastIndex] = destination
+    }
+
+    /** Closes the source dialog, if one is open. */
+    fun dismissSourceChoice() {
+        sourceChoice = null
     }
 
     /** Pop to the root, dropping everything above the first destination. */
@@ -77,9 +98,15 @@ class AmaniV2Navigator internal constructor(
     internal fun snapshot(): List<AmaniV2Destination> = backStack.toList()
 
     companion object {
+        // An open source dialog is saved as the last entry and split off again on restore.
         val Saver: Saver<AmaniV2Navigator, *> = listSaver(
-            save = { it.snapshot() },
-            restore = { AmaniV2Navigator(it) }
+            save = { it.snapshot() + listOfNotNull(it.sourceChoice) },
+            restore = { saved ->
+                val choice = saved.lastOrNull() as? AmaniV2Destination.DocumentSourceChoice
+                AmaniV2Navigator(if (choice == null) saved else saved.dropLast(1)).apply {
+                    sourceChoice = choice
+                }
+            }
         )
     }
 }

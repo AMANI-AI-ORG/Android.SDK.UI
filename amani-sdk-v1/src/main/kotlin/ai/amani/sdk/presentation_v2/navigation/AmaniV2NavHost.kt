@@ -7,6 +7,8 @@ import timber.log.Timber
 import ai.amani.sdk.presentation_v2.document_info.DocumentInfoMapper
 import ai.amani.sdk.presentation_v2.document_info.DocumentInfoScreen
 import ai.amani.sdk.presentation_v2.document_info.DocumentPickScreen
+import ai.amani.sdk.presentation_v2.document_info.DocumentSourceChoiceDialog
+import ai.amani.sdk.presentation.common.document_picker.documentSourceChoiceTextsOf
 import ai.amani.sdk.presentation_v2.address_verify.AddressVerifyScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreen
 import ai.amani.sdk.presentation_v2.home_kyc.HomeKYCScreenState
@@ -416,6 +418,7 @@ fun AmaniV2NavHost(
                     navigator.popToRoot()
                 } else {
                     DocumentPickScreen(
+                        source = destination.source,
                         onPicked = { uri ->
                             onAddressLegFinished(
                                 version,
@@ -429,6 +432,9 @@ fun AmaniV2NavHost(
                     )
                 }
             }
+
+            // Never on the stack: the navigator holds it as the source dialog shown below.
+            is AmaniV2Destination.DocumentSourceChoice -> Unit
 
             is AmaniV2Destination.SpeechVerify -> {
                 val version = CaptureFlow.versionByType(destination.versionType)
@@ -543,6 +549,30 @@ fun AmaniV2NavHost(
             }
         }
     }
+
+        // Source dialog of an `optional` document, over whichever screen started the document
+        // (Home or the document type chooser). The choice replaces the dialog with its route.
+        navigator.sourceChoice?.let { choice ->
+            val versionType = choice.versionType
+            val version = CaptureFlow.versionByType(versionType)
+            if (version == null) {
+                // Stale type (e.g. config reload or a restored process) — nothing to choose for.
+                LaunchedEffect(choice) { navigator.dismissSourceChoice() }
+            } else {
+                DocumentSourceChoiceDialog(
+                    texts = remember(version) {
+                        documentSourceChoiceTextsOf(version, context.resources)
+                    },
+                    onChosen = { source ->
+                        navigator.dismissSourceChoice()
+                        Timber.i("V2 document source $source is chosen for $versionType")
+                        CaptureFlow.chosenSourceDestination(versionType, source)
+                            ?.let(navigator::navigateTo)
+                    },
+                    onDismiss = navigator::dismissSourceChoice
+                )
+            }
+        }
 
         SnackbarHost(
             hostState = snackbarHostState,

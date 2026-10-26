@@ -6,6 +6,7 @@ import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
+import ai.amani.sdk.presentation.common.document_picker.DocumentSourceDialog
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.utils.AmaniDocumentTypes
 import ai.amani.sdk.presentation.home_kyc.ScreenRoutes
@@ -67,6 +68,11 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
         return view
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        DocumentSourceDialog.setOnSourceChosen(this, ::onDocumentSourceChosen)
+    }
+
     override fun onOnItemSelected(version: Version?) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.navigateScreen(
@@ -103,20 +109,52 @@ class SelectDocumentTypeFragment : Fragment(), DocumentAdapter.IDocumentListener
                         documentPickerLauncher.launch(it.source)
                     }
 
-                    else -> {
-                        val action =
-                            SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToPhysicalContractFragment(
-                                ConfigModel(
-                                    version = version,
-                                    generalConfigs = args.dataModel.generalConfigs!!.generalConfigs
-                                )
-                            )
-
-                        findNavController().navigateSafely(action)
+                    ScreenRoutes.DocumentSourceDialog -> {
+                        // The user chooses the source; the choice comes back through
+                        // onDocumentSourceChosen.
+                        DocumentSourceDialog.show(
+                            host = this@SelectDocumentTypeFragment,
+                            version = version,
+                            generalConfigs = args.dataModel.generalConfigs?.generalConfigs
+                        )
                     }
+
+                    else -> navigateToPhysicalContract(version)
                 }
             }
         }
+    }
+
+    /**
+     * Takes the route of the source chosen in the dialog of an `optional` document: a picker
+     * opens straight away, the camera opens the capture screen.
+     */
+    private fun onDocumentSourceChosen(route: ScreenRoutes, versionType: String?) {
+        val version = args.dataModel.versionList.firstOrNull { it?.type == versionType } ?: run {
+            Timber.e("Chosen document source matches no listed document, ignored")
+            return
+        }
+
+        when (route) {
+            is ScreenRoutes.DocumentPickerScreen -> {
+                pickedVersion = version
+                documentPickerLauncher.launch(route.source)
+            }
+
+            else -> navigateToPhysicalContract(version)
+        }
+    }
+
+    private fun navigateToPhysicalContract(version: Version) {
+        val action =
+            SelectDocumentTypeFragmentDirections.actionSelectDocumentTypeFragmentToPhysicalContractFragment(
+                ConfigModel(
+                    version = version,
+                    generalConfigs = args.dataModel.generalConfigs!!.generalConfigs
+                )
+            )
+
+        findNavController().navigateSafely(action)
     }
 
     /**

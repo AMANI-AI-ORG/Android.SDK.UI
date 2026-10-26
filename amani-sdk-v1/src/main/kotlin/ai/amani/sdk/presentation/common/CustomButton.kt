@@ -1,5 +1,6 @@
 package ai.amani.sdk.presentation.common
 
+import ai.amani.amani_sdk.R
 import androidx.appcompat.widget.AppCompatButton
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
@@ -26,6 +27,30 @@ class CustomButton : AppCompatButton {
 
     init {
         this.isAllCaps = false
+    }
+
+    /**
+     * Styles the button as a rounded, config-colored dialog action over its own copy of
+     * `custom_btn`, so buttons styled side by side never share drawable state.
+     */
+    fun setConfigStyle(
+        text: String?,
+        textColor: String,
+        backgroundColor: String,
+        borderColor: String,
+        radius: Int
+    ) {
+        setTextProperty(text, textColor)
+        setBackgroundDrawable(
+            ResourcesCompat.getDrawable(resources, R.drawable.custom_btn, null)?.mutate(),
+            backgroundColor,
+            CONFIG_STROKE_WIDTH,
+            borderColor,
+            0f,
+            null,
+            true,
+            radius
+        )
     }
 
     /**
@@ -96,4 +121,7 @@ class CustomButton : AppCompatButton {
         this.setTextColor(Color.parseColor(textColor))
     }
 
+    private companion object {
+        const val CONFIG_STROKE_WIDTH = 4
+    }
 }

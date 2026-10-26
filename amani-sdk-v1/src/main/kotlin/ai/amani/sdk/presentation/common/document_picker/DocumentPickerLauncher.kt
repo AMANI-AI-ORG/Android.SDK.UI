@@ -34,7 +34,8 @@ internal class DocumentPickerLauncher(
     }
 
     /**
-     * Opens the picker of [source]. [DocumentSource.Camera] has no picker, so it is ignored.
+     * Opens the picker of [source]. [DocumentSource.Camera] has no picker and
+     * [DocumentSource.Optional] is resolved by the user first, so both are ignored.
      *
      * The gallery opens on the Screenshots folder when that folder exists and falls back to the
      * plain image picker otherwise. The folder is only a hint: a picker that cannot honour it
@@ -43,6 +44,8 @@ internal class DocumentPickerLauncher(
     fun launch(source: DocumentSource) {
         when (source) {
             DocumentSource.Camera -> Timber.d("Camera source has no picker to launch")
+
+            DocumentSource.Optional -> Timber.e("Optional source must be chosen before a picker")
 
             DocumentSource.PdfFile -> pickPdf.launch(
                 OpenDocumentIn.Input(mimeType = MIME_PDF)

@@ -15,6 +15,7 @@ import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.common.document_picker.DocumentPickerLauncher
+import ai.amani.sdk.presentation.common.document_picker.DocumentSourceDialog
 import ai.amani.sdk.presentation.physical_contract_screen.GenericDocumentFlow
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.model.NFCScanScreenModel
@@ -90,6 +91,27 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         )
     }
 
+    /**
+     * Takes the route of the source chosen in the dialog of an `optional` document: a picker
+     * opens straight away, the camera opens the capture screen.
+     *
+     * A picker only needs the type the dialog echoes back, so it opens even when the cached
+     * version was lost while the dialog was up; the capture screen needs that version.
+     */
+    private fun onDocumentSourceChosen(route: ScreenRoutes, versionType: String?) {
+        if (route is ScreenRoutes.DocumentPickerScreen) {
+            pickedDocumentType = versionType
+            documentPickerLauncher.launch(route.source)
+            return
+        }
+
+        if (viewModel.getVersion()?.type != versionType) {
+            Timber.e("Chosen document source does not match the current document, ignored")
+            return
+        }
+        navigateToPhysicalContract()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -109,6 +131,8 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
         backPressListener()
 
         observe()
+
+        DocumentSourceDialog.setOnSourceChosen(this, ::onDocumentSourceChosen)
 
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<HomeKYCResultModel>(
             "type"
@@ -546,17 +570,17 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                         documentPickerLauncher.launch(it.source)
                     }
 
-                    ScreenRoutes.PhysicalContractScreen -> {
-
-                        findNavController().navigateSafely(
-                            directions = HomeKYCFragmentDirections
-                                .actionHomeKYCFragmentToPhysicalContractFragment(
-                            dataModel = ConfigModel(
-                                version = viewModel.getVersion(),
-                                generalConfigs = viewModel.getAppConfig()!!.generalConfigs
-                            )
-                        ))
+                    ScreenRoutes.DocumentSourceDialog -> {
+                        // The user chooses the source; the choice comes back through
+                        // onDocumentSourceChosen.
+                        DocumentSourceDialog.show(
+                            host = this@HomeKYCFragment,
+                            version = viewModel.getVersion(),
+                            generalConfigs = viewModel.getAppConfig()?.generalConfigs
+                        )
                     }
+
+                    ScreenRoutes.PhysicalContractScreen -> navigateToPhysicalContract()
 
                     ScreenRoutes.SpeechVerifierScreen -> {
                         // Optional-module guard: a flow with an ST step but no
@@ -577,6 +601,18 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
                 }
             }
         }
+    }
+
+    private fun navigateToPhysicalContract() {
+        findNavController().navigateSafely(
+            directions = HomeKYCFragmentDirections
+                .actionHomeKYCFragmentToPhysicalContractFragment(
+                    dataModel = ConfigModel(
+                        version = viewModel.getVersion(),
+                        generalConfigs = viewModel.getAppConfig()!!.generalConfigs
+                    )
+                )
+        )
     }
 
     //TODO Setting flag and all steps completed case will be handled by viewModel

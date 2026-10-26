@@ -75,4 +75,11 @@
     <string name="expiry_date_title">Enter your document expiry date</string>
     <string name="birth_date_title">Birth date</string>
     <string name="nfc_configure_title">Please check your informations before continue</string>
+    <!-- Source dialog of a document whose `documentSource` is `optional` -->
+    <string name="document_source_title">Upload your document</string>
+    <string name="document_source_description">Choose how you would like to add your document. Uploading the original PDF is the fastest way to get verified.</string>
+    <!-- TODO: static until the remote config carries these labels, then read them from the config -->
+    <string name="document_source_gallery">Upload via gallery</string>
+    <string name="document_source_pdf">Upload via PDF (Recommended)</string>
+    <string name="document_source_camera">Upload via camera</string>
 </resources>
