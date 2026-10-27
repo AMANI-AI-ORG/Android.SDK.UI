@@ -104,6 +104,7 @@
 
         <ImageView
             android:id="@+id/powered_by_amani"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:src="@drawable/ic_bottom_logo"
             android:layout_height="14sp"

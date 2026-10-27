@@ -8,6 +8,7 @@ import android.widget.Button
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
+import datamanager.model.config.GeneralConfigs
 
 /**
  * @Author: zekiamani
@@ -25,6 +26,19 @@ fun View.show(show: Boolean) {
 
 fun View.hide() {
     this.visibility = View.INVISIBLE
+}
+
+/**
+ * Sets the visibility of the "powered by Amani" bottom logo. When the Core SDK config sets
+ * `hideLogo` (or is not loaded yet) the logo is GONE, so the screen content takes its space.
+ * Otherwise it follows [visible]; INVISIBLE keeps the layout steady while the keyboard is open.
+ */
+internal fun View.showAmaniLogo(generalConfigs: GeneralConfigs?, visible: Boolean = true) {
+    visibility = when {
+        generalConfigs == null || generalConfigs.hideLogo -> View.GONE
+        visible -> View.VISIBLE
+        else -> View.INVISIBLE
+    }
 }
 
 fun View.gone() {
