@@ -7,6 +7,7 @@ import ai.amani.amani_sdk.databinding.FragmentCongratulationsBinding
 import ai.amani.sdk.data.manager.UiVoiceKey
 import ai.amani.sdk.data.manager.VoiceAssistantSDKManager
 import ai.amani.sdk.extentions.customizeToolBar
+import ai.amani.sdk.extentions.showAmaniLogo
 import ai.amani.sdk.model.KYCResult
 import ai.amani.sdk.presentation.binding.setText
 import ai.amani.sdk.utils.AppConstant
@@ -68,6 +69,7 @@ class CongratulationsFragment : Fragment() {
         )
 
         binding.congratulationTv.text = args.configModel.generalConfigs?.successHeaderText
+        binding.poweredByAmani.showAmaniLogo(args.configModel.generalConfigs)
     }
 
     private fun handleBackPressed() {

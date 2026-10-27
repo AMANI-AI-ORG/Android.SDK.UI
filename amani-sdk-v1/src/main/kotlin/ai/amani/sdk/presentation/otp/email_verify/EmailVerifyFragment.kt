@@ -2,13 +2,13 @@ package ai.amani.sdk.presentation.otp.email_verify
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentEmailVerifyBinding
+import ai.amani.sdk.extentions.bindAmaniLogo
 import ai.amani.sdk.extentions.customStroke
 import ai.amani.sdk.extentions.customizeToolBar
 import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.hideKeyboard
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.setCustomBackground
-import ai.amani.sdk.extentions.setKeyboardEventListener
 import ai.amani.sdk.extentions.show
 import ai.amani.sdk.extentions.showSnackbar
 import ai.amani.sdk.model.KYCResult
@@ -138,13 +138,7 @@ class EmailVerifyFragment: Fragment() {
             }
         }
 
-        setKeyboardEventListener {
-            if (it) { // Value should be less than keyboard's height
-                binding.bottomLogo.hide()
-            } else {
-                binding.bottomLogo.show()
-            }
-        }
+        bindAmaniLogo(binding.bottomLogo, args.data.config)
     }
 
     private fun EditText.showTextViewAlert(message : String?) {

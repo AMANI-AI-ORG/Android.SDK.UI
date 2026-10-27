@@ -9,8 +9,10 @@ import ai.amani.sdk.extentions.hide
 import ai.amani.sdk.extentions.logUploadResult
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.parcelable
+import ai.amani.sdk.extentions.remove
 import ai.amani.sdk.extentions.safeContext
 import ai.amani.sdk.extentions.show
+import ai.amani.sdk.extentions.showAmaniLogo
 import ai.amani.sdk.model.ConfigModel
 import ai.amani.sdk.model.FeatureConfig
 import ai.amani.sdk.model.HomeKYCResultModel
@@ -306,7 +308,10 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
     private fun observe() {
         viewModel.uiState.observe(viewLifecycleOwner) {
             when (it) {
-                is HomeKYCState.Loading -> binding.progressLoaderCentered.show()
+                is HomeKYCState.Loading -> {
+                    binding.progressLoaderCentered.show()
+                    binding.imageViewPoweredByAmani.remove()
+                }
                 is HomeKYCState.Loaded -> {
                     binding.progressLoaderCentered.hide()
                     if (viewModel.shouldShowTermsDialog()) {
@@ -430,6 +435,7 @@ class HomeKYCFragment : Fragment(), KYCAdapter.IKYCListener {
             )
 
             binding.imageViewPoweredByAmani.setColorFilter("#909090".toColorInt())
+            binding.imageViewPoweredByAmani.showAmaniLogo(appConfig.generalConfigs)
 
             binding.uploadDocumentDescription.let { uploadDocumentDesc ->
                 uploadDocumentDesc.text =

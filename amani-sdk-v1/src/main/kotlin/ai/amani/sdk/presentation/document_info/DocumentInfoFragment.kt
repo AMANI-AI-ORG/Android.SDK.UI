@@ -4,6 +4,7 @@ import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.FragmentDocumentInfoBinding
 import ai.amani.sdk.extentions.navigateSafely
 import ai.amani.sdk.extentions.setToolBarTitle
+import ai.amani.sdk.extentions.showAmaniLogo
 import ai.amani.sdk.model.DocumentSource
 import ai.amani.sdk.model.HomeKYCResultModel
 import ai.amani.sdk.presentation.binding.setPropertyConfirmButton
@@ -84,6 +85,8 @@ class DocumentInfoFragment : Fragment() {
     private fun setTexts() {
         val version = args.dataModel.version
         val generalConfigs = args.dataModel.generalConfigs
+
+        binding.poweredByAmani.showAmaniLogo(generalConfigs)
 
         setToolBarTitle(
             version?.steps?.firstOrNull()?.captureTitle,

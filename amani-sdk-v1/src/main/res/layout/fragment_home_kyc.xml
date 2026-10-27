@@ -74,6 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="@dimen/dp_15"
             android:id="@+id/image_view_powered_by_amani"
+            android:visibility="gone"
             android:layout_marginBottom="10dp"
             android:src="@drawable/ic_bottom_logo"
             app:layout_constraintBottom_toBottomOf="parent"

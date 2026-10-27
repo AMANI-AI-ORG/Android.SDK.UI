@@ -3,6 +3,7 @@ package ai.amani.sdk.extentions
 import ai.amani.BuildConfig
 import ai.amani.amani_sdk.R
 import ai.amani.sdk.model.UploadResultModel
+import datamanager.model.config.GeneralConfigs
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
@@ -171,6 +172,17 @@ fun Fragment.setKeyboardEventListener(listener: KeyboardVisibilityEventListener)
         this.viewLifecycleOwner,
         listener
         )
+}
+
+/**
+ * Shows [logo] per the `hideLogo` config and hides it while the keyboard is open. The keyboard
+ * listener only fires on changes, so the initial state is applied here first.
+ */
+internal fun Fragment.bindAmaniLogo(logo: View, generalConfigs: GeneralConfigs?) {
+    logo.showAmaniLogo(generalConfigs)
+    setKeyboardEventListener { keyboardOpen ->
+        logo.showAmaniLogo(generalConfigs, visible = !keyboardOpen)
+    }
 }
 
 fun Fragment.popBackStackSafely() {
