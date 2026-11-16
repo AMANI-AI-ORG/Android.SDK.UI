@@ -20,7 +20,9 @@ internal object AddressVerifyMapper {
                 .orFallback("Photograph your document, or upload it as a PDF."),
             uploadPdfButtonText = general?.v2UploadPdfButtonText.orFallback("Upload PDF instead"),
             tryAgainText = general?.tryAgainText.orFallback("Try again"),
-            confirmText = general?.continueText.orFallback("Continue")
+            confirmText = general?.continueText.orFallback("Continue"),
+            // The capture fragment's loader; null keeps the Core SDK default.
+            loaderColorHex = general?.loaderColor?.takeIf { it.isNotBlank() }
         )
     }
 

@@ -64,7 +64,9 @@ data class AddressVerifyUiState(
     val instruction: String,
     val uploadPdfButtonText: String,
     val tryAgainText: String,
-    val confirmText: String
+    val confirmText: String,
+    /** Loader colour of the capture fragment (`GeneralConfigs.loaderColor`); null = Core default. */
+    val loaderColorHex: String? = null
 )
 
 /**
@@ -205,14 +207,16 @@ private fun AddressDocumentHost(
 
         if (fm != null && activity != null) {
             // v1 DocBuilder: retry/confirm labels (config texts instead of v1's hardcoded
-            // Turkish), white text/button colors, single document.
+            // Turkish), white text/button colors, single document, loader colour from config.
             val docBuilder = DocBuilder(
                 state.tryAgainText,
                 state.confirmText,
                 ai.amani.R.color.color_white,
                 ai.amani.R.color.color_white,
                 ai.amani.R.color.color_white,
-                DOCUMENT_COUNT
+                DOCUMENT_COUNT,
+                null,
+                state.loaderColorHex
             )
             val container = activity.findViewById<FrameLayout>(containerId)
 

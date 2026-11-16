@@ -44,14 +44,34 @@ internal object AmaniEventBus {
         subscriber?.let { subscribers.remove(it) }
     }
 
+    /** True once the bus listener is installed on the core SDK. */
+    @Volatile
+    private var installed = false
+
     /**
-     * (Re)installs the bus listener on the core SDK. Safe to call repeatedly: subscribers are
-     * untouched, only the core-side registration is refreshed. The host calls this after login,
-     * because the core re-creates its event holder there and would otherwise drop the listener
-     * installed before it — leaving every step spinning on a verdict that never arrives.
+     * Installs the bus listener on the core SDK, once. Later calls do nothing: every
+     * `setListener` makes the core forget what it delivered and read the profile again, and a
+     * read started just before an upload answers with the pre-upload NOT_UPLOADED after the
+     * upload began (the step's loader flickered off). Screens may call this on every resume.
      */
     @Synchronized
     fun attach() {
+        if (installed) return
+        install()
+    }
+
+    /**
+     * Re-installs the bus listener even if it is installed. The host calls this after login,
+     * because the core re-creates its event holder there and would otherwise drop the listener
+     * installed before it, leaving every step spinning on a verdict that never arrives.
+     */
+    @Synchronized
+    fun reattach() {
+        install()
+    }
+
+    private fun install() {
+        installed = true
         Amani.sharedInstance().AmaniEvent().setListener(object : AmaniEventCallBack {
             override fun onError(type: String?, error: ArrayList<AmaniError?>?) {
                 subscribers.forEach { it.onError(type, error) }
