@@ -1,7 +1,112 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-13T13:46:29Z",
+  "updatedAt": "2026-11-17T07:24:07Z",
   "releases": [
+    {
+      "schemaVersion": 1,
+      "version": "1.50.0",
+      "date": "2026-11-17",
+      "aar": {
+        "bytes": 2723094
+      },
+      "versions": {
+        "coreSdk": "3.24.0",
+        "speechVerifier": "1.1.1",
+        "voiceAssistant": "1.1.0"
+      },
+      "perAbi": {
+        "arm64-v8a": {
+          "bareBytes": 4560762,
+          "withCoreBytes": 37867468,
+          "withSdkBytes": 49753370,
+          "coreSdkContributionBytes": 33306706,
+          "uiSdkContributionBytes": 45192608,
+          "uiSdkOwnBytes": 11885902,
+          "optionalModules": {
+            "speechVerifier": {
+              "withModuleBytes": 96998973,
+              "contributionBytes": 47245603
+            },
+            "voiceAssistant": {
+              "withModuleBytes": 49753370,
+              "contributionBytes": 0
+            }
+          }
+        },
+        "armeabi-v7a": {
+          "bareBytes": 4560762,
+          "withCoreBytes": 30656954,
+          "withSdkBytes": 42542858,
+          "coreSdkContributionBytes": 26096192,
+          "uiSdkContributionBytes": 37982096,
+          "uiSdkOwnBytes": 11885904,
+          "optionalModules": {
+            "speechVerifier": {
+              "withModuleBytes": 88683709,
+              "contributionBytes": 46140851
+            },
+            "voiceAssistant": {
+              "withModuleBytes": 42542858,
+              "contributionBytes": 0
+            }
+          }
+        },
+        "x86": {
+          "bareBytes": 4560762,
+          "withCoreBytes": 29592069,
+          "withSdkBytes": 41477965,
+          "coreSdkContributionBytes": 25031307,
+          "uiSdkContributionBytes": 36917203,
+          "uiSdkOwnBytes": 11885896,
+          "optionalModules": {
+            "speechVerifier": {
+              "withModuleBytes": 89030376,
+              "contributionBytes": 47552411
+            },
+            "voiceAssistant": {
+              "withModuleBytes": 41477965,
+              "contributionBytes": 0
+            }
+          }
+        },
+        "x86_64": {
+          "bareBytes": 4560762,
+          "withCoreBytes": 41013079,
+          "withSdkBytes": 52898978,
+          "coreSdkContributionBytes": 36452317,
+          "uiSdkContributionBytes": 48338216,
+          "uiSdkOwnBytes": 11885899,
+          "optionalModules": {
+            "speechVerifier": {
+              "withModuleBytes": 100387839,
+              "contributionBytes": 47488861
+            },
+            "voiceAssistant": {
+              "withModuleBytes": 52898978,
+              "contributionBytes": 0
+            }
+          }
+        },
+        "universal": {
+          "bareBytes": 4560762,
+          "withCoreBytes": 85300514,
+          "withSdkBytes": 97235825,
+          "coreSdkContributionBytes": 80739752,
+          "uiSdkContributionBytes": 92675063,
+          "uiSdkOwnBytes": 11935311,
+          "optionalModules": {
+            "speechVerifier": {
+              "withModuleBytes": 175035740,
+              "contributionBytes": 77799915
+            },
+            "voiceAssistant": {
+              "withModuleBytes": 97235825,
+              "contributionBytes": 0
+            }
+          }
+        }
+      }
+    },
     {
       "schemaVersion": 1,
       "version": "1.41.2",
