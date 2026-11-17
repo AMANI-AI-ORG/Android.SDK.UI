@@ -15,6 +15,10 @@ dependencyResolutionManagement {
         }
 
         maven {
+            url = "https://jfrog.amani.ai/artifactory/amani-speech-verifier"
+        }
+
+        maven {
             url = "https://jitpack.io"
         }
     }
