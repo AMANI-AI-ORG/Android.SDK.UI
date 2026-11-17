@@ -16,7 +16,6 @@ import ai.amani.sdk.extentions.getFirstErrorCode
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.sort
 import ai.amani.sdk.interfaces.TermsConditionsCallback
-import ai.amani.sdk.mapper.AmaniEventMapper.asAmaniError
 import ai.amani.sdk.model.*
 import ai.amani.sdk.model.TermsAndConditionsConfig
 import ai.amani.sdk.model.amani_events.error.AmaniError
@@ -168,7 +167,7 @@ open class HomeKYCViewModel(
                 if (it.isSuccess) {
                     // The core re-creates its event holder on login, dropping the listener
                     // installed before it: re-arm the bus so the step verdicts keep arriving.
-                    AmaniEventBus.attach()
+                    AmaniEventBus.reattach()
 
                     getApplicationConfig()
                 } else {

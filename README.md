@@ -365,10 +365,9 @@ You must have the folowing keys in your application's manifest file:
 
 ## Gradle Properties
 
-Disable R8 full mode, use AndroidX and enable Jetifier like below;
+Use AndroidX and enable Jetifier like below;
 
    ```properties
-    android.enableR8.fullMode=false
     android.useAndroidX=true
     android.enableJetifier=true
  ```

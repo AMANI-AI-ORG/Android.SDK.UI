@@ -2,7 +2,6 @@ package ai.amani.sdk.presentation.home_kyc.adapter
 
 import ai.amani.amani_sdk.R
 import ai.amani.amani_sdk.databinding.ItemKycBinding
-import ai.amani.base.util.SessionManager
 import ai.amani.base.utility.AppConstants
 import ai.amani.sdk.extentions.getStepConfig
 import ai.amani.sdk.extentions.gone
@@ -421,7 +420,7 @@ class KYCAdapter(
     ) {
         init {
             mBinding.progressBar.indeterminateDrawable.setColorFilter(
-                Color.parseColor(SessionManager.getAppBackground()),
+                Color.parseColor(appConfig?.generalConfigs?.appBackground ?: AppConstants.COLOR_WHITE),
                 PorterDuff.Mode.SRC_ATOP
             )
             mBinding.linearBg.setOnClickListener { v: View? ->

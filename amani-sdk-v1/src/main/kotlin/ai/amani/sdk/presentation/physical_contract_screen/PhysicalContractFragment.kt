@@ -100,8 +100,10 @@ class PhysicalContractFragment: Fragment() {
             ai.amani.R.color.color_white,  // Text color
             ai.amani.R.color.color_white,
             ai.amani.R.color.color_white,  // Button color
-            1
-        ) // Indicates the number of documents.
+            1, // Indicates the number of documents.
+            null, // Loader colour resource: the hex below is used instead.
+            args.value.dataModel.generalConfigs?.loaderColor?.takeIf { it.isNotBlank() } // Loader colour (hex) from config; null = Core default.
+        )
 
         val docFragment =
             Amani.sharedInstance().Document().start(

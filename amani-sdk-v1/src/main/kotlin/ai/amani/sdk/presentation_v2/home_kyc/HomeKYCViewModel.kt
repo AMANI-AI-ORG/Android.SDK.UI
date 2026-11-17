@@ -397,7 +397,7 @@ class HomeKYCViewModel(
                 if (result.isSuccess) {
                     // The core re-creates its AmaniEvent holder during login, so re-install the
                     // shared bus listener before any step verdict can arrive.
-                    AmaniEventBus.attach()
+                    AmaniEventBus.reattach()
                     fetchAppConfig()
                 } else {
                     val code = result.error ?: 0
